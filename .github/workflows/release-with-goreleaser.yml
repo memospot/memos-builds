@@ -1,0 +1,58 @@
+name: Release with GoReleaser
+
+on:
+  push:
+    branches:
+      - "release/*.*.*"
+    tags:
+      - "*.*.*"
+  workflow_dispatch:
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          fetch-depth: 0
+      - run: |
+          git fetch --force --tags
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "latest_tag=$latest_tag" >> $GITHUB_ENV          
+          previous_tag=$(git tag --sort=-creatordate | head -n 3 | tail -n 1)
+          echo "previous_tag=$previous_tag" >> $GITHUB_ENV
+          git checkout $latest_tag
+          export GORELEASER_CURRENT_TAG=$latest_tag
+          export GORELEASER_PREVIOUS_TAG=$previous_tag
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ">=1.21.0"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.2.4
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: pnpm
+          cache-dependency-path: "web/pnpm-lock.yaml"
+
+      - name: Build with goreleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GORELEASER_CURRENT_TAG: ${{ github.env.latest_tag }}
+          GORELEASER_PREVIOUS_TAG: ${{ github.env.previous_tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

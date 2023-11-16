@@ -1,0 +1,185 @@
+# https://goreleaser.com
+
+# To use this goreleaser setting on Windows, add Git\bin to PATH.
+# This allows using Git's sh.exe to run the build hooks.
+#
+# To add git to the path just for the current powershell session:
+#* $Env:Path += ";$Env:ProgramFiles\Git\bin";
+#
+# To create a local build for current OS/Arch only:
+#* goreleaser build --clean --single-target --snapshot
+#
+# To create local cross-platform builds without publishing to GitHub, run:
+#* goreleaser release --clean --snapshot
+#
+#? Building with --snapshot bumps the patch version and appends -dev to the version.
+#? This also allows git in a dirty state.
+#
+# To restore the repo after a local build:
+# sh -c "rm -rf ./web/dist && rm -rf ./server/dist && mv -f ./server/dist.bak ./server/dist"
+
+before:
+  hooks: 
+    - sh -c "cd ./memos-upstream/web && pnpm i --frozen-lockfile"
+    # - sh -c "cd ./memos-upstream/web && pnpm type-gen"
+    - sh -c "cd ./memos-upstream/web && pnpm build"
+    # backup front-end placeholder only once
+    - sh -c "cd ./memos-upstream && mv -nT ./server/dist ./server/dist.bak || true" 
+    # remove leftover from a previous local build
+    - sh -c "cd ./memos-upstream && rm -rf ./server/dist"
+    # move front-end build to server/dist
+    - sh -c "cd ./memos-upstream && mv -f ./web/dist ./server/"
+    - sh -c "cd ./memos-upstream && go mod tidy -go=1.19"
+
+project_name: memos
+dist: build
+builds:
+  - dir: ./memos-upstream
+    # main: ./memos-upstream
+    binary: memos
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+
+    # Notes on build targets:
+    # - modernc.org/libc doesn't support Windows i386 and any sort of MIPS architecture:
+    #   https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures
+    # - multiple GOAMD64 (v1-v4) SIMD targets currently aren't supported by goreleaser
+    goos:
+      - darwin
+      # - freebsd
+      - linux
+      - windows
+    goarch:
+      # - '386'
+      - amd64
+      - arm
+      - arm64
+      # - ppc64le
+      - riscv64
+      # - s390x
+    goarm:
+      # - '5' # use software floating point; for CPUs without a VFP co-processor
+      - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
+      - "7" # use VFPv3; Cortex-A cores
+    goamd64:
+      # - v1 # baseline: all x86_64 CPUs
+      - v2 # CMPXCHG16B, LAHF, SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3 (circa 2009: Intel Nehalem/circa 2013: AMD Jaguar)
+      # - v3 # AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, OSXSAVE (circa 2015: Intel Haswell and AMD Excavator)
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: "386"
+    flags: >-
+      -trimpath
+    ldflags: >-
+      -s
+      -w
+      -X main.Date={{.CommitDate}}
+    #  -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
+    #  -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+upx:
+  # Note:
+  # - freebsd/*, windows/arm64, */riscv64, */s390x aren't supported by upx
+  - enabled: true
+    goos: [darwin, linux, windows]
+    goarch: [arm, arm64, "386", amd64, ppc64le]
+    compress: "best"
+    lzma: true
+
+archives:
+  - format: tar.gz
+    # this template makes the OS and Arch more compatible with `uname` output.
+    name_template: >-
+      {{ .ProjectName }}-{{ .Tag }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}l{{ end -}}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^refactor:"
+      - "^style:"
+      - "^ci:"
+      - "^perf:"
+      - "^build:"
+
+gomod:
+  # Proxy a module from proxy.golang.org, making the builds verifiable.
+  #
+  # This will only be effective if running against a tag. Snapshots will ignore this setting.
+  # Notice: for this to work your `build.main` must be a package, not a `.go` file.
+  # Can only be enabled on upstream repo.
+  proxy: false
+
+  # If proxy is true, use these environment variables when running `go mod`
+  # commands (namely, `go mod tidy`).
+  #
+  # Default: `os.Environ()` merged with what you set the root `env` section.
+  env:
+    - GOPROXY=https://proxy.golang.org,direct
+    - GOSUMDB=sum.golang.org
+
+checksum:
+  disable: false
+  name_template: "{{ .ProjectName }}_SHA256SUMS.txt"
+  algorithm: sha256 # [sha256] sha512 sha1 crc32 md5 sha224 sha384
+
+# Generates a full build, but neither validate anything nor upload it to anywhere.
+# goreleaser --snapshot --skip-publish --rm-dist
+snapshot:
+  # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
+  name_template: "{{ incpatch .Version }}-dev"
+
+release:
+  github:
+    owner: lincolnthalles
+    name: memos-builds
+
+  # If set to true, will not auto-publish the release.
+  draft: false
+
+  # If set, will create a release discussion in the category specified.
+  # Warning: do not use categories in the 'Announcement' format.
+  discussion_category_name: General
+
+  # If set to auto, will mark the release as not ready for production
+  # in case there is an indicator for this in the tag e.g. v1.0.0-rc1
+  # If set to true, will always mark the release as not ready for production.
+  # Default is false.
+  prerelease: auto
+
+  # If set to false, will NOT mark the release as "latest".
+  # This prevents it from being shown at the top of the release list,
+  # and from being returned when calling https://api.github.com/repos/OWNER/REPO/releases/latest.
+  make_latest: true
+
+  # What to do with the release notes in case there the release already exists.
+  #
+  # Valid options: [keep-existing] | append | prepend | replace
+  mode: append
+
+  # Templates: allowed
+  # header: |
+  #   ## Some title ({{ .Date }})
+
+  #   Welcome to this new release!
+  footer: |
+    **Full Changelog**: https://github.com/usememos/memos/releases/tag/{{ .Tag }}
+    ```
+
+  skip_upload: false
