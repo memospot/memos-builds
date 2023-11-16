@@ -25,9 +25,7 @@ jobs:
           echo "latest_tag=$latest_tag" >> $GITHUB_ENV          
           previous_tag=$(git tag --sort=-creatordate | head -n 3 | tail -n 1)
           echo "previous_tag=$previous_tag" >> $GITHUB_ENV
-          git checkout $latest_tag
-          export GORELEASER_CURRENT_TAG=$latest_tag
-          export GORELEASER_PREVIOUS_TAG=$previous_tag
+        #  git checkout $latest_tag
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -44,7 +42,7 @@ jobs:
         with:
           node-version: 18
           cache: pnpm
-          cache-dependency-path: "web/pnpm-lock.yaml"
+          cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
       - name: Build with goreleaser
         uses: goreleaser/goreleaser-action@v5
@@ -53,6 +51,6 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GORELEASER_CURRENT_TAG: ${{ github.env.latest_tag }}
-          GORELEASER_PREVIOUS_TAG: ${{ github.env.previous_tag }}
+          # GORELEASER_CURRENT_TAG: ${{ github.env.latest_tag }}
+          # GORELEASER_PREVIOUS_TAG: ${{ github.env.previous_tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
