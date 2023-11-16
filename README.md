@@ -1,5 +1,3 @@
-<img height="128" src="assets/memos.webp" alt="app-icon" align="right" />
-
 # memos-builds
 
 This project hosts builds for [Memos](https://github.com/usememos/memos), a beautiful, privacy-first, lightweight note-taking service.
@@ -46,8 +44,9 @@ Some of these builds are consumed by [Memospot](https://github.com/lincolnthalle
 
 All `amd64` binaries are built with SSE4.2 support, requiring at least a CPU launched on 2009 for Intel (first gen. Core), and 2013 for AMD.
 
-Most binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software.
-    You can unpack the binaries with `upx -d memos*`, if you will.
+Most binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
+
+⚠ It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite) is not compatible with these targets.
 
 ## Support
 
