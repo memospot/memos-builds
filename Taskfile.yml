@@ -76,6 +76,7 @@ tasks:
       Usage: `task checkout-upstream -- v0.0.0` to checkout a specific tag.
     cmds:
       - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash
+      - git push origin
     #  - git read-tree --prefix=memos-upstream -u tags/{{.CLI_ARGS}}
       - git commit -m "Checkout memos-upstream to {{.CLI_ARGS}}"
       - git tag -a {{.CLI_ARGS}} -m "Push {{.CLI_ARGS}}"
