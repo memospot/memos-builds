@@ -24,6 +24,10 @@ Some of these builds are consumed by [Memospot](https://github.com/lincolnthalle
         media="(prefers-color-scheme: light)"
         srcset="assets/powered-by-memos.webp"
       />
+      <img height="128"
+        alt="powered by memos"
+        src="assets/powered-by-memos.webp"
+      />
     </picture>
   </a>
 </p>
@@ -85,6 +89,10 @@ MEMOS_DSN="" # database connection string
     srcset="
       https://api.star-history.com/svg?repos=usememos/memos,lincolnthalles/memos-builds,lincolnthalles/memospot&type=Date
     "
+  />
+  <img
+    alt="Star History Chart"
+    src="https://api.star-history.com/svg?repos=usememos/memos,lincolnthalles/memos-builds,lincolnthalles/memospot&type=Date"
   />
 </picture>
 
