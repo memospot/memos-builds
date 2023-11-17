@@ -18,8 +18,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/usememos/memos/common/log"
-	"github.com/usememos/memos/common/util"
+	"github.com/usememos/memos/internal/log"
+	"github.com/usememos/memos/internal/util"
 	"github.com/usememos/memos/plugin/storage/s3"
 	"github.com/usememos/memos/store"
 )
@@ -63,9 +63,6 @@ const (
 	// This is unrelated to maximum upload size limit, which is now set through system setting.
 	maxUploadBufferSizeBytes = 32 << 20
 	MebiByte                 = 1024 * 1024
-
-	// thumbnailImagePath is the directory to store image thumbnails.
-	thumbnailImagePath = ".thumbnail_cache"
 )
 
 var fileKeyPattern = regexp.MustCompile(`\{[a-z]{1,9}\}`)
@@ -161,9 +158,6 @@ func (s *APIV1Service) CreateResource(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create resource").SetInternal(err)
 	}
-	if err := s.createResourceCreateActivity(ctx, resource); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
-	}
 	return c.JSON(http.StatusOK, convertResourceFromStore(resource))
 }
 
@@ -187,7 +181,7 @@ func (s *APIV1Service) UploadResource(c echo.Context) error {
 	}
 
 	// This is the backend default max upload size limit.
-	maxUploadSetting := s.Store.GetSystemSettingValueWithDefault(&ctx, SystemSettingMaxUploadSizeMiBName.String(), "32")
+	maxUploadSetting := s.Store.GetSystemSettingValueWithDefault(ctx, SystemSettingMaxUploadSizeMiBName.String(), "32")
 	var settingMaxUploadSizeBytes int
 	if settingMaxUploadSizeMiB, err := strconv.Atoi(maxUploadSetting); err == nil {
 		settingMaxUploadSizeBytes = settingMaxUploadSizeMiB * MebiByte
@@ -233,9 +227,6 @@ func (s *APIV1Service) UploadResource(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create resource").SetInternal(err)
 	}
-	if err := s.createResourceCreateActivity(ctx, resource); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
-	}
 	return c.JSON(http.StatusOK, convertResourceFromStore(resource))
 }
 
@@ -272,18 +263,6 @@ func (s *APIV1Service) DeleteResource(c echo.Context) error {
 	}
 	if resource == nil {
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("Resource not found: %d", resourceID))
-	}
-
-	if resource.InternalPath != "" {
-		if err := os.Remove(resource.InternalPath); err != nil {
-			log.Warn(fmt.Sprintf("failed to delete local file with path %s", resource.InternalPath), zap.Error(err))
-		}
-	}
-
-	ext := filepath.Ext(resource.Filename)
-	thumbnailPath := filepath.Join(s.Profile.Data, thumbnailImagePath, fmt.Sprintf("%d%s", resource.ID, ext))
-	if err := os.Remove(thumbnailPath); err != nil {
-		log.Warn(fmt.Sprintf("failed to delete local thumbnail with path %s", thumbnailPath), zap.Error(err))
 	}
 
 	if err := s.Store.DeleteResource(ctx, &store.DeleteResource{
@@ -351,28 +330,6 @@ func (s *APIV1Service) UpdateResource(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to patch resource").SetInternal(err)
 	}
 	return c.JSON(http.StatusOK, convertResourceFromStore(resource))
-}
-
-func (s *APIV1Service) createResourceCreateActivity(ctx context.Context, resource *store.Resource) error {
-	payload := ActivityResourceCreatePayload{
-		Filename: resource.Filename,
-		Type:     resource.Type,
-		Size:     resource.Size,
-	}
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal activity payload")
-	}
-	activity, err := s.Store.CreateActivity(ctx, &store.Activity{
-		CreatorID: resource.CreatorID,
-		Type:      ActivityResourceCreate.String(),
-		Level:     ActivityInfo.String(),
-		Payload:   string(payloadBytes),
-	})
-	if err != nil || activity == nil {
-		return errors.Wrap(err, "failed to create activity")
-	}
-	return err
 }
 
 func replacePathTemplate(path, filename string) string {
