@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { toast } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import { useResourceStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 import "@/less/change-resource-filename-dialog.less";
 
 interface Props extends DialogProps {
@@ -25,7 +25,7 @@ const validateFilename = (filename: string): boolean => {
 
 const ChangeResourceFilenameDialog: React.FC<Props> = (props: Props) => {
   const { destroy, resourceId, resourceFilename } = props;
-  const t = useTranslate();
+  const { t } = useTranslation();
   const resourceStore = useResourceStore();
   const [filename, setFilename] = useState<string>(resourceFilename);
 

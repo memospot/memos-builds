@@ -1,19 +1,13 @@
 type Appearance = "system" | "light" | "dark";
 
-interface BasicSetting {
-  locale: Locale;
-  appearance: Appearance;
-}
 interface Setting {
   locale: Locale;
   appearance: Appearance;
   memoVisibility: Visibility;
-  telegramUserId: string;
 }
 
 interface LocalSetting {
   enableDoubleClickEditing: boolean;
-  enableAutoCollapse: boolean;
   dailyReviewTimeOffset: number;
 }
 
@@ -32,12 +26,7 @@ interface UserMemoVisibilitySetting {
   value: Visibility;
 }
 
-interface UserTelegramUserIdSetting {
-  key: "telegram-user-id";
-  value: string;
-}
-
-type UserSetting = UserLocaleSetting | UserAppearanceSetting | UserMemoVisibilitySetting | UserTelegramUserIdSetting;
+type UserSetting = UserLocaleSetting | UserAppearanceSetting | UserMemoVisibilitySetting;
 
 interface UserSettingUpsert {
   key: keyof Setting;

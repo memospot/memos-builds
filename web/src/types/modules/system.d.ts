@@ -12,22 +12,24 @@ interface CustomizedProfile {
   externalUrl: string;
 }
 
+interface OpenAIConfig {
+  key: string;
+  host: string;
+}
+
 interface SystemStatus {
   host?: User;
   profile: Profile;
   dbSize: number;
   // System settings
   allowSignUp: boolean;
-  disablePasswordLogin: boolean;
+  ignoreUpgrade: boolean;
   disablePublicMemos: boolean;
-  maxUploadSizeMiB: number;
-  autoBackupInterval: number;
   additionalStyle: string;
   additionalScript: string;
   customizedProfile: CustomizedProfile;
   storageServiceId: number;
   localStoragePath: string;
-  memoDisplayWithUpdatedTs: boolean;
 }
 
 interface SystemSetting {

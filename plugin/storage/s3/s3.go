@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3config "github.com/aws/aws-sdk-go-v2/config"
@@ -30,18 +29,13 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, config *Config) (*Client, error) {
-	// For some s3-compatible object stores, converting the hostname is not required,
-	// and not setting this option will result in not being able to access the corresponding object store address.
-	// But Aliyun OSS should disable this option
-	hostnameImmutable := true
-	if strings.HasSuffix(config.EndPoint, "aliyuncs.com") {
-		hostnameImmutable = false
-	}
 	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...any) (aws.Endpoint, error) {
 		return aws.Endpoint{
-			URL:               config.EndPoint,
-			SigningRegion:     config.Region,
-			HostnameImmutable: hostnameImmutable,
+			URL:           config.EndPoint,
+			SigningRegion: config.Region,
+			// For some s3-compatible object stores, converting the hostname is not required,
+			// and not setting this option will result in not being able to access the corresponding object store address.
+			HostnameImmutable: true,
 		}, nil
 	})
 

@@ -1,6 +1,5 @@
-import axios from "axios";
 import * as api from "@/helpers/api";
-import storage from "@/helpers/storage";
+import * as storage from "@/helpers/storage";
 import i18n from "@/i18n";
 import { findNearestLanguageMatch } from "@/utils/i18n";
 import store, { useAppSelector } from "../";
@@ -12,13 +11,10 @@ export const initialGlobalState = async () => {
     appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
-      disablePasswordLogin: false,
+      ignoreUpgrade: false,
       disablePublicMemos: false,
-      maxUploadSizeMiB: 0,
-      autoBackupInterval: 0,
       additionalStyle: "",
       additionalScript: "",
-      memoDisplayWithUpdatedTs: false,
       customizedProfile: {
         name: "memos",
         logoUrl: "/logo.webp",
@@ -38,7 +34,7 @@ export const initialGlobalState = async () => {
     defaultGlobalState.appearance = storageAppearance;
   }
 
-  const { data } = await api.getSystemStatus();
+  const { data } = (await api.getSystemStatus()).data;
   if (data) {
     const customizedProfile = data.customizedProfile;
     defaultGlobalState.systemStatus = {
@@ -52,9 +48,8 @@ export const initialGlobalState = async () => {
         externalUrl: "",
       },
     };
-    defaultGlobalState.locale =
-      storageLocale || defaultGlobalState.systemStatus.customizedProfile.locale || findNearestLanguageMatch(i18n.language);
-    defaultGlobalState.appearance = defaultGlobalState.systemStatus.customizedProfile.appearance;
+    defaultGlobalState.locale = storageLocale || findNearestLanguageMatch(i18n.language);
+    defaultGlobalState.appearance = customizedProfile.appearance;
   }
   store.dispatch(setGlobalState(defaultGlobalState));
 };
@@ -67,19 +62,11 @@ export const useGlobalStore = () => {
     getState: () => {
       return store.getState().global;
     },
-    getDisablePublicMemos: () => {
-      return store.getState().global.systemStatus.disablePublicMemos;
-    },
     isDev: () => {
       return state.systemStatus.profile.mode !== "prod";
     },
     fetchSystemStatus: async () => {
-      const { data: systemStatus } = await api.getSystemStatus();
-      // TODO: update this when api v2 is ready.
-      const {
-        data: { systemInfo },
-      } = await axios.get("/api/v2/system/info");
-      systemStatus.dbSize = Number(systemInfo.dbSize);
+      const { data: systemStatus } = (await api.getSystemStatus()).data;
       store.dispatch(setGlobalState({ systemStatus: systemStatus }));
       return systemStatus;
     },

@@ -1,21 +1,21 @@
-import { Option, Select } from "@mui/joy";
-import copy from "copy-to-clipboard";
-import { toLower } from "lodash-es";
+import { Select, Option } from "@mui/joy";
 import { QRCodeSVG } from "qrcode.react";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { getMemoStats } from "@/helpers/api";
+import { useTranslation } from "react-i18next";
+import copy from "copy-to-clipboard";
+import { toLower } from "lodash-es";
+import toImage from "@/labs/html2image";
+import { useGlobalStore, useMemoStore, useUserStore } from "@/store/module";
 import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
 import { getDateTimeString, getTimeStampByDate } from "@/helpers/datetime";
+import { getMemoStats } from "@/helpers/api";
 import useLoading from "@/hooks/useLoading";
-import toImage from "@/labs/html2image";
-import { useMemoStore, useUserStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import { generateDialog } from "./Dialog";
-import showEmbedMemoDialog from "./EmbedMemoDialog";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 import MemoContent from "./MemoContent";
-import MemoResourceListView from "./MemoResourceListView";
+import MemoResources from "./MemoResources";
+import showEmbedMemoDialog from "./EmbedMemoDialog";
 import "@/less/share-memo-dialog.less";
 
 interface Props extends DialogProps {
@@ -30,10 +30,12 @@ interface State {
 
 const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const { memo: propsMemo, destroy } = props;
-  const t = useTranslate();
+  const { t } = useTranslation();
   const userStore = useUserStore();
   const memoStore = useMemoStore();
+  const globalStore = useGlobalStore();
   const user = userStore.state.user as User;
+  const { systemStatus } = globalStore.state;
   const [state, setState] = useState<State>({
     memoAmount: 0,
     memoVisibility: propsMemo.visibility,
@@ -44,13 +46,13 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const memoElRef = useRef<HTMLDivElement>(null);
   const memo = {
     ...propsMemo,
-    displayTsStr: getDateTimeString(propsMemo.displayTs),
+    createdAtStr: getDateTimeString(propsMemo.createdTs),
   };
   const createdDays = Math.ceil((Date.now() - getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24);
 
   useEffect(() => {
-    getMemoStats(user.username)
-      .then(({ data }) => {
+    getMemoStats(user.id)
+      .then(({ data: { data } }) => {
         setPartialState({
           memoAmount: data.length,
         });
@@ -107,7 +109,7 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const memoVisibilityOptionSelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
     return {
       value: item.value,
-      text: t(`memo.visibility.${toLower(item.value) as Lowercase<typeof item.value>}`),
+      text: t(`memo.visibility.${toLower(item.value)}`),
     };
   });
 
@@ -172,14 +174,14 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
             className="w-full h-auto select-none relative flex flex-col justify-start items-start bg-white dark:bg-zinc-800"
             ref={memoElRef}
           >
-            <span className="w-full px-6 pt-5 pb-2 text-sm text-gray-500">{memo.displayTsStr}</span>
+            <span className="w-full px-6 pt-5 pb-2 text-sm text-gray-500">{memo.createdAtStr}</span>
             <div className="w-full px-6 text-base pb-4">
               <MemoContent content={memo.content} showFull={true} />
-              <MemoResourceListView className="!grid-cols-2" resourceList={memo.resourceList} />
+              <MemoResources className="!grid-cols-2" resourceList={memo.resourceList} />
             </div>
             <div className="flex flex-row justify-between items-center w-full bg-gray-100 dark:bg-zinc-700 py-4 px-6">
               <div className="mr-2">
-                <img className="h-10 w-auto rounded-lg" src={`${user.avatarUrl || "/logo.webp"}`} alt="" />
+                <img className="h-10 w-auto rounded-lg" src={`${systemStatus.customizedProfile.logoUrl || "/logo.webp"}`} alt="" />
               </div>
               <div className="w-auto grow truncate flex mr-2 flex-col justify-center items-start">
                 <span className="w-full text-sm truncate font-bold text-gray-600 dark:text-gray-300">{user.nickname || user.username}</span>

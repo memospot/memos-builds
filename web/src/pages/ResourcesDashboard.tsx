@@ -1,23 +1,21 @@
 import { Button } from "@mui/joy";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import showCreateResourceDialog from "@/components/CreateResourceDialog";
-import { showCommonDialog } from "@/components/Dialog/CommonDialog";
-import Empty from "@/components/Empty";
-import Icon from "@/components/Icon";
-import MobileHeader from "@/components/MobileHeader";
-import ResourceCard from "@/components/ResourceCard";
-import ResourceItem from "@/components/ResourceItem";
-import ResourceSearchBar from "@/components/ResourceSearchBar";
-import Dropdown from "@/components/kit/Dropdown";
+import { useTranslation } from "react-i18next";
 import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
-import useEvent from "@/hooks/useEvent";
 import useLoading from "@/hooks/useLoading";
 import { useResourceStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
+import Icon from "@/components/Icon";
+import ResourceCard from "@/components/ResourceCard";
+import ResourceSearchBar from "@/components/ResourceSearchBar";
+import MobileHeader from "@/components/MobileHeader";
+import Dropdown from "@/components/kit/Dropdown";
+import ResourceItem from "@/components/ResourceItem";
+import { showCommonDialog } from "@/components/Dialog/CommonDialog";
+import showCreateResourceDialog from "@/components/CreateResourceDialog";
 
 const ResourcesDashboard = () => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const loadingState = useLoading();
   const resourceStore = useResourceStore();
   const resources = resourceStore.state.resources;
@@ -42,13 +40,13 @@ const ResourcesDashboard = () => {
       });
   }, []);
 
-  const handleCheckBtnClick = useEvent((resourceId: ResourceId) => {
+  const handleCheckBtnClick = (resourceId: ResourceId) => {
     setSelectedList([...selectedList, resourceId]);
-  });
+  };
 
-  const handleUncheckBtnClick = useEvent((resourceId: ResourceId) => {
+  const handleUncheckBtnClick = (resourceId: ResourceId) => {
     setSelectedList(selectedList.filter((id) => id !== resourceId));
-  });
+  };
 
   const handleStyleChangeBtnClick = (listStyle: "GRID" | "TABLE") => {
     setListStyle(listStyle);
@@ -94,11 +92,9 @@ const ResourcesDashboard = () => {
         style: "warning",
         dialogName: "delete-resource-dialog",
         onConfirm: async () => {
-          for (const resourceId of selectedList) {
+          selectedList.map(async (resourceId: ResourceId) => {
             await resourceStore.deleteResourceById(resourceId);
-          }
-
-          setSelectedList([]);
+          });
         },
       });
     }
@@ -197,7 +193,7 @@ const ResourcesDashboard = () => {
   };
 
   return (
-    <section className="w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+    <section className="w-full max-w-2xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
       <MobileHeader showSearch={false} />
       <div className="w-full relative" onDragEnter={handleDrag}>
         {dragActive && (
@@ -217,7 +213,7 @@ const ResourcesDashboard = () => {
         <div className="w-full flex flex-col justify-start items-start px-4 py-3 rounded-xl bg-white dark:bg-zinc-700 text-black dark:text-gray-300">
           <div className="relative w-full flex flex-row justify-between items-center">
             <p className="flex flex-row justify-start items-center select-none rounded">
-              <Icon.Paperclip className="w-5 h-auto mr-1 ml-2" /> {t("common.resources")}
+              <Icon.Paperclip className="w-5 h-auto mr-1" /> {t("common.resources")}
             </p>
             <ResourceSearchBar setQuery={handleSearchResourceInputChange} />
           </div>
@@ -227,15 +223,7 @@ const ResourcesDashboard = () => {
                 <Icon.Trash2 className="w-4 h-auto" />
               </Button>
             )}
-            <Button
-              onClick={() =>
-                showCreateResourceDialog({
-                  onConfirm: () => {
-                    resourceStore.fetchResourceList();
-                  },
-                })
-              }
-            >
+            <Button onClick={() => showCreateResourceDialog({})}>
               <Icon.Plus className="w-4 h-auto" />
             </Button>
             <Dropdown
@@ -254,7 +242,7 @@ const ResourcesDashboard = () => {
                     onClick={handleDeleteUnusedResourcesBtnClick}
                   >
                     <Icon.Trash2 className="w-4 h-auto mr-2" />
-                    {t("resource.clear")}
+                    {t("common.clear")}
                   </button>
                 </>
               }
@@ -286,7 +274,7 @@ const ResourcesDashboard = () => {
             ) : (
               <div
                 className={
-                  listStyle === "TABLE" || resourceList.length === 0
+                  listStyle === "TABLE"
                     ? "flex flex-col justify-start items-start w-full"
                     : "w-full h-auto grid grid-cols-2 md:grid-cols-4 md:px-6 gap-6"
                 }
@@ -300,10 +288,7 @@ const ResourcesDashboard = () => {
                   </div>
                 )}
                 {resourceList.length === 0 ? (
-                  <div className="w-full mt-8 mb-8 flex flex-col justify-center items-center italic">
-                    <Empty />
-                    <p className="mt-4 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
-                  </div>
+                  <p className="w-full text-center text-base my-6 mt-8">{t("resource.no-resources")}</p>
                 ) : (
                   resourceList
                 )}

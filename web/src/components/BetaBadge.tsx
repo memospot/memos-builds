@@ -1,4 +1,4 @@
-import { useTranslate } from "@/utils/i18n";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   className?: string;
@@ -6,7 +6,7 @@ interface Props {
 
 const BetaBadge: React.FC<Props> = (props: Props) => {
   const { className } = props;
-  const t = useTranslate();
+  const { t } = useTranslation();
 
   return (
     <span

@@ -14,9 +14,9 @@ export const useTagStore = () => {
     fetchTags: async () => {
       const tagFind: TagFind = {};
       if (userStore.isVisitorMode()) {
-        tagFind.creatorUsername = userStore.getUsernameFromPath();
+        tagFind.creatorId = userStore.getUserIdFromPath();
       }
-      const { data } = await api.getTagList(tagFind);
+      const { data } = (await api.getTagList(tagFind)).data;
       store.dispatch(setTags(data));
     },
     upsertTag: async (tagName: string) => {

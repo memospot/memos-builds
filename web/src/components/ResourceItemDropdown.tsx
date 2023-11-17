@@ -1,27 +1,31 @@
 import copy from "copy-to-clipboard";
 import React from "react";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import { useResourceStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import { getResourceType, getResourceUrl } from "@/utils/resource";
-import showChangeResourceFilenameDialog from "./ChangeResourceFilenameDialog";
-import { showCommonDialog } from "./Dialog/CommonDialog";
-import Icon from "./Icon";
-import showPreviewImageDialog from "./PreviewImageDialog";
+import { getResourceUrl } from "@/utils/resource";
 import Dropdown from "./kit/Dropdown";
+import Icon from "./Icon";
+import { showCommonDialog } from "./Dialog/CommonDialog";
+import showChangeResourceFilenameDialog from "./ChangeResourceFilenameDialog";
+import showPreviewImageDialog from "./PreviewImageDialog";
 
 interface Props {
   resource: Resource;
 }
 
 const ResourceItemDropdown = ({ resource }: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const resourceStore = useResourceStore();
+  const resources = resourceStore.state.resources;
 
   const handlePreviewBtnClick = (resource: Resource) => {
     const resourceUrl = getResourceUrl(resource);
-    if (getResourceType(resource).startsWith("image")) {
-      showPreviewImageDialog([getResourceUrl(resource)], 0);
+    if (resource.type.startsWith("image")) {
+      showPreviewImageDialog(
+        resources.filter((r) => r.type.startsWith("image")).map((r) => getResourceUrl(r)),
+        resources.findIndex((r) => r.id === resource.id)
+      );
     } else {
       window.open(resourceUrl);
     }
@@ -31,6 +35,21 @@ const ResourceItemDropdown = ({ resource }: Props) => {
     const url = getResourceUrl(resource);
     copy(url);
     toast.success(t("message.succeed-copy-resource-link"));
+  };
+
+  const handleResetResourceLinkBtnClick = (resource: Resource) => {
+    showCommonDialog({
+      title: t("resource.reset-resource-link"),
+      content: t("resource.reset-link-prompt"),
+      style: "warning",
+      dialogName: "reset-resource-link-dialog",
+      onConfirm: async () => {
+        await resourceStore.patchResource({
+          id: resource.id,
+          resetPublicId: true,
+        });
+      },
+    });
   };
 
   const handleRenameBtnClick = (resource: Resource) => {
@@ -71,6 +90,12 @@ const ResourceItemDropdown = ({ resource }: Props) => {
             onClick={() => handleCopyResourceLinkBtnClick(resource)}
           >
             {t("resource.copy-link")}
+          </button>
+          <button
+            className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
+            onClick={() => handleResetResourceLinkBtnClick(resource)}
+          >
+            {t("resource.reset-link")}
           </button>
           <button
             className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"

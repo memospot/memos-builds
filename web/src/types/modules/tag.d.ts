@@ -1,3 +1,3 @@
 interface TagFind {
-  creatorUsername?: string;
+  creatorId?: UserId;
 }

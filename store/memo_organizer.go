@@ -5,26 +5,124 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/usememos/memos/api"
+	"github.com/usememos/memos/common"
 )
 
-type MemoOrganizer struct {
-	MemoID int32
-	UserID int32
+// memoOrganizerRaw is the store model for an MemoOrganizer.
+// Fields have exactly the same meanings as MemoOrganizer.
+type memoOrganizerRaw struct {
+	ID int
+
+	// Domain specific fields
+	MemoID int
+	UserID int
 	Pinned bool
 }
 
-type FindMemoOrganizer struct {
-	MemoID int32
-	UserID int32
+func (raw *memoOrganizerRaw) toMemoOrganizer() *api.MemoOrganizer {
+	return &api.MemoOrganizer{
+		ID: raw.ID,
+
+		MemoID: raw.MemoID,
+		UserID: raw.UserID,
+		Pinned: raw.Pinned,
+	}
 }
 
-type DeleteMemoOrganizer struct {
-	MemoID *int32
-	UserID *int32
+func (s *Store) FindMemoOrganizer(ctx context.Context, find *api.MemoOrganizerFind) (*api.MemoOrganizer, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer tx.Rollback()
+
+	memoOrganizerRaw, err := findMemoOrganizer(ctx, tx, find)
+	if err != nil {
+		return nil, err
+	}
+
+	memoOrganizer := memoOrganizerRaw.toMemoOrganizer()
+
+	return memoOrganizer, nil
 }
 
-func (s *Store) UpsertMemoOrganizer(ctx context.Context, upsert *MemoOrganizer) (*MemoOrganizer, error) {
-	stmt := `
+func (s *Store) UpsertMemoOrganizer(ctx context.Context, upsert *api.MemoOrganizerUpsert) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return FormatError(err)
+	}
+	defer tx.Rollback()
+
+	if err := upsertMemoOrganizer(ctx, tx, upsert); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return FormatError(err)
+	}
+
+	return nil
+}
+
+func (s *Store) DeleteMemoOrganizer(ctx context.Context, delete *api.MemoOrganizerDelete) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return FormatError(err)
+	}
+	defer tx.Rollback()
+
+	if err := deleteMemoOrganizer(ctx, tx, delete); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return FormatError(err)
+	}
+
+	return nil
+}
+
+func findMemoOrganizer(ctx context.Context, tx *sql.Tx, find *api.MemoOrganizerFind) (*memoOrganizerRaw, error) {
+	query := `
+		SELECT
+			id,
+			memo_id,
+			user_id,
+			pinned
+		FROM memo_organizer
+		WHERE memo_id = ? AND user_id = ?
+	`
+	row, err := tx.QueryContext(ctx, query, find.MemoID, find.UserID)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer row.Close()
+
+	if !row.Next() {
+		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("not found")}
+	}
+
+	var memoOrganizerRaw memoOrganizerRaw
+	if err := row.Scan(
+		&memoOrganizerRaw.ID,
+		&memoOrganizerRaw.MemoID,
+		&memoOrganizerRaw.UserID,
+		&memoOrganizerRaw.Pinned,
+	); err != nil {
+		return nil, FormatError(err)
+	}
+
+	if err := row.Err(); err != nil {
+		return nil, err
+	}
+
+	return &memoOrganizerRaw, nil
+}
+
+func upsertMemoOrganizer(ctx context.Context, tx *sql.Tx, upsert *api.MemoOrganizerUpsert) error {
+	query := `
 		INSERT INTO memo_organizer (
 			memo_id,
 			user_id,
@@ -34,66 +132,42 @@ func (s *Store) UpsertMemoOrganizer(ctx context.Context, upsert *MemoOrganizer) 
 		ON CONFLICT(memo_id, user_id) DO UPDATE 
 		SET
 			pinned = EXCLUDED.pinned
+		RETURNING id, memo_id, user_id, pinned
 	`
-	if _, err := s.db.ExecContext(ctx, stmt, upsert.MemoID, upsert.UserID, upsert.Pinned); err != nil {
-		return nil, err
-	}
-
-	memoOrganizer := upsert
-	return memoOrganizer, nil
-}
-
-func (s *Store) GetMemoOrganizer(ctx context.Context, find *FindMemoOrganizer) (*MemoOrganizer, error) {
-	where, args := []string{}, []any{}
-	if find.MemoID != 0 {
-		where = append(where, "memo_id = ?")
-		args = append(args, find.MemoID)
-	}
-	if find.UserID != 0 {
-		where = append(where, "user_id = ?")
-		args = append(args, find.UserID)
-	}
-
-	query := fmt.Sprintf(`
-		SELECT
-			memo_id,
-			user_id,
-			pinned
-		FROM memo_organizer
-		WHERE %s
-	`, strings.Join(where, " AND "))
-	row := s.db.QueryRowContext(ctx, query, args...)
-	if err := row.Err(); err != nil {
-		return nil, err
-	}
-	if row == nil {
-		return nil, nil
-	}
-
-	memoOrganizer := &MemoOrganizer{}
-	if err := row.Scan(
+	var memoOrganizer api.MemoOrganizer
+	if err := tx.QueryRowContext(ctx, query, upsert.MemoID, upsert.UserID, upsert.Pinned).Scan(
+		&memoOrganizer.ID,
 		&memoOrganizer.MemoID,
 		&memoOrganizer.UserID,
 		&memoOrganizer.Pinned,
 	); err != nil {
-		return nil, err
+		return FormatError(err)
 	}
 
-	return memoOrganizer, nil
+	return nil
 }
 
-func (s *Store) DeleteMemoOrganizer(ctx context.Context, delete *DeleteMemoOrganizer) error {
+func deleteMemoOrganizer(ctx context.Context, tx *sql.Tx, delete *api.MemoOrganizerDelete) error {
 	where, args := []string{}, []any{}
+
 	if v := delete.MemoID; v != nil {
 		where, args = append(where, "memo_id = ?"), append(args, *v)
 	}
 	if v := delete.UserID; v != nil {
 		where, args = append(where, "user_id = ?"), append(args, *v)
 	}
+
 	stmt := `DELETE FROM memo_organizer WHERE ` + strings.Join(where, " AND ")
-	if _, err := s.db.ExecContext(ctx, stmt, args...); err != nil {
-		return err
+	result, err := tx.ExecContext(ctx, stmt, args...)
+	if err != nil {
+		return FormatError(err)
 	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return &common.Error{Code: common.NotFound, Err: fmt.Errorf("memo organizer not found")}
+	}
+
 	return nil
 }
 
@@ -116,7 +190,7 @@ func vacuumMemoOrganizer(ctx context.Context, tx *sql.Tx) error {
 		)`
 	_, err := tx.ExecContext(ctx, stmt)
 	if err != nil {
-		return err
+		return FormatError(err)
 	}
 
 	return nil
