@@ -19,7 +19,7 @@ const PreferencesSection = () => {
   const visibilitySelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
     return {
       value: item.value,
-      text: t(`memo.visibility.${item.text.toLowerCase() as Lowercase<typeof item.text>}`),
+      text: t(`memo.visibility.${item.value.toLowerCase() as Lowercase<typeof item.value>}`),
     };
   });
 
@@ -50,7 +50,7 @@ const PreferencesSection = () => {
   const handleSaveTelegramUserId = async () => {
     try {
       await userStore.upsertUserSetting("telegram-user-id", telegramUserId);
-      toast.success(t("common.dialog.success"));
+      toast.success(t("message.update-succeed"));
     } catch (error: any) {
       console.error(error);
       toast.error(error.response.data.message);

@@ -11,7 +11,7 @@ import (
 
 	"github.com/usememos/memos/common/util"
 	"github.com/usememos/memos/store"
-	"github.com/usememos/memos/store/db"
+	"github.com/usememos/memos/store/db/sqlite"
 )
 
 var (
@@ -36,17 +36,17 @@ var (
 				return
 			}
 
-			db := db.NewDB(profile)
-			if err := db.Open(); err != nil {
-				fmt.Printf("failed to open db, error: %+v\n", err)
+			driver, err := sqlite.NewDB(profile)
+			if err != nil {
+				fmt.Printf("failed to create db driver, error: %+v\n", err)
 				return
 			}
-			if err := db.Migrate(ctx); err != nil {
+			if err := driver.Migrate(ctx); err != nil {
 				fmt.Printf("failed to migrate db, error: %+v\n", err)
 				return
 			}
 
-			store := store.New(db.DBInstance, profile)
+			store := store.New(driver, profile)
 			if err := ExecuteSetup(ctx, store, hostUsername, hostPassword); err != nil {
 				fmt.Printf("failed to setup, error: %+v\n", err)
 				return
