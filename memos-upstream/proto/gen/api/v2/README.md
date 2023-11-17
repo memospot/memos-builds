@@ -7,8 +7,14 @@
     - [RowStatus](#memos-api-v2-RowStatus)
   
 - [api/v2/memo_service.proto](#api_v2_memo_service-proto)
+    - [CreateMemoCommentRequest](#memos-api-v2-CreateMemoCommentRequest)
+    - [CreateMemoCommentResponse](#memos-api-v2-CreateMemoCommentResponse)
+    - [CreateMemoRequest](#memos-api-v2-CreateMemoRequest)
+    - [CreateMemoResponse](#memos-api-v2-CreateMemoResponse)
     - [GetMemoRequest](#memos-api-v2-GetMemoRequest)
     - [GetMemoResponse](#memos-api-v2-GetMemoResponse)
+    - [ListMemoCommentsRequest](#memos-api-v2-ListMemoCommentsRequest)
+    - [ListMemoCommentsResponse](#memos-api-v2-ListMemoCommentsResponse)
     - [ListMemosRequest](#memos-api-v2-ListMemosRequest)
     - [ListMemosResponse](#memos-api-v2-ListMemosResponse)
     - [Memo](#memos-api-v2-Memo)
@@ -18,9 +24,15 @@
     - [MemoService](#memos-api-v2-MemoService)
   
 - [api/v2/resource_service.proto](#api_v2_resource_service-proto)
+    - [CreateResourceRequest](#memos-api-v2-CreateResourceRequest)
+    - [CreateResourceResponse](#memos-api-v2-CreateResourceResponse)
+    - [DeleteResourceRequest](#memos-api-v2-DeleteResourceRequest)
+    - [DeleteResourceResponse](#memos-api-v2-DeleteResourceResponse)
     - [ListResourcesRequest](#memos-api-v2-ListResourcesRequest)
     - [ListResourcesResponse](#memos-api-v2-ListResourcesResponse)
     - [Resource](#memos-api-v2-Resource)
+    - [UpdateResourceRequest](#memos-api-v2-UpdateResourceRequest)
+    - [UpdateResourceResponse](#memos-api-v2-UpdateResourceResponse)
   
     - [ResourceService](#memos-api-v2-ResourceService)
   
@@ -34,9 +46,13 @@
     - [SystemService](#memos-api-v2-SystemService)
   
 - [api/v2/tag_service.proto](#api_v2_tag_service-proto)
+    - [DeleteTagRequest](#memos-api-v2-DeleteTagRequest)
+    - [DeleteTagResponse](#memos-api-v2-DeleteTagResponse)
     - [ListTagsRequest](#memos-api-v2-ListTagsRequest)
     - [ListTagsResponse](#memos-api-v2-ListTagsResponse)
     - [Tag](#memos-api-v2-Tag)
+    - [UpsertTagRequest](#memos-api-v2-UpsertTagRequest)
+    - [UpsertTagResponse](#memos-api-v2-UpsertTagResponse)
   
     - [TagService](#memos-api-v2-TagService)
   
@@ -98,6 +114,68 @@
 
 
 
+<a name="memos-api-v2-CreateMemoCommentRequest"></a>
+
+### CreateMemoCommentRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [int32](#int32) |  | id is the memo id to create comment for. |
+| create | [CreateMemoRequest](#memos-api-v2-CreateMemoRequest) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-CreateMemoCommentResponse"></a>
+
+### CreateMemoCommentResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| memo | [Memo](#memos-api-v2-Memo) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-CreateMemoRequest"></a>
+
+### CreateMemoRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| content | [string](#string) |  |  |
+| visibility | [Visibility](#memos-api-v2-Visibility) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-CreateMemoResponse"></a>
+
+### CreateMemoResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| memo | [Memo](#memos-api-v2-Memo) |  |  |
+
+
+
+
+
+
 <a name="memos-api-v2-GetMemoRequest"></a>
 
 ### GetMemoRequest
@@ -122,6 +200,36 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | memo | [Memo](#memos-api-v2-Memo) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-ListMemoCommentsRequest"></a>
+
+### ListMemoCommentsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-ListMemoCommentsResponse"></a>
+
+### ListMemoCommentsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| memos | [Memo](#memos-api-v2-Memo) | repeated |  |
 
 
 
@@ -209,8 +317,11 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| CreateMemo | [CreateMemoRequest](#memos-api-v2-CreateMemoRequest) | [CreateMemoResponse](#memos-api-v2-CreateMemoResponse) |  |
 | ListMemos | [ListMemosRequest](#memos-api-v2-ListMemosRequest) | [ListMemosResponse](#memos-api-v2-ListMemosResponse) |  |
 | GetMemo | [GetMemoRequest](#memos-api-v2-GetMemoRequest) | [GetMemoResponse](#memos-api-v2-GetMemoResponse) |  |
+| CreateMemoComment | [CreateMemoCommentRequest](#memos-api-v2-CreateMemoCommentRequest) | [CreateMemoCommentResponse](#memos-api-v2-CreateMemoCommentResponse) |  |
+| ListMemoComments | [ListMemoCommentsRequest](#memos-api-v2-ListMemoCommentsRequest) | [ListMemoCommentsResponse](#memos-api-v2-ListMemoCommentsResponse) |  |
 
  
 
@@ -220,6 +331,64 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## api/v2/resource_service.proto
+
+
+
+<a name="memos-api-v2-CreateResourceRequest"></a>
+
+### CreateResourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filename | [string](#string) |  |  |
+| external_link | [string](#string) |  |  |
+| type | [string](#string) |  |  |
+| memo_id | [int32](#int32) | optional |  |
+
+
+
+
+
+
+<a name="memos-api-v2-CreateResourceResponse"></a>
+
+### CreateResourceResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource | [Resource](#memos-api-v2-Resource) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-DeleteResourceRequest"></a>
+
+### DeleteResourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [int32](#int32) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-DeleteResourceResponse"></a>
+
+### DeleteResourceResponse
+
+
+
+
 
 
 
@@ -262,7 +431,39 @@
 | external_link | [string](#string) |  |  |
 | type | [string](#string) |  |  |
 | size | [int64](#int64) |  |  |
-| related_memo_id | [int32](#int32) | optional |  |
+| memo_id | [int32](#int32) | optional |  |
+
+
+
+
+
+
+<a name="memos-api-v2-UpdateResourceRequest"></a>
+
+### UpdateResourceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [int32](#int32) |  |  |
+| resource | [Resource](#memos-api-v2-Resource) |  |  |
+| update_mask | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="memos-api-v2-UpdateResourceResponse"></a>
+
+### UpdateResourceResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource | [Resource](#memos-api-v2-Resource) |  |  |
 
 
 
@@ -282,7 +483,10 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| CreateResource | [CreateResourceRequest](#memos-api-v2-CreateResourceRequest) | [CreateResourceResponse](#memos-api-v2-CreateResourceResponse) |  |
 | ListResources | [ListResourcesRequest](#memos-api-v2-ListResourcesRequest) | [ListResourcesResponse](#memos-api-v2-ListResourcesResponse) |  |
+| UpdateResource | [UpdateResourceRequest](#memos-api-v2-UpdateResourceRequest) | [UpdateResourceResponse](#memos-api-v2-UpdateResourceResponse) |  |
+| DeleteResource | [DeleteResourceRequest](#memos-api-v2-DeleteResourceRequest) | [DeleteResourceResponse](#memos-api-v2-DeleteResourceResponse) |  |
 
  
 
@@ -399,6 +603,31 @@
 
 
 
+<a name="memos-api-v2-DeleteTagRequest"></a>
+
+### DeleteTagRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| tag | [Tag](#memos-api-v2-Tag) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-DeleteTagResponse"></a>
+
+### DeleteTagResponse
+
+
+
+
+
+
+
 <a name="memos-api-v2-ListTagsRequest"></a>
 
 ### ListTagsRequest
@@ -444,6 +673,36 @@
 
 
 
+
+<a name="memos-api-v2-UpsertTagRequest"></a>
+
+### UpsertTagRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-UpsertTagResponse"></a>
+
+### UpsertTagResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| tag | [Tag](#memos-api-v2-Tag) |  |  |
+
+
+
+
+
  
 
  
@@ -458,7 +717,9 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
+| UpsertTag | [UpsertTagRequest](#memos-api-v2-UpsertTagRequest) | [UpsertTagResponse](#memos-api-v2-UpsertTagResponse) |  |
 | ListTags | [ListTagsRequest](#memos-api-v2-ListTagsRequest) | [ListTagsResponse](#memos-api-v2-ListTagsResponse) |  |
+| DeleteTag | [DeleteTagRequest](#memos-api-v2-DeleteTagRequest) | [DeleteTagResponse](#memos-api-v2-DeleteTagResponse) |  |
 
  
 

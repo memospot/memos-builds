@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import storage from "./helpers/storage";
 import { getSystemColorScheme } from "./helpers/utils";
+import useNavigateTo from "./hooks/useNavigateTo";
 import Loading from "./pages/Loading";
 import store from "./store";
 import { useGlobalStore } from "./store/module";
@@ -11,11 +12,19 @@ import { useUserV1Store } from "./store/v1";
 
 const App = () => {
   const { i18n } = useTranslation();
+  const navigateTo = useNavigateTo();
   const globalStore = useGlobalStore();
   const { mode, setMode } = useColorScheme();
   const userV1Store = useUserV1Store();
   const [loading, setLoading] = useState(true);
   const { appearance, locale, systemStatus } = globalStore.state;
+
+  // Redirect to sign up page if no host.
+  useEffect(() => {
+    if (!systemStatus.host) {
+      navigateTo("/auth/signup");
+    }
+  }, [systemStatus.host]);
 
   useEffect(() => {
     const initialState = async () => {
@@ -70,7 +79,7 @@ const App = () => {
     // dynamic update metadata with customized profile.
     document.title = systemStatus.customizedProfile.name;
     const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-    link.href = systemStatus.customizedProfile.logoUrl || "/logo.webp";
+    link.href = systemStatus.customizedProfile.logoUrl || "/logo.png";
   }, [systemStatus.customizedProfile]);
 
   useEffect(() => {
@@ -79,6 +88,11 @@ const App = () => {
     storage.set({
       locale: locale,
     });
+    if (locale === "ar") {
+      document.documentElement.setAttribute("dir", "rtl");
+    } else {
+      document.documentElement.setAttribute("dir", "ltr");
+    }
   }, [locale]);
 
   useEffect(() => {
