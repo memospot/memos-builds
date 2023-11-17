@@ -34,7 +34,6 @@
     "sign-out": "Вийти",
     "back-to-home": "Повернутися на головну",
     "type": "Типу",
-    "shortcuts": "Ярлики",
     "title": "Заголовок",
     "filter": "Фільтр",
     "tags": "Теги",
@@ -49,7 +48,8 @@
     "vacuum": "Стиснути",
     "select": "Вибрати",
     "database": "Database",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Зареєструватися як власник",
@@ -108,15 +108,6 @@
     "fetching-data": "завантаження даних...",
     "fetch-more": "Завантажити більше"
   },
-  "shortcut-list": {
-    "shortcut-title": "назва ярлика",
-    "create-shortcut": "Створити ярлик",
-    "edit-shortcut": "Редагувати ярлик",
-    "eligible-memo": "пов'язані нотатки",
-    "fill-previous": "Будь ласка заповніть значення фільтра",
-    "title-required": "Назва обов'язкова",
-    "value-required": "Значення фільтра обов'язкове"
-  },
   "filter": {
     "new-filter": "Новий фільтр",
     "type": {
@@ -166,7 +157,8 @@
       "default-memo-sort-option": "Час відображення закладки",
       "created_ts": "Час створення",
       "updated_ts": "Час оновлення",
-      "enable-double-click": "Enable double-click to edit"
+      "enable-double-click": "Enable double-click to edit",
+      "auto-collapse": "Автоматичне згортання"
     },
     "member-section": {
       "create-a-member": "Створити користувача"
@@ -184,7 +176,8 @@
       "additional-script": "Кастомні скрипти",
       "additional-style-placeholder": "Додатковий CSS",
       "additional-script-placeholder": "Додатковий JavaScript",
-      "disable-public-memos": "Disable public memos"
+      "disable-public-memos": "Disable public memos",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Автоматично",

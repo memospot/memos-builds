@@ -2,13 +2,14 @@
 
 <img height="72px" src="https://usememos.com/logo.webp" alt="✍️ memos" align="right" />
 
-A lightweight, self-hosted memo hub. Open Source and Free forever.
+A privacy-first, lightweight note-taking service. Easily capture and share your great thoughts.
 
+<a href="https://usememos.com/docs">Documentation</a> •
 <a href="https://demo.usememos.com/">Live Demo</a> •
-Discuss in <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a> / <a href="https://discord.gg/tfPJa4UmAv">Discord</a>
+Discuss in <a href="https://discord.gg/tfPJa4UmAv">Discord</a> / <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a>
 
 <p>
-  <a href="https://github.com/usememos/memos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/usememos/memos" /></a>
+  <a href="https://github.com/usememos/memos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/usememos/memos?logo=github" /></a>
   <a href="https://discord.gg/tfPJa4UmAv"><img alt="Discord" src="https://img.shields.io/badge/discord-chat-5865f2?logo=discord&logoColor=f5f5f5" /></a>
 </p>
 
@@ -16,11 +17,11 @@ Discuss in <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a> / <a href="http
 
 ## Key points
 
-- Open source and free forever
-- Self-hosting with Docker in seconds
-- Markdown support
-- Customizable and sharable
-- RESTful API for self-service
+- **Open source and free forever**. Embrace a future where creativity knows no boundaries with our open-source solution – free today, tomorrow, and always.
+- **Self-hosting with Docker in just seconds**. Enjoy the flexibility, scalability, and ease of setup that Docker provides, allowing you to have full control over your data and privacy.
+- **Pure text with added Markdown support.** Say goodbye to the overwhelming mental burden of rich formatting and embrace a minimalist approach.
+- **Customize and share your notes effortlessly**. With our intuitive sharing features, you can easily collaborate and distribute your notes with others.
+- **RESTful API for third-party services.** Embrace the power of integration and unleash new possibilities with our RESTful API support.
 
 ## Deploy with Docker in seconds
 
@@ -30,7 +31,7 @@ docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos ghcr.io/usem
 
 > The `~/.memos/` directory will be used as the data directory on your local machine, while `/var/opt/memos` is the directory of the volume in Docker and should not be modified.
 
-Learn more about [other installation methods](https://usememos.com/docs/install).
+Learn more about [other installation methods](https://usememos.com/docs#installation).
 
 ## Contribution
 
@@ -52,6 +53,7 @@ Contributions are what make the open-source community such an amazing place to l
 - [Send to memos](https://sharecuts.cn/shortcut/12640) - A shortcut for iOS
 - [Memos Raycast Extension](https://www.raycast.com/JakeYu/memos) - Raycast extension
 - [Memos Desktop](https://github.com/xudaolong/memos-desktop) - Third party client for MacOS and Windows
+- [MemosGallery](https://github.com/BarryYangi/MemosGallery) - A static Gallery rendered with the Memos API
 
 ## Acknowledgements
 

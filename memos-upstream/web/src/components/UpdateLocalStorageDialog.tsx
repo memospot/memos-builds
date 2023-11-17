@@ -1,12 +1,12 @@
 import { Button, Input } from "@mui/joy";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { useGlobalStore } from "@/store/module";
 import * as api from "@/helpers/api";
+import { useGlobalStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
 import LearnMore from "./LearnMore";
-import { useTranslation } from "react-i18next";
 
 interface Props extends DialogProps {
   localStoragePath?: string;
@@ -14,7 +14,7 @@ interface Props extends DialogProps {
 }
 
 const UpdateLocalStorageDialog: React.FC<Props> = (props: Props) => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const { destroy, localStoragePath, confirmCallback } = props;
   const globalStore = useGlobalStore();
   const [path, setPath] = useState(localStoragePath || "");
@@ -49,13 +49,11 @@ const UpdateLocalStorageDialog: React.FC<Props> = (props: Props) => {
         </button>
       </div>
       <div className="dialog-content-container max-w-xs">
-        <p className="text-sm break-words mb-1">
-          {t("setting.storage-section.update-local-path-description")}
-          <LearnMore className="ml-1" url="https://usememos.com/docs/local-storage" />
-        </p>
-        <p className="text-sm text-gray-400 mb-2 break-all">
-          {t("common.e.g")} {"assets/{timestamp}_{filename}"}
-        </p>
+        <p className="text-sm break-words mb-1">{t("setting.storage-section.update-local-path-description")}</p>
+        <div className="flex flex-row">
+          <p className="text-sm text-gray-400 mb-2 break-all">e.g. {"assets/{filename}"}</p>
+          <LearnMore url="https://usememos.com/docs/local-storage" />
+        </div>
         <Input
           className="mb-2"
           placeholder={t("setting.storage-section.local-storage-path")}

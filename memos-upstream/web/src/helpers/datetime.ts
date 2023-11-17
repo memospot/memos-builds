@@ -121,6 +121,17 @@ export const getRelativeTimeString = (time: number, locale = i18n.language, form
   const minMillis = secMillis * 60;
   const hourMillis = minMillis * 60;
   const dayMillis = hourMillis * 24;
+  // Show full date if more than 1 day ago.
+  if (pastTimeMillis >= dayMillis) {
+    return new Date(time).toLocaleDateString(locale, {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+    });
+  }
 
   // numeric: "auto" provides "yesterday" for 1 day ago, "always" provides "1 day ago"
   const formatOpts = { style: formatStyle, numeric: "auto" } as Intl.RelativeTimeFormatOptions;
@@ -204,4 +215,17 @@ export function getUnixTimeMillis(t?: Date | number | string): number {
 export function getUnixTime(t?: Date | number | string): number {
   const date = new Date(t ? t : Date.now());
   return Math.floor(date.getTime() / 1000);
+}
+
+/**
+ * Checks if the provided date or timestamp is in the future.
+ *
+ * If no date is provided, the current date is used.
+ *
+ * @param t - Date or timestamp to check.
+ * @returns `true` if the date is in the future, `false` otherwise.
+ */
+export function isFutureDate(t?: Date | number | string): boolean {
+  const timestamp = getTimeStampByDate(t ? t : Date.now());
+  return timestamp > Date.now();
 }

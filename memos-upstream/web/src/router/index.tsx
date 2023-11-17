@@ -1,10 +1,12 @@
-import { createBrowserRouter, redirect } from "react-router-dom";
 import { lazy } from "react";
+import { createBrowserRouter, redirect } from "react-router-dom";
 import { isNullorUndefined } from "@/helpers/utils";
-import store from "@/store";
-import { initialGlobalState, initialUserState } from "@/store/module";
+import Archived from "@/pages/Archived";
 import DailyReview from "@/pages/DailyReview";
 import ResourcesDashboard from "@/pages/ResourcesDashboard";
+import Setting from "@/pages/Setting";
+import store from "@/store";
+import { initialGlobalState, initialUserState } from "@/store/module";
 
 const Root = lazy(() => import("@/layouts/Root"));
 const Auth = lazy(() => import("@/pages/Auth"));
@@ -60,17 +62,24 @@ const router = createBrowserRouter([
             // do nth
           }
 
-          const { host, user } = store.getState().user;
-          if (isNullorUndefined(host)) {
-            return redirect("/auth");
-          } else if (isNullorUndefined(user)) {
-            return redirect("/explore");
+          const { user } = store.getState().user;
+          const { systemStatus } = store.getState().global;
+
+          // if user is authenticated, then show home
+          if (!isNullorUndefined(user)) {
+            return null;
           }
-          return null;
+
+          // if user is anonymous, then redirect to auth if disabled public memos, else redirect to explore
+          if (systemStatus.disablePublicMemos) {
+            return redirect("/auth");
+          }
+
+          return redirect("/explore");
         },
       },
       {
-        path: "/u/:userId",
+        path: "u/:username",
         element: <Home />,
         loader: async () => {
           await initialGlobalStateLoader();
@@ -81,10 +90,13 @@ const router = createBrowserRouter([
             // do nth
           }
 
-          const { host } = store.getState().user;
-          if (isNullorUndefined(host)) {
+          const { user } = store.getState().user;
+          const { systemStatus } = store.getState().global;
+
+          if (isNullorUndefined(user) && systemStatus.disablePublicMemos) {
             return redirect("/auth");
           }
+
           return null;
         },
       },
@@ -100,8 +112,10 @@ const router = createBrowserRouter([
             // do nth
           }
 
-          const { host } = store.getState().user;
-          if (isNullorUndefined(host)) {
+          const { user } = store.getState().user;
+          const { systemStatus } = store.getState().global;
+
+          if (isNullorUndefined(user) && systemStatus.disablePublicMemos) {
             return redirect("/auth");
           }
           return null;
@@ -119,8 +133,9 @@ const router = createBrowserRouter([
             // do nth
           }
 
-          const { host } = store.getState().user;
-          if (isNullorUndefined(host)) {
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
             return redirect("/auth");
           }
           return null;
@@ -138,8 +153,49 @@ const router = createBrowserRouter([
             // do nth
           }
 
-          const { host } = store.getState().user;
-          if (isNullorUndefined(host)) {
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
+            return redirect("/auth");
+          }
+          return null;
+        },
+      },
+      {
+        path: "archived",
+        element: <Archived />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
+            return redirect("/auth");
+          }
+          return null;
+        },
+      },
+      {
+        path: "setting",
+        element: <Setting />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
             return redirect("/auth");
           }
           return null;
@@ -159,8 +215,10 @@ const router = createBrowserRouter([
         // do nth
       }
 
-      const { host } = store.getState().user;
-      if (isNullorUndefined(host)) {
+      const { user } = store.getState().user;
+      const { systemStatus } = store.getState().global;
+
+      if (isNullorUndefined(user) && systemStatus.disablePublicMemos) {
         return redirect("/auth");
       }
       return null;

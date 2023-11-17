@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFilterStore, useMemoStore, useUserStore } from "../store/module";
-import { useTranslation } from "react-i18next";
 import { getMemoStats } from "@/helpers/api";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
 import { getDateStampByDate, getDateString, getTimeStampByDate } from "@/helpers/datetime";
 import * as utils from "@/helpers/utils";
+import { useTranslate } from "@/utils/i18n";
+import { useFilterStore, useMemoStore, useUserStore } from "../store/module";
 import "@/less/usage-heat-map.less";
 
 const tableConfig = {
@@ -29,7 +29,7 @@ interface DailyUsageStat {
 }
 
 const UsageHeatMap = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const filterStore = useFilterStore();
   const userStore = useUserStore();
   const memoStore = useMemoStore();
@@ -44,17 +44,20 @@ const UsageHeatMap = () => {
   const [allStat, setAllStat] = useState<DailyUsageStat[]>(getInitialUsageStat(usedDaysAmount, beginDayTimestamp));
   const [currentStat, setCurrentStat] = useState<DailyUsageStat | null>(null);
   const containerElRef = useRef<HTMLDivElement>(null);
+  const currentUsername = userStore.getCurrentUsername();
 
   useEffect(() => {
-    if (!userStore.state.user) {
-      return;
-    }
-    setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(userStore.state.user.createdTs)) / 1000 / 3600 / 24));
-  }, [userStore.state.user]);
+    userStore.getUserByUsername(currentUsername).then((user) => {
+      if (!user) {
+        return;
+      }
+      setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24));
+    });
+  }, [currentUsername]);
 
   useEffect(() => {
-    getMemoStats(userStore.getCurrentUserId())
-      .then(({ data: { data } }) => {
+    getMemoStats(currentUsername)
+      .then(({ data }) => {
         setMemoAmount(data.length);
         const newStat: DailyUsageStat[] = getInitialUsageStat(usedDaysAmount, beginDayTimestamp);
         for (const record of data) {
@@ -72,11 +75,7 @@ const UsageHeatMap = () => {
       .catch((error) => {
         console.error(error);
       });
-
-    return () => {
-      handleUsageStatItemMouseLeave();
-    };
-  }, [memos.length]);
+  }, [memos.length, currentUsername]);
 
   const handleUsageStatItemMouseEnter = useCallback((event: React.MouseEvent, item: DailyUsageStat) => {
     const tempDiv = document.createElement("div");
@@ -110,7 +109,7 @@ const UsageHeatMap = () => {
 
   // This interpolation is not being used because of the current styling,
   // but it can improve translation quality by giving it a more meaningful context
-  const tMemoInOpts = { amount: "", period: "", date: "" };
+  const tMemoInOpts = { amount: memoAmount, period: "", date: "" };
 
   return (
     <>

@@ -34,12 +34,12 @@
     "sign-out": "Çıkış yap",
     "back-to-home": "Ana sayfaya dön",
     "type": "Tip",
-    "shortcuts": "Kısayollar",
     "title": "Başlık",
     "filter": "Filtre",
     "tags": "Etiketler",
     "yourself": "Sen",
-    "archived-at": "Arşivlendi"
+    "archived-at": "Arşivlendi",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Sahip olarak kaydolun",
@@ -98,15 +98,6 @@
     "fetching-data": "Veriler yükleniyor...",
     "fetch-more": "Daha fazla yükle"
   },
-  "shortcut-list": {
-    "shortcut-title": "Kısayol adı",
-    "create-shortcut": "Kısayol oluştur",
-    "edit-shortcut": "Kısayolu düzenle",
-    "eligible-memo": "İlgili notlar",
-    "fill-previous": "Lütfen filtre değerini doldurun",
-    "title-required": "Başlık gerekli",
-    "value-required": "Filtre değeri gerekli"
-  },
   "filter": {
     "new-filter": "Yeni filtre",
     "type": {
@@ -156,7 +147,8 @@
       "default-memo-sort-option": "Yer İşareti Görüntüleme Zamanı",
       "created_ts": "Oluşturulma zamanı",
       "updated_ts": "Güncelleme zamanı",
-      "enable-double-click": "Düzenlemek için çift tıklatmayı etkinleştir"
+      "enable-double-click": "Düzenlemek için çift tıklatmayı etkinleştir",
+      "auto-collapse": "Otomatik Daralt"
     },
     "member-section": {
       "create-a-member": "Kullanıcı oluştur"
@@ -174,7 +166,8 @@
       "additional-script": "Özel Scriptler",
       "additional-style-placeholder": "Ek CSS",
       "additional-script-placeholder": "Ek JavaScript",
-      "disable-public-memos": "Halka açık notları devre dışı bırak"
+      "disable-public-memos": "Halka açık notları devre dışı bırak",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Otomatik",
