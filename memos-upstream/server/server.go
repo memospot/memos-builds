@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,14 +14,16 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	"go.uber.org/zap"
+
 	apiv1 "github.com/usememos/memos/api/v1"
 	apiv2 "github.com/usememos/memos/api/v2"
 	"github.com/usememos/memos/common/log"
-	"github.com/usememos/memos/common/util"
 	"github.com/usememos/memos/plugin/telegram"
+	"github.com/usememos/memos/server/integration"
 	"github.com/usememos/memos/server/profile"
+	"github.com/usememos/memos/server/service"
 	"github.com/usememos/memos/store"
-	"go.uber.org/zap"
 )
 
 type Server struct {
@@ -35,29 +38,10 @@ type Server struct {
 	apiV2Service *apiv2.APIV2Service
 
 	// Asynchronous runners.
-	backupRunner *BackupRunner
+	backupRunner *service.BackupRunner
 	telegramBot  *telegram.Bot
 }
 
-// @title						memos API
-// @version					1.0
-// @description				A privacy-first, lightweight note-taking service.
-//
-// @contact.name				API Support
-// @contact.url				https://github.com/orgs/usememos/discussions
-//
-// @license.name				MIT License
-// @license.url				https://github.com/usememos/memos/blob/main/LICENSE
-//
-// @BasePath					/
-//
-// @externalDocs.url			https://usememos.com/
-// @externalDocs.description	Find out more about Memos
-//
-// @securitydefinitions.apikey	ApiKeyAuth
-// @in							query
-// @name						openId
-// @description				Insert your Open ID API Key here.
 func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store) (*Server, error) {
 	e := echo.New()
 	e.Debug = true
@@ -70,8 +54,8 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 		Profile: profile,
 
 		// Asynchronous runners.
-		backupRunner: NewBackupRunner(store),
-		telegramBot:  telegram.NewBotWithHandler(newTelegramHandler(store)),
+		backupRunner: service.NewBackupRunner(store),
+		telegramBot:  telegram.NewBotWithHandler(integration.NewTelegramHandler(store)),
 	}
 
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
@@ -82,49 +66,65 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 
 	e.Use(middleware.Gzip())
 
-	e.Use(middleware.CORS())
-
-	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
-		Skipper:            defaultGetRequestSkipper,
-		XSSProtection:      "1; mode=block",
-		ContentTypeNosniff: "nosniff",
-		XFrameOptions:      "SAMEORIGIN",
-		HSTSPreloadEnabled: false,
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		Skipper:      grpcRequestSkipper,
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
 	}))
 
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		ErrorMessage: "Request timeout",
-		Timeout:      30 * time.Second,
+		Skipper: grpcRequestSkipper,
+		Timeout: 30 * time.Second,
+	}))
+
+	e.Use(middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Skipper: grpcRequestSkipper,
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{Rate: 30, Burst: 60, ExpiresIn: 3 * time.Minute},
+		),
+		IdentifierExtractor: func(ctx echo.Context) (string, error) {
+			id := ctx.RealIP()
+			return id, nil
+		},
+		ErrorHandler: func(context echo.Context, err error) error {
+			return context.JSON(http.StatusForbidden, nil)
+		},
+		DenyHandler: func(context echo.Context, identifier string, err error) error {
+			return context.JSON(http.StatusTooManyRequests, nil)
+		},
 	}))
 
 	serverID, err := s.getSystemServerID(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve system server ID: %w", err)
+		return nil, errors.Wrap(err, "failed to retrieve system server ID")
 	}
 	s.ID = serverID
 
+	// Serve frontend.
 	embedFrontend(e)
 
-	// This will serve Swagger UI at /api/index.html and Swagger 2.0 spec at /api/doc.json
-	e.GET("/api/*", echoSwagger.WrapHandler)
+	// Serve swagger in dev/demo mode.
+	if profile.Mode == "dev" || profile.Mode == "demo" {
+		e.GET("/api/*", echoSwagger.WrapHandler)
+	}
 
 	secret := "usememos"
 	if profile.Mode == "prod" {
 		secret, err = s.getSystemSecretSessionName(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve system secret session name: %w", err)
+			return nil, errors.Wrap(err, "failed to retrieve system secret session name")
 		}
 	}
 	s.Secret = secret
 
 	rootGroup := e.Group("")
-	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store)
+	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store, s.telegramBot)
 	apiV1Service.Register(rootGroup)
 
 	s.apiV2Service = apiv2.NewAPIV2Service(s.Secret, profile, store, s.Profile.Port+1)
 	// Register gRPC gateway as api v2.
 	if err := s.apiV2Service.RegisterGateway(ctx, e); err != nil {
-		return nil, fmt.Errorf("failed to register gRPC gateway: %w", err)
+		return nil, errors.Wrap(err, "failed to register gRPC gateway")
 	}
 
 	return s, nil
@@ -139,7 +139,7 @@ func (s *Server) Start(ctx context.Context) error {
 	go s.backupRunner.Run(ctx)
 
 	// Start gRPC server.
-	listen, err := net.Listen("tcp", fmt.Sprintf(":%d", s.Profile.Port+1))
+	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.Profile.Addr, s.Profile.Port+1))
 	if err != nil {
 		return err
 	}
@@ -149,10 +149,7 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}()
 
-	// programmatically set API version same as the server version
-	apiv1.SwaggerInfo.Version = s.Profile.Version
-
-	return s.e.Start(fmt.Sprintf(":%d", s.Profile.Port))
+	return s.e.Start(fmt.Sprintf("%s:%d", s.Profile.Addr, s.Profile.Port))
 }
 
 func (s *Server) Shutdown(ctx context.Context) {
@@ -235,11 +232,6 @@ func (s *Server) createServerStartActivity(ctx context.Context) error {
 	return err
 }
 
-func defaultGetRequestSkipper(c echo.Context) bool {
-	return c.Request().Method == http.MethodGet
-}
-
-func defaultAPIRequestSkipper(c echo.Context) bool {
-	path := c.Request().URL.Path
-	return util.HasPrefixes(path, "/api", "/api/v1", "api/v2")
+func grpcRequestSkipper(c echo.Context) bool {
+	return strings.HasPrefix(c.Request().URL.Path, "/memos.api.v2.")
 }
