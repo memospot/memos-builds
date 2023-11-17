@@ -4,9 +4,10 @@
 
 A privacy-first, lightweight note-taking service. Easily capture and share your great thoughts.
 
-<a href="https://usememos.com/docs">Documentation</a> •
-<a href="https://demo.usememos.com/">Live Demo</a> •
-Discuss in <a href="https://discord.gg/tfPJa4UmAv">Discord</a> / <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a>
+<a href="https://www.usememos.com">Home Page</a> •
+<a href="https://www.usememos.com/blog">Blogs</a> •
+<a href="https://www.usememos.com/docs">Docs</a> •
+<a href="https://demo.usememos.com/">Live Demo</a>
 
 <p>
   <a href="https://github.com/usememos/memos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/usememos/memos?logo=github" /></a>
@@ -15,7 +16,7 @@ Discuss in <a href="https://discord.gg/tfPJa4UmAv">Discord</a> / <a href="https:
   <a href="https://discord.gg/tfPJa4UmAv"><img alt="Discord" src="https://img.shields.io/badge/discord-chat-5865f2?logo=discord&logoColor=f5f5f5" /></a>
 </p>
 
-![demo](https://usememos.com/demo.webp)
+![demo](https://www.usememos.com/demo.webp)
 
 ## Key points
 
@@ -33,7 +34,7 @@ docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos ghcr.io/usem
 
 > The `~/.memos/` directory will be used as the data directory on your local machine, while `/var/opt/memos` is the directory of the volume in Docker and should not be modified.
 
-Learn more about [other installation methods](https://usememos.com/docs#installation).
+Learn more about [other installation methods](https://www.usememos.com/docs/install).
 
 ## Contribution
 
