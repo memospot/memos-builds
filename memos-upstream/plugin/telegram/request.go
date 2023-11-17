@@ -3,11 +3,10 @@ package telegram
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-
-	"github.com/pkg/errors"
 )
 
 func (b *Bot) postForm(ctx context.Context, apiPath string, formData url.Values, result any) error {
@@ -18,13 +17,13 @@ func (b *Bot) postForm(ctx context.Context, apiPath string, formData url.Values,
 
 	resp, err := http.PostForm(apiURL+apiPath, formData)
 	if err != nil {
-		return errors.Wrap(err, "fail to http.PostForm")
+		return fmt.Errorf("fail to http.PostForm: %s", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return errors.Wrap(err, "fail to ioutil.ReadAll")
+		return fmt.Errorf("fail to ioutil.ReadAll: %s", err)
 	}
 
 	var respInfo struct {
@@ -38,11 +37,11 @@ func (b *Bot) postForm(ctx context.Context, apiPath string, formData url.Values,
 
 	err = json.Unmarshal(body, &respInfo)
 	if err != nil {
-		return errors.Wrap(err, "fail to json.Unmarshal")
+		return fmt.Errorf("fail to json.Unmarshal: %s", err)
 	}
 
 	if !respInfo.Ok {
-		return errors.Errorf("api error: [%d]%s", respInfo.ErrorCode, respInfo.Description)
+		return fmt.Errorf("api error: [%d]%s", respInfo.ErrorCode, respInfo.Description)
 	}
 
 	return nil

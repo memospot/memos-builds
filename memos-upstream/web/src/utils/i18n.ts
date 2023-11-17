@@ -38,7 +38,7 @@ export const findNearestLanguageMatch = (codename: string): Locale => {
 };
 
 // Represents the keys of nested translation objects.
-export type Translations = NestedKeyOf<typeof locales>;
+type Translations = NestedKeyOf<typeof locales>;
 
 // Represents a typed translation function.
 type TypedT = (key: Translations, params?: Record<string, any>) => string;

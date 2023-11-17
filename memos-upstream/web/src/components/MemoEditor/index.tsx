@@ -1,33 +1,27 @@
-import { Select, Option, Button, IconButton, Divider } from "@mui/joy";
-import { isNumber, last, uniq, uniqBy } from "lodash-es";
+import { isNumber, last, uniq } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import useLocalStorage from "react-use/lib/useLocalStorage";
-import { TAB_SPACE_WIDTH, UNKNOWN_ID, VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
+import { upsertMemoResource } from "@/helpers/api";
+import { TAB_SPACE_WIDTH, UNKNOWN_ID } from "@/helpers/consts";
 import { clearContentQueryParam } from "@/helpers/utils";
-import useCurrentUser from "@/hooks/useCurrentUser";
 import { getMatchedNodes } from "@/labs/marked";
 import { useFilterStore, useGlobalStore, useMemoStore, useResourceStore, useTagStore, useUserStore } from "@/store/module";
-import { Resource } from "@/types/proto/api/v2/resource_service";
-import { User_Role } from "@/types/proto/api/v2/user_service";
 import { useTranslate } from "@/utils/i18n";
-import showCreateMemoRelationDialog from "../CreateMemoRelationDialog";
 import showCreateResourceDialog from "../CreateResourceDialog";
 import Icon from "../Icon";
-import VisibilityIcon from "../VisibilityIcon";
+import MemoVisibilitySelector from "./ActionButton/MemoVisibilitySelector";
 import TagSelector from "./ActionButton/TagSelector";
 import Editor, { EditorRefActions } from "./Editor";
 import RelationListView from "./RelationListView";
 import ResourceListView from "./ResourceListView";
+import "@/less/memo-editor.less";
 
 const listItemSymbolList = ["- [ ] ", "- [x] ", "- [X] ", "* ", "- "];
 const emptyOlReg = /^(\d+)\. $/;
 
 interface Props {
   className?: string;
-  editorClassName?: string;
-  cacheKey?: string;
   memoId?: MemoId;
   relationList?: MemoRelation[];
   onConfirm?: () => void;
@@ -37,16 +31,15 @@ interface State {
   memoVisibility: Visibility;
   resourceList: Resource[];
   relationList: MemoRelation[];
+  fullscreen: boolean;
   isUploadingResource: boolean;
   isRequesting: boolean;
 }
 
 const MemoEditor = (props: Props) => {
-  const { className, editorClassName, cacheKey, memoId, onConfirm } = props;
+  const { className, memoId, onConfirm } = props;
   const { i18n } = useTranslation();
   const t = useTranslate();
-  const contentCacheKey = `memo-editor-${cacheKey}`;
-  const [contentCache, setContentCache] = useLocalStorage<string>(contentCacheKey, "");
   const {
     state: { systemStatus },
   } = useGlobalStore();
@@ -55,11 +48,12 @@ const MemoEditor = (props: Props) => {
   const memoStore = useMemoStore();
   const tagStore = useTagStore();
   const resourceStore = useResourceStore();
-  const currentUser = useCurrentUser();
+
   const [state, setState] = useState<State>({
     memoVisibility: "PRIVATE",
     resourceList: [],
     relationList: props.relationList ?? [],
+    fullscreen: false,
     isUploadingResource: false,
     isRequesting: false,
   });
@@ -68,16 +62,6 @@ const MemoEditor = (props: Props) => {
   const editorRef = useRef<EditorRefActions>(null);
   const user = userStore.state.user as User;
   const setting = user.setting;
-  const referenceRelations = memoId
-    ? state.relationList.filter(
-        (relation) => relation.memoId === memoId && relation.relatedMemoId !== memoId && relation.type === "REFERENCE"
-      )
-    : state.relationList.filter((relation) => relation.type === "REFERENCE");
-
-  useEffect(() => {
-    editorRef.current?.setContent(contentCache || "");
-    handleEditorFocus();
-  }, []);
 
   useEffect(() => {
     let visibility = setting.memoVisibility;
@@ -101,9 +85,7 @@ const MemoEditor = (props: Props) => {
             resourceList: memo.resourceList,
             relationList: memo.relationList,
           }));
-          if (!contentCache) {
-            editorRef.current?.setContent(memo.content ?? "");
-          }
+          editorRef.current?.setContent(memo.content ?? "");
         }
       });
     }
@@ -157,6 +139,12 @@ const MemoEditor = (props: Props) => {
       }
       return;
     }
+    if (event.key === "Escape") {
+      if (state.fullscreen) {
+        handleFullscreenBtnClick();
+      }
+      return;
+    }
     if (event.key === "Tab") {
       event.preventDefault();
       const tabSpace = " ".repeat(TAB_SPACE_WIDTH);
@@ -183,23 +171,6 @@ const MemoEditor = (props: Props) => {
         setState((prevState) => ({
           ...prevState,
           resourceList: [...prevState.resourceList, ...resourceList],
-        }));
-      },
-    });
-  };
-
-  const handleAddMemoRelationBtnClick = () => {
-    showCreateMemoRelationDialog({
-      onConfirm: (memoIdList) => {
-        setState((prevState) => ({
-          ...prevState,
-          relationList: uniqBy(
-            [
-              ...memoIdList.map((id) => ({ memoId: memoId || UNKNOWN_ID, relatedMemoId: id, type: "REFERENCE" as MemoRelationType })),
-              ...state.relationList,
-            ].filter((relation) => relation.relatedMemoId !== (memoId || UNKNOWN_ID)),
-            "relatedMemoId"
-          ),
         }));
       },
     });
@@ -251,13 +222,7 @@ const MemoEditor = (props: Props) => {
       if (resource) {
         uploadedResourceList.push(resource);
         if (memoId) {
-          await resourceStore.updateResource({
-            resource: Resource.fromPartial({
-              id: resource.id,
-              memoId,
-            }),
-            updateMask: ["memo_id"],
-          });
+          await upsertMemoResource(memoId, resource.id);
         }
       }
     }
@@ -285,11 +250,6 @@ const MemoEditor = (props: Props) => {
 
   const handleContentChange = (content: string) => {
     setHasContent(content !== "");
-    if (content !== "") {
-      setContentCache(content);
-    } else {
-      localStorage.removeItem(contentCacheKey);
-    }
   };
 
   const handleSaveBtnClick = async () => {
@@ -326,8 +286,6 @@ const MemoEditor = (props: Props) => {
         });
         filterStore.clearFilter();
       }
-      editorRef.current?.setContent("");
-      clearContentQueryParam();
     } catch (error: any) {
       console.error(error);
       toast.error(error.response.data.message);
@@ -346,10 +304,19 @@ const MemoEditor = (props: Props) => {
       await tagStore.upsertTag(tagName);
     }
 
+    setState((state) => {
+      return {
+        ...state,
+        fullscreen: false,
+      };
+    });
     setState((prevState) => ({
       ...prevState,
       resourceList: [],
+      relationList: [],
     }));
+    editorRef.current?.setContent("");
+    clearContentQueryParam();
     if (onConfirm) {
       onConfirm();
     }
@@ -359,24 +326,14 @@ const MemoEditor = (props: Props) => {
     if (!editorRef.current) {
       return;
     }
-    const currentPosition = editorRef.current?.getCursorPosition();
-    const currentLineNumber = editorRef.current?.getCursorLineNumber();
-    const currentLine = editorRef.current?.getLine(currentLineNumber);
-    let newLine = "";
-    let cursorChange = 0;
-    if (/^- \[( |x|X)\] /.test(currentLine)) {
-      newLine = currentLine.replace(/^- \[( |x|X)\] /, "");
-      cursorChange = -6;
-    } else if (/^\d+\. |- /.test(currentLine)) {
-      const match = currentLine.match(/^\d+\. |- /) ?? [""];
-      newLine = currentLine.replace(/^\d+\. |- /, "- [ ] ");
-      cursorChange = -match[0].length + 6;
+
+    const cursorPosition = editorRef.current.getCursorPosition();
+    const prevValue = editorRef.current.getContent().slice(0, cursorPosition);
+    if (prevValue === "" || prevValue.endsWith("\n")) {
+      editorRef.current?.insertText("", "- [ ] ");
     } else {
-      newLine = "- [ ] " + currentLine;
-      cursorChange = 6;
+      editorRef.current?.insertText("", "\n- [ ] ");
     }
-    editorRef.current?.setLine(currentLineNumber, newLine);
-    editorRef.current.setCursorPosition(currentPosition + cursorChange);
     editorRef.current?.scrollToCursor();
   };
 
@@ -395,6 +352,15 @@ const MemoEditor = (props: Props) => {
     editorRef.current?.scrollToCursor();
   };
 
+  const handleFullscreenBtnClick = useCallback(() => {
+    setState((state) => {
+      return {
+        ...state,
+        fullscreen: !state.fullscreen,
+      };
+    });
+  }, []);
+
   const handleTagSelectorClick = useCallback((tag: string) => {
     editorRef.current?.insertText(`#${tag} `);
   }, []);
@@ -405,31 +371,21 @@ const MemoEditor = (props: Props) => {
 
   const editorConfig = useMemo(
     () => ({
-      className: editorClassName ?? "",
+      className: `memo-editor`,
       initialContent: "",
       placeholder: t("editor.placeholder"),
+      fullscreen: state.fullscreen,
       onContentChange: handleContentChange,
       onPaste: handlePasteEvent,
     }),
-    [i18n.language]
+    [state.fullscreen, i18n.language]
   );
 
   const allowSave = (hasContent || state.resourceList.length > 0) && !state.isUploadingResource && !state.isRequesting;
 
-  const disableOption = (v: string) => {
-    const isAdminOrHost = currentUser.role === User_Role.ADMIN || currentUser.role === User_Role.HOST;
-
-    if (v === "PUBLIC" && !isAdminOrHost) {
-      return systemStatus.disablePublicMemos;
-    }
-    return false;
-  };
-
   return (
     <div
-      className={`${
-        className ?? ""
-      } relative w-full flex flex-col justify-start items-start bg-white dark:bg-zinc-700 px-4 pt-4 rounded-lg border-2 border-gray-200 dark:border-zinc-600`}
+      className={`${className ?? ""} memo-editor-container ${state.fullscreen ? "fullscreen" : ""}`}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onDrop={handleDropEvent}
@@ -438,61 +394,31 @@ const MemoEditor = (props: Props) => {
       onCompositionEnd={() => setIsInIME(false)}
     >
       <Editor ref={editorRef} {...editorConfig} />
-      <div className="relative w-full flex flex-row justify-between items-center pt-2 z-1">
-        <div className="flex flex-row justify-start items-center">
+      <div className="common-tools-wrapper">
+        <div className="common-tools-container">
           <TagSelector onTagSelectorClick={(tag) => handleTagSelectorClick(tag)} />
-          <IconButton
-            className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
-            onClick={handleUploadFileBtnClick}
-          >
-            <Icon.Image className="w-5 h-5 mx-auto" />
-          </IconButton>
-          <IconButton
-            className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
-            onClick={handleAddMemoRelationBtnClick}
-          >
-            <Icon.Link className="w-5 h-5 mx-auto" />
-          </IconButton>
-          <IconButton
-            className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
-            onClick={handleCheckBoxBtnClick}
-          >
-            <Icon.CheckSquare className="w-5 h-5 mx-auto" />
-          </IconButton>
-          <IconButton
-            className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
-            onClick={handleCodeBlockBtnClick}
-          >
-            <Icon.Code className="w-5 h-5 mx-auto" />
-          </IconButton>
+          <button className="action-btn">
+            <Icon.CheckSquare className="icon-img" onClick={handleCheckBoxBtnClick} />
+          </button>
+          <button className="action-btn">
+            <Icon.Code className="icon-img" onClick={handleCodeBlockBtnClick} />
+          </button>
+          <button className="action-btn">
+            <Icon.Image className="icon-img" onClick={handleUploadFileBtnClick} />
+          </button>
+          <button className="action-btn" onClick={handleFullscreenBtnClick}>
+            {state.fullscreen ? <Icon.Minimize className="icon-img" /> : <Icon.Maximize className="icon-img" />}
+          </button>
         </div>
       </div>
       <ResourceListView resourceList={state.resourceList} setResourceList={handleSetResourceList} />
-      <RelationListView relationList={referenceRelations} setRelationList={handleSetRelationList} />
-      <Divider className="!mt-2" />
-      <div className="w-full flex flex-row justify-between items-center py-3 dark:border-t-zinc-500">
-        <div className="relative flex flex-row justify-start items-center" onFocus={(e) => e.stopPropagation()}>
-          <Select
-            variant="plain"
-            value={state.memoVisibility}
-            startDecorator={<VisibilityIcon visibility={state.memoVisibility} />}
-            onChange={(_, visibility) => {
-              if (visibility) {
-                handleMemoVisibilityChange(visibility);
-              }
-            }}
-          >
-            {VISIBILITY_SELECTOR_ITEMS.map((item) => (
-              <Option key={item} value={item} className="whitespace-nowrap" disabled={disableOption(item)}>
-                {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
-              </Option>
-            ))}
-          </Select>
-        </div>
-        <div className="shrink-0 flex flex-row justify-end items-center">
-          <Button color="success" disabled={!allowSave} onClick={handleSaveBtnClick}>
+      <RelationListView relationList={state.relationList} setRelationList={handleSetRelationList} />
+      <div className="editor-footer-container">
+        <MemoVisibilitySelector value={state.memoVisibility} onChange={handleMemoVisibilityChange} />
+        <div className="buttons-container">
+          <button className="action-btn confirm-btn" disabled={!allowSave} onClick={handleSaveBtnClick}>
             {t("editor.save")}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

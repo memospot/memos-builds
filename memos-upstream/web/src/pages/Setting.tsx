@@ -9,8 +9,7 @@ import PreferencesSection from "@/components/Settings/PreferencesSection";
 import SSOSection from "@/components/Settings/SSOSection";
 import StorageSection from "@/components/Settings/StorageSection";
 import SystemSection from "@/components/Settings/SystemSection";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { User_Role } from "@/types/proto/api/v2/user_service";
+import { useUserStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import "@/less/setting.less";
 
@@ -22,11 +21,12 @@ interface State {
 
 const Setting = () => {
   const t = useTranslate();
-  const user = useCurrentUser();
+  const userStore = useUserStore();
+  const user = userStore.state.user;
   const [state, setState] = useState<State>({
     selectedSection: "my-account",
   });
-  const isHost = user.role === User_Role.HOST;
+  const isHost = user?.role === "HOST";
 
   const handleSectionSelectorItemClick = (settingSection: SettingSection) => {
     setState({
@@ -43,8 +43,8 @@ const Setting = () => {
   };
 
   return (
-    <section className="@container w-full max-w-3xl min-h-full flex flex-col justify-start items-start px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
-      <MobileHeader />
+    <section className="w-full min-h-full flex flex-col md:flex-row justify-start items-start px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+      <MobileHeader showSearch={false} />
       <div className="setting-page-wrapper">
         <div className="section-selector-container">
           <span className="section-title">{t("common.basic")}</span>
@@ -94,7 +94,7 @@ const Setting = () => {
             </>
           ) : null}
         </div>
-        <div className="section-content-container sm:max-w-[calc(100%-12rem)]">
+        <div className="section-content-container">
           <Select
             className="block mb-2 sm:!hidden"
             value={state.selectedSection}

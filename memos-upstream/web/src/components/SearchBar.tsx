@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import useDebounce from "react-use/lib/useDebounce";
+import useDebounce from "@/hooks/useDebounce";
 import { useFilterStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
@@ -19,12 +19,13 @@ const SearchBar = () => {
     () => {
       filterStore.setTextFilter(queryText.length === 0 ? undefined : queryText);
     },
-    1000,
+    200,
     [queryText]
   );
 
   const handleTextQueryInput = (event: React.FormEvent<HTMLInputElement>) => {
-    setQueryText(event.currentTarget.value);
+    const text = event.currentTarget.value;
+    setQueryText(text);
   };
 
   return (

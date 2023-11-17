@@ -3,21 +3,12 @@ syntax = "proto3";
 package memos.api.v2;
 
 import "google/api/annotations.proto";
-import "google/api/client.proto";
-import "google/protobuf/field_mask.proto";
 
 option go_package = "gen/api/v2";
 
 service SystemService {
   rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse) {
     option (google.api.http) = {get: "/api/v2/system/info"};
-  }
-  rpc UpdateSystemInfo(UpdateSystemInfoRequest) returns (UpdateSystemInfoResponse) {
-    option (google.api.http) = {
-      patch: "/api/v2/system/info",
-      body: "system_info"
-    };
-    option (google.api.method_signature) = "system_info,update_mask";
   }
 }
 
@@ -34,15 +25,5 @@ message SystemInfo {
 message GetSystemInfoRequest {}
 
 message GetSystemInfoResponse {
-  SystemInfo system_info = 1;
-}
-
-message UpdateSystemInfoRequest {
-  // System info is the updated data.
-  SystemInfo system_info = 1;
-  google.protobuf.FieldMask update_mask = 2;
-}
-
-message UpdateSystemInfoResponse {
   SystemInfo system_info = 1;
 }

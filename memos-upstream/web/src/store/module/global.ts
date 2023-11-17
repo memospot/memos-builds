@@ -1,4 +1,4 @@
-import { systemServiceClient } from "@/grpcweb";
+import axios from "axios";
 import * as api from "@/helpers/api";
 import storage from "@/helpers/storage";
 import i18n from "@/i18n";
@@ -7,10 +7,9 @@ import store, { useAppSelector } from "../";
 import { setAppearance, setGlobalState, setLocale } from "../reducer/global";
 
 export const initialGlobalState = async () => {
-  const { locale: storageLocale, appearance: storageAppearance } = storage.get(["locale", "appearance"]);
   const defaultGlobalState = {
-    locale: (storageLocale || "en") as Locale,
-    appearance: (storageAppearance || "system") as Appearance,
+    locale: "en" as Locale,
+    appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
       disablePasswordLogin: false,
@@ -22,7 +21,7 @@ export const initialGlobalState = async () => {
       memoDisplayWithUpdatedTs: false,
       customizedProfile: {
         name: "memos",
-        logoUrl: "/logo.png",
+        logoUrl: "/logo.webp",
         description: "",
         locale: "en",
         appearance: "system",
@@ -31,6 +30,14 @@ export const initialGlobalState = async () => {
     } as SystemStatus,
   };
 
+  const { locale: storageLocale, appearance: storageAppearance } = storage.get(["locale", "appearance"]);
+  if (storageLocale) {
+    defaultGlobalState.locale = storageLocale;
+  }
+  if (storageAppearance) {
+    defaultGlobalState.appearance = storageAppearance;
+  }
+
   const { data } = await api.getSystemStatus();
   if (data) {
     const customizedProfile = data.customizedProfile;
@@ -38,7 +45,7 @@ export const initialGlobalState = async () => {
       ...data,
       customizedProfile: {
         name: customizedProfile.name || "memos",
-        logoUrl: customizedProfile.logoUrl || "/logo.png",
+        logoUrl: customizedProfile.logoUrl || "/logo.webp",
         description: customizedProfile.description,
         locale: customizedProfile.locale || "en",
         appearance: customizedProfile.appearance || "system",
@@ -46,8 +53,8 @@ export const initialGlobalState = async () => {
       },
     };
     defaultGlobalState.locale =
-      defaultGlobalState.locale || defaultGlobalState.systemStatus.customizedProfile.locale || findNearestLanguageMatch(i18n.language);
-    defaultGlobalState.appearance = defaultGlobalState.appearance || defaultGlobalState.systemStatus.customizedProfile.appearance;
+      storageLocale || defaultGlobalState.systemStatus.customizedProfile.locale || findNearestLanguageMatch(i18n.language);
+    defaultGlobalState.appearance = defaultGlobalState.systemStatus.customizedProfile.appearance;
   }
   store.dispatch(setGlobalState(defaultGlobalState));
 };
@@ -68,8 +75,11 @@ export const useGlobalStore = () => {
     },
     fetchSystemStatus: async () => {
       const { data: systemStatus } = await api.getSystemStatus();
-      const { systemInfo } = await systemServiceClient.getSystemInfo({});
-      systemStatus.dbSize = systemInfo?.dbSize || 0;
+      // TODO: update this when api v2 is ready.
+      const {
+        data: { systemInfo },
+      } = await axios.get("/api/v2/system/info");
+      systemStatus.dbSize = Number(systemInfo.dbSize);
       store.dispatch(setGlobalState({ systemStatus: systemStatus }));
       return systemStatus;
     },

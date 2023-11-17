@@ -2,11 +2,10 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func (b *Bot) downloadAttachment(ctx context.Context, message *Message) (*Attachment, error) {
@@ -93,13 +92,13 @@ func (b *Bot) downloadFilepath(ctx context.Context, filePath string) ([]byte, er
 
 	resp, err := http.Get(fileURL + "/" + filePath)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail to http.Get")
+		return nil, fmt.Errorf("fail to http.Get: %s", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "fail to io.ReadAll")
+		return nil, fmt.Errorf("fail to io.ReadAll: %s", err)
 	}
 
 	return body, nil

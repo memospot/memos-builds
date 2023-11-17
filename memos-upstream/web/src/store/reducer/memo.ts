@@ -1,30 +1,23 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { uniqBy } from "lodash-es";
 
-type LoadingStatus = "incomplete" | "fetching" | "complete";
-
 interface State {
-  loadingStatus: LoadingStatus;
   memos: Memo[];
+  isFetching: boolean;
 }
 
 const memoSlice = createSlice({
   name: "memo",
   initialState: {
-    loadingStatus: "incomplete",
     memos: [],
+    // isFetching flag should starts with true.
+    isFetching: true,
   } as State,
   reducers: {
-    updateLoadingStatus: (state, action: PayloadAction<LoadingStatus>) => {
-      return {
-        ...state,
-        loadingStatus: action.payload,
-      };
-    },
     upsertMemos: (state, action: PayloadAction<Memo[]>) => {
       return {
         ...state,
-        memos: uniqBy([...action.payload, ...state.memos], "id"),
+        memos: uniqBy([...state.memos, ...action.payload], "id"),
       };
     },
     createMemo: (state, action: PayloadAction<Memo>) => {
@@ -58,9 +51,15 @@ const memoSlice = createSlice({
         }),
       };
     },
+    setIsFetching: (state, action: PayloadAction<boolean>) => {
+      return {
+        ...state,
+        isFetching: action.payload,
+      };
+    },
   },
 });
 
-export const { updateLoadingStatus, upsertMemos, createMemo, patchMemo, deleteMemo } = memoSlice.actions;
+export const { upsertMemos, createMemo, patchMemo, deleteMemo, setIsFetching } = memoSlice.actions;
 
 export default memoSlice.reducer;

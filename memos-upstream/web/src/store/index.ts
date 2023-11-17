@@ -3,6 +3,7 @@ import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
 import dialogReducer from "./reducer/dialog";
 import filterReducer from "./reducer/filter";
 import globalReducer from "./reducer/global";
+import layoutReducer from "./reducer/layout";
 import memoReducer from "./reducer/memo";
 import resourceReducer from "./reducer/resource";
 import tagReducer from "./reducer/tag";
@@ -17,6 +18,7 @@ const store = configureStore({
     filter: filterReducer,
     resource: resourceReducer,
     dialog: dialogReducer,
+    layout: layoutReducer,
   },
 });
 

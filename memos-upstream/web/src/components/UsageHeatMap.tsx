@@ -3,11 +3,8 @@ import { getMemoStats } from "@/helpers/api";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
 import { getDateStampByDate, getDateString, getTimeStampByDate } from "@/helpers/datetime";
 import * as utils from "@/helpers/utils";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { useGlobalStore } from "@/store/module";
-import { useUserV1Store, extractUsernameFromName } from "@/store/v1";
-import { useTranslate, Translations } from "@/utils/i18n";
-import { useFilterStore, useMemoStore } from "../store/module";
+import { useTranslate } from "@/utils/i18n";
+import { useFilterStore, useMemoStore, useUserStore } from "../store/module";
 import "@/less/usage-heat-map.less";
 
 const tableConfig = {
@@ -34,14 +31,10 @@ interface DailyUsageStat {
 const UsageHeatMap = () => {
   const t = useTranslate();
   const filterStore = useFilterStore();
-  const userV1Store = useUserV1Store();
-  const user = useCurrentUser();
+  const userStore = useUserStore();
   const memoStore = useMemoStore();
   const todayTimeStamp = getDateStampByDate(Date.now());
-  const weekDay = new Date(todayTimeStamp).getDay();
-  const weekFromMonday = ["zh-Hans", "ko"].includes(useGlobalStore().state.locale);
-  const dayTips = weekFromMonday ? ["mon", "", "wed", "", "fri", "", "sun"] : ["sun", "", "tue", "", "thu", "", "sat"];
-  const todayDay = weekFromMonday ? (weekDay == 0 ? 7 : weekDay) : weekDay + 1;
+  const todayDay = new Date(todayTimeStamp).getDay() + 1;
   const nullCell = new Array(7 - todayDay).fill(0);
   const usedDaysAmount = (tableConfig.width - 1) * tableConfig.height + todayDay;
   const beginDayTimestamp = todayTimeStamp - usedDaysAmount * DAILY_TIMESTAMP;
@@ -51,22 +44,19 @@ const UsageHeatMap = () => {
   const [allStat, setAllStat] = useState<DailyUsageStat[]>(getInitialUsageStat(usedDaysAmount, beginDayTimestamp));
   const [currentStat, setCurrentStat] = useState<DailyUsageStat | null>(null);
   const containerElRef = useRef<HTMLDivElement>(null);
+  const currentUsername = userStore.getCurrentUsername();
 
   useEffect(() => {
-    userV1Store.getOrFetchUserByUsername(extractUsernameFromName(user.name)).then((user) => {
+    userStore.getUserByUsername(currentUsername).then((user) => {
       if (!user) {
         return;
       }
-      setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createTime)) / 1000 / 3600 / 24));
+      setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24));
     });
-  }, [user.name]);
+  }, [currentUsername]);
 
   useEffect(() => {
-    if (memos.length === 0) {
-      return;
-    }
-
-    getMemoStats(extractUsernameFromName(user.name))
+    getMemoStats(currentUsername)
       .then(({ data }) => {
         setMemoAmount(data.length);
         const newStat: DailyUsageStat[] = getInitialUsageStat(usedDaysAmount, beginDayTimestamp);
@@ -85,7 +75,7 @@ const UsageHeatMap = () => {
       .catch((error) => {
         console.error(error);
       });
-  }, [memos.length, user.name]);
+  }, [memos.length, currentUsername]);
 
   const handleUsageStatItemMouseEnter = useCallback((event: React.MouseEvent, item: DailyUsageStat) => {
     const tempDiv = document.createElement("div");
@@ -161,11 +151,13 @@ const UsageHeatMap = () => {
           ))}
         </div>
         <div className="day-tip-text-container">
-          {dayTips.map((v, i) => (
-            <span className="tip-text" key={i}>
-              {v && t(("days." + v) as Translations)}
-            </span>
-          ))}
+          <span className="tip-text">{t("days.sun")}</span>
+          <span className="tip-text"></span>
+          <span className="tip-text">{t("days.tue")}</span>
+          <span className="tip-text"></span>
+          <span className="tip-text">{t("days.thu")}</span>
+          <span className="tip-text"></span>
+          <span className="tip-text">{t("days.sat")}</span>
         </div>
       </div>
       <p className="w-full pl-4 text-xs -mt-2 mb-3 text-gray-400 dark:text-zinc-400">

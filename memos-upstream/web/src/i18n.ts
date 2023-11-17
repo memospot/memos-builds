@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import { initReactI18next } from "react-i18next";
 
 export const availableLocales = [
-  "ar",
   "de",
   "en",
   "es",
