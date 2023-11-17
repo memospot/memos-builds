@@ -1,6 +1,5 @@
-import { Resource } from "@/types/proto/api/v2/resource_service";
 import { getResourceUrl } from "@/utils/resource";
-import ResourceIcon from "./ResourceIcon";
+import Icon from "./Icon";
 
 interface Props {
   resource: Resource;
@@ -16,18 +15,24 @@ const MemoResource: React.FC<Props> = (props: Props) => {
   };
 
   return (
-    <div className={`w-auto flex flex-row justify-start items-center text-gray-500 dark:text-gray-400 hover:opacity-80 ${className}`}>
-      {resource.type.startsWith("audio") ? (
-        <audio src={resourceUrl} controls></audio>
-      ) : (
-        <>
-          <ResourceIcon className="!w-4 !h-4 mr-1" resource={resource} />
-          <span className="text-sm max-w-[256px] truncate cursor-pointer" onClick={handlePreviewBtnClick}>
-            {resource.filename}
-          </span>
-        </>
-      )}
-    </div>
+    <>
+      <div className={`w-auto flex flex-row justify-start items-center hover:opacity-80 ${className}`}>
+        {resource.type.startsWith("audio") ? (
+          <>
+            <audio controls>
+              <source src={resourceUrl} type={resource.type} />
+            </audio>
+          </>
+        ) : (
+          <>
+            <Icon.FileText className="w-4 h-auto mr-1 text-gray-500" />
+            <span className="text-gray-500 text-sm max-w-[256px] truncate font-mono cursor-pointer" onClick={handlePreviewBtnClick}>
+              {resource.filename}
+            </span>
+          </>
+        )}
+      </div>
+    </>
   );
 };
 

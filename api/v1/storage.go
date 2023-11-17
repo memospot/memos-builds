@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-
-	"github.com/usememos/memos/internal/util"
+	"github.com/usememos/memos/api/auth"
+	"github.com/usememos/memos/common/util"
 	"github.com/usememos/memos/store"
 )
 
@@ -16,8 +16,6 @@ const (
 	LocalStorage int32 = -1
 	// DatabaseStorage means the storage service is database.
 	DatabaseStorage int32 = 0
-	// Default storage service is database.
-	DefaultStorage int32 = DatabaseStorage
 )
 
 type StorageType string
@@ -79,10 +77,11 @@ func (s *APIV1Service) registerStorageRoutes(g *echo.Group) {
 //	@Success	200	{object}	[]store.Storage	"List of storages"
 //	@Failure	401	{object}	nil				"Missing user in session | Unauthorized"
 //	@Failure	500	{object}	nil				"Failed to find user | Failed to convert storage"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/storage [GET]
 func (s *APIV1Service) GetStorageList(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -125,10 +124,11 @@ func (s *APIV1Service) GetStorageList(c echo.Context) error {
 //	@Failure	400		{object}	nil						"Malformatted post storage request"
 //	@Failure	401		{object}	nil						"Missing user in session"
 //	@Failure	500		{object}	nil						"Failed to find user | Failed to create storage | Failed to convert storage"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/storage [POST]
 func (s *APIV1Service) CreateStorage(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -182,13 +182,14 @@ func (s *APIV1Service) CreateStorage(c echo.Context) error {
 //	@Failure	400			{object}	nil		"ID is not a number: %s | Storage service %d is using"
 //	@Failure	401			{object}	nil		"Missing user in session | Unauthorized"
 //	@Failure	500			{object}	nil		"Failed to find user | Failed to find storage | Failed to unmarshal storage service id | Failed to delete storage"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/storage/{storageId} [DELETE]
 //
 // NOTES:
 // - error message "Storage service %d is using" probably should be "Storage service %d is in use".
 func (s *APIV1Service) DeleteStorage(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -213,7 +214,7 @@ func (s *APIV1Service) DeleteStorage(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find storage").SetInternal(err)
 	}
 	if systemSetting != nil {
-		storageServiceID := DefaultStorage
+		storageServiceID := DatabaseStorage
 		err = json.Unmarshal([]byte(systemSetting.Value), &storageServiceID)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to unmarshal storage service id").SetInternal(err)
@@ -240,10 +241,11 @@ func (s *APIV1Service) DeleteStorage(c echo.Context) error {
 //	@Failure	400			{object}	nil						"ID is not a number: %s | Malformatted patch storage request | Malformatted post storage request"
 //	@Failure	401			{object}	nil						"Missing user in session | Unauthorized"
 //	@Failure	500			{object}	nil						"Failed to find user | Failed to patch storage | Failed to convert storage"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/storage/{storageId} [PATCH]
 func (s *APIV1Service) UpdateStorage(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}

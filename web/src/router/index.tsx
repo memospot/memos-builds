@@ -1,126 +1,250 @@
 import { lazy } from "react";
 import { createBrowserRouter, redirect } from "react-router-dom";
-import App from "@/App";
+import { isNullorUndefined } from "@/helpers/utils";
+import Archived from "@/pages/Archived";
+import DailyReview from "@/pages/DailyReview";
+import ResourcesDashboard from "@/pages/ResourcesDashboard";
+import Setting from "@/pages/Setting";
+import store from "@/store";
 import { initialGlobalState, initialUserState } from "@/store/module";
 
 const Root = lazy(() => import("@/layouts/Root"));
-const SignIn = lazy(() => import("@/pages/SignIn"));
-const SignUp = lazy(() => import("@/pages/SignUp"));
+const Auth = lazy(() => import("@/pages/Auth"));
 const AuthCallback = lazy(() => import("@/pages/AuthCallback"));
 const Explore = lazy(() => import("@/pages/Explore"));
 const Home = lazy(() => import("@/pages/Home"));
-const UserProfile = lazy(() => import("@/pages/UserProfile"));
 const MemoDetail = lazy(() => import("@/pages/MemoDetail"));
 const EmbedMemo = lazy(() => import("@/pages/EmbedMemo"));
-const Archived = lazy(() => import("@/pages/Archived"));
-const DailyReview = lazy(() => import("@/pages/DailyReview"));
-const Resources = lazy(() => import("@/pages/Resources"));
-const Inboxes = lazy(() => import("@/pages/Inboxes"));
-const Setting = lazy(() => import("@/pages/Setting"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-const initialGlobalStateLoader = async () => {
-  try {
-    await initialGlobalState();
-  } catch (error) {
-    // do nothing.
-  }
-  return null;
-};
+const initialGlobalStateLoader = (() => {
+  let done = false;
 
-const initialUserStateLoader = async (redirectWhenNotFound = true) => {
-  let user = undefined;
-  try {
-    user = await initialUserState();
-  } catch (error) {
-    // do nothing.
-  }
-
-  if (!user && redirectWhenNotFound) {
-    return redirect("/explore");
-  }
-  return null;
-};
+  return async () => {
+    if (done) {
+      return;
+    }
+    done = true;
+    try {
+      await initialGlobalState();
+    } catch (error) {
+      // do nth
+    }
+  };
+})();
 
 const router = createBrowserRouter([
   {
+    path: "/auth",
+    element: <Auth />,
+    loader: async () => {
+      await initialGlobalStateLoader();
+      return null;
+    },
+  },
+  {
+    path: "/auth/callback",
+    element: <AuthCallback />,
+  },
+  {
     path: "/",
-    element: <App />,
-    loader: () => initialGlobalStateLoader(),
+    element: <Root />,
     children: [
       {
-        path: "/auth",
-        element: <SignIn />,
+        path: "",
+        element: <Home />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+          const { systemStatus } = store.getState().global;
+
+          // if user is authenticated, then show home
+          if (!isNullorUndefined(user)) {
+            return null;
+          }
+
+          // if user is anonymous, then redirect to auth if disabled public memos, else redirect to explore
+          if (systemStatus.disablePublicMemos) {
+            return redirect("/auth");
+          }
+
+          return redirect("/explore");
+        },
       },
       {
-        path: "/auth/signup",
-        element: <SignUp />,
+        path: "u/:username",
+        element: <Home />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+          const { systemStatus } = store.getState().global;
+
+          if (isNullorUndefined(user) && systemStatus.disablePublicMemos) {
+            return redirect("/auth");
+          }
+
+          return null;
+        },
       },
       {
-        path: "/auth/callback",
-        element: <AuthCallback />,
+        path: "explore",
+        element: <Explore />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+          const { systemStatus } = store.getState().global;
+
+          if (isNullorUndefined(user) && systemStatus.disablePublicMemos) {
+            return redirect("/auth");
+          }
+          return null;
+        },
       },
       {
-        path: "/",
-        element: <Root />,
-        children: [
-          {
-            path: "",
-            element: <Home />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "review",
-            element: <DailyReview />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "resources",
-            element: <Resources />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "inbox",
-            element: <Inboxes />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "archived",
-            element: <Archived />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "setting",
-            element: <Setting />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "explore",
-            element: <Explore />,
-            loader: () => initialUserStateLoader(false),
-          },
-        ],
+        path: "review",
+        element: <DailyReview />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
+            return redirect("/auth");
+          }
+          return null;
+        },
       },
       {
-        path: "/m/:memoId",
-        element: <MemoDetail />,
-        loader: () => initialUserStateLoader(false),
+        path: "resources",
+        element: <ResourcesDashboard />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
+            return redirect("/auth");
+          }
+          return null;
+        },
       },
       {
-        path: "/m/:memoId/embed",
-        element: <EmbedMemo />,
-        loader: () => initialUserStateLoader(false),
+        path: "archived",
+        element: <Archived />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
+            return redirect("/auth");
+          }
+          return null;
+        },
       },
       {
-        path: "/u/:username",
-        element: <UserProfile />,
-        loader: () => initialUserStateLoader(false),
-      },
-      {
-        path: "*",
-        element: <NotFound />,
+        path: "setting",
+        element: <Setting />,
+        loader: async () => {
+          await initialGlobalStateLoader();
+
+          try {
+            await initialUserState();
+          } catch (error) {
+            // do nth
+          }
+
+          const { user } = store.getState().user;
+
+          if (isNullorUndefined(user)) {
+            return redirect("/auth");
+          }
+          return null;
+        },
       },
     ],
+  },
+  {
+    path: "/m/:memoId",
+    element: <MemoDetail />,
+    loader: async () => {
+      await initialGlobalStateLoader();
+
+      try {
+        await initialUserState();
+      } catch (error) {
+        // do nth
+      }
+
+      const { user } = store.getState().user;
+      const { systemStatus } = store.getState().global;
+
+      if (isNullorUndefined(user) && systemStatus.disablePublicMemos) {
+        return redirect("/auth");
+      }
+      return null;
+    },
+  },
+  {
+    path: "/m/:memoId/embed",
+    element: <EmbedMemo />,
+    loader: async () => {
+      await initialGlobalStateLoader();
+
+      try {
+        await initialUserState();
+      } catch (error) {
+        // do nth
+      }
+      return null;
+    },
+  },
+  {
+    path: "*",
+    element: <NotFound />,
+    loader: async () => {
+      await initialGlobalStateLoader();
+      return null;
+    },
   },
 ]);
 

@@ -1,6 +1,5 @@
 import { marked } from "..";
 import { matcher } from "../matcher";
-import InlineCode from "./InlineCode";
 import Link from "./Link";
 import PlainLink from "./PlainLink";
 import PlainText from "./PlainText";
@@ -14,7 +13,7 @@ const renderer = (rawStr: string) => {
   }
 
   const level = matchResult[1].length;
-  const parsedContent = marked(matchResult[2], [], [InlineCode, Link, PlainLink, PlainText]);
+  const parsedContent = marked(matchResult[2], [], [Link, PlainLink, PlainText]);
   if (level === 1) {
     return <h1>{parsedContent}</h1>;
   } else if (level === 2) {

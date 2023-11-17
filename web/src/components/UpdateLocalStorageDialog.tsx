@@ -50,9 +50,9 @@ const UpdateLocalStorageDialog: React.FC<Props> = (props: Props) => {
       </div>
       <div className="dialog-content-container max-w-xs">
         <p className="text-sm break-words mb-1">{t("setting.storage-section.update-local-path-description")}</p>
-        <div className="flex flex-row items-center mb-2 gap-x-2">
-          <span className="text-sm text-gray-400 break-all">e.g. {"assets/{timestamp}_{filename}"}</span>
-          <LearnMore url="https://usememos.com/docs/advanced-settings/local-storage" />
+        <div className="flex flex-row">
+          <p className="text-sm text-gray-400 mb-2 break-all">e.g. {"assets/{filename}"}</p>
+          <LearnMore url="https://usememos.com/docs/local-storage" />
         </div>
         <Input
           className="mb-2"

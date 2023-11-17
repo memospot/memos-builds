@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/usememos/memos/store"
 )
 
@@ -44,9 +43,4 @@ func TestMemoStore(t *testing.T) {
 		ID: memo.ID,
 	})
 	require.NoError(t, err)
-	memoList, err = ts.ListMemos(ctx, &store.FindMemo{
-		CreatorID: &user.ID,
-	})
-	require.NoError(t, err)
-	require.Equal(t, 0, len(memoList))
 }

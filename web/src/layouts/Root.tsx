@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import DemoBanner from "@/components/DemoBanner";
-import Navigation from "@/components/Navigation";
+import Header from "@/components/Header";
 
 function Root() {
   return (
@@ -9,10 +9,8 @@ function Root() {
         <DemoBanner />
       </div>
       <div className="w-full max-w-6xl mx-auto flex flex-row justify-center items-start sm:px-4">
-        <div className="hidden sm:block sticky top-0 left-0 w-56">
-          <Navigation />
-        </div>
-        <main className="w-full min-h-screen sm:max-w-[calc(100%-14rem)] flex-grow shrink flex flex-col justify-start items-start">
+        <Header />
+        <main className="w-auto max-w-full flex-grow shrink flex flex-col justify-start items-start">
           <Outlet />
         </main>
       </div>
