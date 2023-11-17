@@ -21,7 +21,7 @@
 before:
   hooks: 
     - sh -c "cd ./memos-upstream/web && pnpm i --frozen-lockfile"
-    # - sh -c "cd ./memos-upstream/web && pnpm type-gen"
+    - sh -c "cd ./memos-upstream/web && pnpm type-gen || true"
     - sh -c "cd ./memos-upstream/web && pnpm build"
     # backup front-end placeholder only once
     - sh -c "cd ./memos-upstream && mv -nT ./server/dist ./server/dist.bak || true" 
@@ -29,7 +29,7 @@ before:
     - sh -c "cd ./memos-upstream && rm -rf ./server/dist"
     # move front-end build to server/dist
     - sh -c "cd ./memos-upstream && mv -f ./web/dist ./server/"
-    - sh -c "cd ./memos-upstream && go mod tidy -go=1.19"
+    - sh -c "cd ./memos-upstream && go mod tidy"
 
 project_name: memos
 dist: build
