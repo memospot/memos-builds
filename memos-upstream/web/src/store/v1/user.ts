@@ -1,16 +1,12 @@
 import { create } from "zustand";
-import { userServiceClient } from "@/grpcweb";
-import { User } from "@/types/proto/api/v2/user_service";
+import * as api from "@/helpers/api";
+import { convertResponseModelUser } from "../module";
 
 interface UserV1Store {
   userMapByUsername: Record<string, User>;
   getOrFetchUserByUsername: (username: string) => Promise<User>;
   getUserByUsername: (username: string) => User;
-  updateUser: (user: Partial<User>, updateMask: string[]) => Promise<User>;
 }
-
-// Request cache is used to prevent multiple requests.
-const requestCache = new Map<string, Promise<any>>();
 
 const useUserV1Store = create<UserV1Store>()((set, get) => ({
   userMapByUsername: {},
@@ -19,46 +15,17 @@ const useUserV1Store = create<UserV1Store>()((set, get) => ({
     if (userMap[username]) {
       return userMap[username] as User;
     }
-    if (requestCache.has(username)) {
-      return await requestCache.get(username);
-    }
 
-    const promisedUser = userServiceClient
-      .getUser({
-        username: username,
-      })
-      .then(({ user }) => user);
-    requestCache.set(username, promisedUser);
-    const user = await promisedUser;
-    if (!user) {
-      throw new Error("User not found");
-    }
-    requestCache.delete(username);
+    const { data } = await api.getUserByUsername(username);
+    const user = convertResponseModelUser(data);
     userMap[username] = user;
     set(userMap);
     return user;
   },
   getUserByUsername: (username: string) => {
     const userMap = get().userMapByUsername;
-    return userMap[username];
-  },
-  updateUser: async (user: Partial<User>, updateMask: string[]) => {
-    const { user: updatedUser } = await userServiceClient.updateUser({
-      user: user,
-      updateMask: updateMask,
-    });
-    if (!updatedUser) {
-      throw new Error("User not found");
-    }
-    const userMap = get().userMapByUsername;
-    userMap[updatedUser.username] = updatedUser;
-    set(userMap);
-    return updatedUser;
+    return userMap[username] as User;
   },
 }));
-
-export const extractUsernameFromName = (name: string) => {
-  return name.split("/")[1];
-};
 
 export default useUserV1Store;

@@ -1,13 +1,11 @@
 package getter
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/microcosm-cc/bluemonday"
 )
 
 type Image struct {
@@ -31,15 +29,10 @@ func GetImage(urlStr string) (*Image, error) {
 		return nil, err
 	}
 	if !strings.HasPrefix(mediatype, "image/") {
-		return nil, errors.New("Wrong image mediatype")
+		return nil, fmt.Errorf("Wrong image mediatype")
 	}
 
 	bodyBytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	bodyBytes, err = SanitizeContent(bodyBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -49,11 +42,4 @@ func GetImage(urlStr string) (*Image, error) {
 		Mediatype: mediatype,
 	}
 	return image, nil
-}
-
-func SanitizeContent(content []byte) ([]byte, error) {
-	bodyString := string(content)
-
-	bm := bluemonday.UGCPolicy()
-	return []byte(bm.Sanitize(bodyString)), nil
 }

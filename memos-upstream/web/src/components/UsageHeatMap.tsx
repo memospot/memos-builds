@@ -3,10 +3,8 @@ import { getMemoStats } from "@/helpers/api";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
 import { getDateStampByDate, getDateString, getTimeStampByDate } from "@/helpers/datetime";
 import * as utils from "@/helpers/utils";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { useUserV1Store } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
-import { useFilterStore, useMemoStore } from "../store/module";
+import { useFilterStore, useMemoStore, useUserStore } from "../store/module";
 import "@/less/usage-heat-map.less";
 
 const tableConfig = {
@@ -33,8 +31,7 @@ interface DailyUsageStat {
 const UsageHeatMap = () => {
   const t = useTranslate();
   const filterStore = useFilterStore();
-  const userV1Store = useUserV1Store();
-  const user = useCurrentUser();
+  const userStore = useUserStore();
   const memoStore = useMemoStore();
   const todayTimeStamp = getDateStampByDate(Date.now());
   const todayDay = new Date(todayTimeStamp).getDay() + 1;
@@ -47,22 +44,19 @@ const UsageHeatMap = () => {
   const [allStat, setAllStat] = useState<DailyUsageStat[]>(getInitialUsageStat(usedDaysAmount, beginDayTimestamp));
   const [currentStat, setCurrentStat] = useState<DailyUsageStat | null>(null);
   const containerElRef = useRef<HTMLDivElement>(null);
+  const currentUsername = userStore.getCurrentUsername();
 
   useEffect(() => {
-    userV1Store.getOrFetchUserByUsername(user.username).then((user) => {
+    userStore.getUserByUsername(currentUsername).then((user) => {
       if (!user) {
         return;
       }
-      setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createTime)) / 1000 / 3600 / 24));
+      setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24));
     });
-  }, [user.username]);
+  }, [currentUsername]);
 
   useEffect(() => {
-    if (memos.length === 0) {
-      return;
-    }
-
-    getMemoStats(user.username)
+    getMemoStats(currentUsername)
       .then(({ data }) => {
         setMemoAmount(data.length);
         const newStat: DailyUsageStat[] = getInitialUsageStat(usedDaysAmount, beginDayTimestamp);
@@ -81,7 +75,7 @@ const UsageHeatMap = () => {
       .catch((error) => {
         console.error(error);
       });
-  }, [memos.length, user.username]);
+  }, [memos.length, currentUsername]);
 
   const handleUsageStatItemMouseEnter = useCallback((event: React.MouseEvent, item: DailyUsageStat) => {
     const tempDiv = document.createElement("div");

@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"github.com/usememos/memos/plugin/idp"
 	"github.com/usememos/memos/store"
 )
