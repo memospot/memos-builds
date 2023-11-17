@@ -1,20 +1,25 @@
-import { useTranslation } from "react-i18next";
+import { Tooltip } from "@mui/joy";
+import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 
 interface Props {
-  url: string;
   className?: string;
+  url: string;
+  title?: string;
 }
 
-const LearnMore = (props: Props) => {
-  const { url, className } = props;
-  const { t } = useTranslation();
+const LearnMore: React.FC<Props> = (props: Props) => {
+  const { className, url, title } = props;
+  const t = useTranslate();
 
   return (
-    <a className={`${className || ""} text-sm text-blue-600 hover:opacity-80 hover:underline`} href={url} target="_blank">
-      {t("common.learn-more")}
-      <Icon.ExternalLink className="inline -mt-1 ml-1 w-4 h-auto opacity-80" />
-    </a>
+    <>
+      <Tooltip title={title ?? t("common.learn-more")} placement="top">
+        <a className={`text-gray-500 dark:text-gray-400 hover:text-blue-600 ${className}`} href={url} target="_blank">
+          <Icon.ExternalLink className="w-4 h-auto" />
+        </a>
+      </Tooltip>
+    </>
   );
 };
 

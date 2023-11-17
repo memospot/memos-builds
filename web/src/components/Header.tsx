@@ -1,18 +1,17 @@
+import classNames from "classnames";
 import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { useLayoutStore, useUserStore } from "@/store/module";
+import { useGlobalStore, useLayoutStore, useUserStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import { resolution } from "@/utils/layout";
 import Icon from "./Icon";
-import showSettingDialog from "./SettingDialog";
-import showAskAIDialog from "./AskAIDialog";
-import showArchivedMemoDialog from "./ArchivedMemoDialog";
-import showAboutSiteDialog from "./AboutSiteDialog";
+import UpgradeVersionView from "./UpgradeVersionBanner";
 import UserBanner from "./UserBanner";
 
 const Header = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const location = useLocation();
+  const globalStore = useGlobalStore();
   const userStore = useUserStore();
   const layoutStore = useLayoutStore();
   const showHeader = layoutStore.state.showHeader;
@@ -32,7 +31,7 @@ const Header = () => {
 
   return (
     <div
-      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full flex-shrink-0 pointer-events-none sm:pointer-events-auto z-20 ${
+      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full shrink-0 pointer-events-none sm:pointer-events-auto z-10 ${
         showHeader && "pointer-events-auto"
       }`}
     >
@@ -55,9 +54,10 @@ const Header = () => {
                 to="/"
                 id="header-home"
                 className={({ isActive }) =>
-                  `${
-                    isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
                 }
               >
                 <>
@@ -68,9 +68,10 @@ const Header = () => {
                 to="/review"
                 id="header-review"
                 className={({ isActive }) =>
-                  `${
-                    isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
                 }
               >
                 <>
@@ -81,9 +82,10 @@ const Header = () => {
                 to="/resources"
                 id="header-resources"
                 className={({ isActive }) =>
-                  `${
-                    isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
                 }
               >
                 <>
@@ -92,42 +94,56 @@ const Header = () => {
               </NavLink>
             </>
           )}
-          <NavLink
-            to="/explore"
-            id="header-explore"
-            className={({ isActive }) =>
-              `${
-                isActive && "bg-white dark:bg-zinc-700 shadow"
-              } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
-            }
-          >
+          {!globalStore.getDisablePublicMemos() && (
             <>
-              <Icon.Hash className="mr-3 w-6 h-auto opacity-70" /> {t("common.explore")}
+              <NavLink
+                to="/explore"
+                id="header-explore"
+                className={({ isActive }) =>
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
+                }
+              >
+                <>
+                  <Icon.Hash className="mr-3 w-6 h-auto opacity-70" /> {t("common.explore")}
+                </>
+              </NavLink>
             </>
-          </NavLink>
+          )}
+
           {!isVisitorMode && (
             <>
-              <button
-                id="header-ask-ai"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showAskAIDialog()}
+              <NavLink
+                to="/archived"
+                id="header-archived"
+                className={({ isActive }) =>
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
+                }
               >
-                <Icon.Bot className="mr-3 w-6 h-auto opacity-70" /> {t("ask-ai.title")}
-              </button>
-              <button
-                id="header-archived-memo"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showArchivedMemoDialog()}
+                <>
+                  <Icon.Archive className="mr-3 w-6 h-auto opacity-70" /> {t("common.archived")}
+                </>
+              </NavLink>
+              <NavLink
+                to="/setting"
+                id="header-setting"
+                className={({ isActive }) =>
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
+                }
               >
-                <Icon.Archive className="mr-3 w-6 h-auto opacity-70" /> {t("common.archived")}
-              </button>
-              <button
-                id="header-settings"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showSettingDialog()}
-              >
-                <Icon.Settings className="mr-3 w-6 h-auto opacity-70" /> {t("common.settings")}
-              </button>
+                <>
+                  <Icon.Settings className="mr-3 w-6 h-auto opacity-70" /> {t("common.settings")}
+                </>
+              </NavLink>
+              <UpgradeVersionView />
             </>
           )}
           {isVisitorMode && (
@@ -136,22 +152,16 @@ const Header = () => {
                 to="/auth"
                 id="header-auth"
                 className={({ isActive }) =>
-                  `${
-                    isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  classNames(
+                    "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                    isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  )
                 }
               >
                 <>
                   <Icon.LogIn className="mr-3 w-6 h-auto opacity-70" /> {t("common.sign-in")}
                 </>
               </NavLink>
-              <button
-                id="header-about"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showAboutSiteDialog()}
-              >
-                <Icon.CupSoda className="mr-3 w-6 h-auto opacity-70" /> {t("common.about")}
-              </button>
             </>
           )}
         </div>

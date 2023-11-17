@@ -4,7 +4,7 @@ WORKDIR /frontend-build
 
 COPY ./web/package.json ./web/pnpm-lock.yaml ./
 
-RUN npm install -g pnpm && pnpm i --frozen-lockfile
+RUN corepack enable && pnpm i --frozen-lockfile
 
 COPY ./web/ .
 
@@ -14,12 +14,10 @@ RUN pnpm build
 FROM golang:1.19.3-alpine3.16 AS backend
 WORKDIR /backend-build
 
-RUN apk update && apk add --no-cache gcc musl-dev
-
 COPY . .
 COPY --from=frontend /frontend-build/dist ./server/dist
 
-RUN go build -o memos ./main.go
+RUN CGO_ENABLED=0 go build -o memos ./main.go
 
 # Make workspace with above generated files.
 FROM alpine:3.16 AS monolithic
@@ -34,5 +32,9 @@ EXPOSE 5230
 
 # Directory to store the data, which can be referenced as the mounting point.
 RUN mkdir -p /var/opt/memos
+VOLUME /var/opt/memos
 
-ENTRYPOINT ["./memos", "--mode", "prod", "--port", "5230"]
+ENV MEMOS_MODE="prod"
+ENV MEMOS_PORT="5230"
+
+ENTRYPOINT ["./memos"]

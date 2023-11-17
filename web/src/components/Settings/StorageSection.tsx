@@ -1,16 +1,17 @@
-import { Divider, Select, Option } from "@mui/joy";
+import { Divider, Option, Select } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
-import { useGlobalStore } from "@/store/module";
 import * as api from "@/helpers/api";
+import { useGlobalStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import showCreateStorageServiceDialog from "../CreateStorageServiceDialog";
+import { showCommonDialog } from "../Dialog/CommonDialog";
+import LearnMore from "../LearnMore";
 import showUpdateLocalStorageDialog from "../UpdateLocalStorageDialog";
 import Dropdown from "../kit/Dropdown";
-import { showCommonDialog } from "../Dialog/CommonDialog";
 
 const StorageSection = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const globalStore = useGlobalStore();
   const systemStatus = globalStore.state.systemStatus;
   const [storageServiceId, setStorageServiceId] = useState(systemStatus.storageServiceId);
@@ -21,9 +22,7 @@ const StorageSection = () => {
   }, []);
 
   const fetchStorageList = async () => {
-    const {
-      data: { data: storageList },
-    } = await api.getStorageList();
+    const { data: storageList } = await api.getStorageList();
     setStorageList(storageList);
   };
 
@@ -75,14 +74,19 @@ const StorageSection = () => {
         ))}
       </Select>
       <Divider />
-      <div className="mt-4 mb-2 w-full flex flex-row justify-start items-center">
-        <span className="font-mono text-sm text-gray-400 mr-2">{t("setting.storage-section.storage-services-list")}</span>
-        <button className="btn-normal px-2 py-0 leading-7" onClick={() => showCreateStorageServiceDialog(undefined, fetchStorageList)}>
+      <div className="mt-4 mb-2 w-full flex flex-row justify-start items-center gap-1">
+        <span className="font-mono text-sm text-gray-400">{t("setting.storage-section.storage-services-list")}</span>
+        <LearnMore url="https://usememos.com/docs/storage" />
+        <button className="btn-normal px-2 py-0 ml-1" onClick={() => showCreateStorageServiceDialog(undefined, fetchStorageList)}>
           {t("common.create")}
         </button>
       </div>
       <div className="mt-2 w-full flex flex-col">
-        <div className="py-2 w-full border-t dark:border-zinc-700 flex flex-row items-center justify-between">
+        <div
+          className={
+            storageServiceId !== -1 ? "hidden" : "py-2 w-full border-t dark:border-zinc-700 flex flex-row items-center justify-between"
+          }
+        >
           <div className="flex flex-row items-center">
             <p className="ml-2">{t("setting.storage-section.type-local")}</p>
           </div>

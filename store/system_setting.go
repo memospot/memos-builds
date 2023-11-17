@@ -2,94 +2,21 @@ package store
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"strings"
-
-	"github.com/usememos/memos/api"
-	"github.com/usememos/memos/common"
 )
 
-type systemSettingRaw struct {
-	Name        api.SystemSettingName
+type SystemSetting struct {
+	Name        string
 	Value       string
 	Description string
 }
 
-func (raw *systemSettingRaw) toSystemSetting() *api.SystemSetting {
-	return &api.SystemSetting{
-		Name:        raw.Name,
-		Value:       raw.Value,
-		Description: raw.Description,
-	}
+type FindSystemSetting struct {
+	Name string
 }
 
-func (s *Store) UpsertSystemSetting(ctx context.Context, upsert *api.SystemSettingUpsert) (*api.SystemSetting, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	systemSettingRaw, err := upsertSystemSetting(ctx, tx, upsert)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	systemSetting := systemSettingRaw.toSystemSetting()
-
-	return systemSetting, nil
-}
-
-func (s *Store) FindSystemSettingList(ctx context.Context, find *api.SystemSettingFind) ([]*api.SystemSetting, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	systemSettingRawList, err := findSystemSettingList(ctx, tx, find)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	list := []*api.SystemSetting{}
-	for _, raw := range systemSettingRawList {
-		list = append(list, raw.toSystemSetting())
-	}
-
-	return list, nil
-}
-
-func (s *Store) FindSystemSetting(ctx context.Context, find *api.SystemSettingFind) (*api.SystemSetting, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	systemSettingRawList, err := findSystemSettingList(ctx, tx, find)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(systemSettingRawList) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("not found")}
-	}
-
-	return systemSettingRawList[0].toSystemSetting(), nil
-}
-
-func upsertSystemSetting(ctx context.Context, tx *sql.Tx, upsert *api.SystemSettingUpsert) (*systemSettingRaw, error) {
-	query := `
+func (s *Store) UpsertSystemSetting(ctx context.Context, upsert *SystemSetting) (*SystemSetting, error) {
+	stmt := `
 		INSERT INTO system_setting (
 			name, value, description
 		)
@@ -98,56 +25,84 @@ func upsertSystemSetting(ctx context.Context, tx *sql.Tx, upsert *api.SystemSett
 		SET
 			value = EXCLUDED.value,
 			description = EXCLUDED.description
-		RETURNING name, value, description
 	`
-	var systemSettingRaw systemSettingRaw
-	if err := tx.QueryRowContext(ctx, query, upsert.Name, upsert.Value, upsert.Description).Scan(
-		&systemSettingRaw.Name,
-		&systemSettingRaw.Value,
-		&systemSettingRaw.Description,
-	); err != nil {
-		return nil, FormatError(err)
+	if _, err := s.db.ExecContext(ctx, stmt, upsert.Name, upsert.Value, upsert.Description); err != nil {
+		return nil, err
 	}
 
-	return &systemSettingRaw, nil
+	systemSetting := upsert
+	return systemSetting, nil
 }
 
-func findSystemSettingList(ctx context.Context, tx *sql.Tx, find *api.SystemSettingFind) ([]*systemSettingRaw, error) {
+func (s *Store) ListSystemSettings(ctx context.Context, find *FindSystemSetting) ([]*SystemSetting, error) {
 	where, args := []string{"1 = 1"}, []any{}
-	if find.Name.String() != "" {
-		where, args = append(where, "name = ?"), append(args, find.Name.String())
+	if find.Name != "" {
+		where, args = append(where, "name = ?"), append(args, find.Name)
 	}
 
 	query := `
 		SELECT
 			name,
-		  value,
+			value,
 			description
 		FROM system_setting
 		WHERE ` + strings.Join(where, " AND ")
-	rows, err := tx.QueryContext(ctx, query, args...)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, FormatError(err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	systemSettingRawList := make([]*systemSettingRaw, 0)
+	list := []*SystemSetting{}
 	for rows.Next() {
-		var systemSettingRaw systemSettingRaw
+		systemSettingMessage := &SystemSetting{}
 		if err := rows.Scan(
-			&systemSettingRaw.Name,
-			&systemSettingRaw.Value,
-			&systemSettingRaw.Description,
+			&systemSettingMessage.Name,
+			&systemSettingMessage.Value,
+			&systemSettingMessage.Description,
 		); err != nil {
-			return nil, FormatError(err)
+			return nil, err
 		}
-
-		systemSettingRawList = append(systemSettingRawList, &systemSettingRaw)
+		list = append(list, systemSettingMessage)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, FormatError(err)
+		return nil, err
 	}
 
-	return systemSettingRawList, nil
+	for _, systemSettingMessage := range list {
+		s.systemSettingCache.Store(systemSettingMessage.Name, systemSettingMessage)
+	}
+	return list, nil
+}
+
+func (s *Store) GetSystemSetting(ctx context.Context, find *FindSystemSetting) (*SystemSetting, error) {
+	if find.Name != "" {
+		if cache, ok := s.systemSettingCache.Load(find.Name); ok {
+			return cache.(*SystemSetting), nil
+		}
+	}
+
+	list, err := s.ListSystemSettings(ctx, find)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list) == 0 {
+		return nil, nil
+	}
+
+	systemSettingMessage := list[0]
+	s.systemSettingCache.Store(systemSettingMessage.Name, systemSettingMessage)
+	return systemSettingMessage, nil
+}
+
+func (s *Store) GetSystemSettingValueWithDefault(ctx *context.Context, settingName string, defaultValue string) string {
+	if setting, err := s.GetSystemSetting(*ctx, &FindSystemSetting{
+		Name: settingName,
+	}); err == nil && setting != nil {
+		return setting.Value
+	}
+	return defaultValue
 }

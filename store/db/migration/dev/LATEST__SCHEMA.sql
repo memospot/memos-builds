@@ -27,6 +27,8 @@ CREATE TABLE user (
   avatar_url TEXT NOT NULL DEFAULT ''
 );
 
+CREATE INDEX idx_user_username ON user (username);
+
 -- user_setting
 CREATE TABLE user_setting (
   user_id INTEGER NOT NULL,
@@ -46,9 +48,12 @@ CREATE TABLE memo (
   visibility TEXT NOT NULL CHECK (visibility IN ('PUBLIC', 'PROTECTED', 'PRIVATE')) DEFAULT 'PRIVATE'
 );
 
+CREATE INDEX idx_memo_creator_id ON memo (creator_id);
+CREATE INDEX idx_memo_content ON memo (content);
+CREATE INDEX idx_memo_visibility ON memo (visibility);
+
 -- memo_organizer
 CREATE TABLE memo_organizer (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
   memo_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
   pinned INTEGER NOT NULL CHECK (pinned IN (0, 1)) DEFAULT 0,
@@ -77,10 +82,10 @@ CREATE TABLE resource (
   external_link TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT '',
   size INTEGER NOT NULL DEFAULT 0,
-  internal_path TEXT NOT NULL DEFAULT '',
-  public_id TEXT NOT NULL DEFAULT '',
-  UNIQUE(id, public_id)
+  internal_path TEXT NOT NULL DEFAULT ''
 );
+
+CREATE INDEX idx_resource_creator_id ON resource (creator_id);
 
 -- memo_resource
 CREATE TABLE memo_resource (
@@ -123,4 +128,12 @@ CREATE TABLE idp (
   type TEXT NOT NULL,
   identifier_filter TEXT NOT NULL DEFAULT '',
   config TEXT NOT NULL DEFAULT '{}'
+);
+
+-- memo_relation
+CREATE TABLE memo_relation (
+  memo_id INTEGER NOT NULL,
+  related_memo_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  UNIQUE(memo_id, related_memo_id, type)
 );

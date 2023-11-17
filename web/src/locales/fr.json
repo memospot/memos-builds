@@ -34,7 +34,6 @@
     "sign-out": "Se déconnecter",
     "back-to-home": "Retour à l'accueil",
     "type": "Type",
-    "shortcuts": "Raccourcis",
     "title": "Titre",
     "filter": "Filtre",
     "tags": "Étiquettes",
@@ -49,7 +48,8 @@
     "vacuum": "Vacuum",
     "select": "Select",
     "avatar": "Avatar",
-    "database": "Database"
+    "database": "Database",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "S'inscrire en tant qu'hôte",
@@ -108,15 +108,6 @@
     "fetching-data": "récupération des données...",
     "fetch-more": "Cliquez ici pour en savoir plus"
   },
-  "shortcut-list": {
-    "shortcut-title": "titre du raccourci",
-    "create-shortcut": "Créer un raccourci",
-    "edit-shortcut": "Editer un raccourci",
-    "eligible-memo": "mémo admissible",
-    "fill-previous": "Veuillez remplir la valeur du filtre précédent",
-    "title-required": "Le titre est requis",
-    "value-required": "La valeur du filtre est requise"
-  },
   "filter": {
     "new-filter": "Nouveau filtre",
     "type": {
@@ -166,7 +157,8 @@
       "default-memo-sort-option": "Memo display time",
       "created_ts": "Heure de création",
       "updated_ts": "Heure de mise à jour",
-      "enable-double-click": "Enable double-click to edit"
+      "enable-double-click": "Activer le double-clic",
+      "auto-collapse": "Réduction automatique"
     },
     "member-section": {
       "create-a-member": "Créer un membre"
@@ -184,7 +176,8 @@
       "additional-script": "Script supplémentaire",
       "additional-style-placeholder": "Codes CSS supplémentaires",
       "additional-script-placeholder": "Codes JavaScript supplémentaires",
-      "disable-public-memos": "Disable public memos"
+      "disable-public-memos": "Disable public memos",
+      "display-with-updated-time": "Display with updated time"
     },
     "storage-section": {
       "delete-storage": "Delete Storage",
