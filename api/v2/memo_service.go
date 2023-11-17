@@ -5,82 +5,39 @@ import (
 
 	"github.com/google/cel-go/cel"
 	"github.com/pkg/errors"
-	v1alpha1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
 	"github.com/usememos/memos/store"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func (s *APIV2Service) CreateMemo(ctx context.Context, request *apiv2pb.CreateMemoRequest) (*apiv2pb.CreateMemoResponse, error) {
-	user, err := getCurrentUser(ctx, s.Store)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get user")
-	}
-	if user == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
-	}
+type MemoService struct {
+	apiv2pb.UnimplementedMemoServiceServer
 
-	create := &store.Memo{
-		CreatorID:  user.ID,
-		Content:    request.Content,
-		Visibility: store.Visibility(request.Visibility.String()),
-	}
-	memo, err := s.Store.CreateMemo(ctx, create)
-	if err != nil {
-		return nil, err
-	}
-
-	response := &apiv2pb.CreateMemoResponse{
-		Memo: convertMemoFromStore(memo),
-	}
-	return response, nil
+	Store *store.Store
 }
 
-func (s *APIV2Service) ListMemos(ctx context.Context, request *apiv2pb.ListMemosRequest) (*apiv2pb.ListMemosResponse, error) {
+// NewMemoService creates a new MemoService.
+func NewMemoService(store *store.Store) *MemoService {
+	return &MemoService{
+		Store: store,
+	}
+}
+
+func (s *MemoService) ListMemos(ctx context.Context, request *apiv2pb.ListMemosRequest) (*apiv2pb.ListMemosResponse, error) {
 	memoFind := &store.FindMemo{}
-	if request.Filter != "" {
-		filter, err := parseListMemosFilter(request.Filter)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
-		}
-		if filter.Visibility != nil {
-			memoFind.VisibilityList = []store.Visibility{*filter.Visibility}
-		}
-		if filter.CreatedTsBefore != nil {
-			memoFind.CreatedTsBefore = filter.CreatedTsBefore
-		}
-		if filter.CreatedTsAfter != nil {
-			memoFind.CreatedTsAfter = filter.CreatedTsAfter
-		}
-	}
-	user, _ := getCurrentUser(ctx, s.Store)
-	// If the user is not authenticated, only public memos are visible.
-	if user == nil {
-		memoFind.VisibilityList = []store.Visibility{store.Public}
-	}
-
-	if request.CreatorId != nil {
-		memoFind.CreatorID = request.CreatorId
-	}
-
-	// Remove the private memos from the list if the user is not the creator.
-	if user != nil && request.CreatorId != nil && *request.CreatorId != user.ID {
-		var filteredVisibility []store.Visibility
-		for _, v := range memoFind.VisibilityList {
-			if v != store.Private {
-				filteredVisibility = append(filteredVisibility, v)
-			}
-		}
-		memoFind.VisibilityList = filteredVisibility
-	}
-
 	if request.PageSize != 0 {
 		offset := int(request.Page * request.PageSize)
 		limit := int(request.PageSize)
 		memoFind.Offset = &offset
 		memoFind.Limit = &limit
+	}
+	if request.Filter != "" {
+		visibilityString, err := getVisibilityFilter(request.Filter)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
+		}
+		memoFind.VisibilityList = []store.Visibility{store.Visibility(visibilityString)}
 	}
 	memos, err := s.Store.ListMemos(ctx, memoFind)
 	if err != nil {
@@ -92,13 +49,14 @@ func (s *APIV2Service) ListMemos(ctx context.Context, request *apiv2pb.ListMemos
 		memoMessages[i] = convertMemoFromStore(memo)
 	}
 
+	// TODO(steven): Add privalige checks.
 	response := &apiv2pb.ListMemosResponse{
-		Memos: memoMessages,
+		Memos: nil,
 	}
 	return response, nil
 }
 
-func (s *APIV2Service) GetMemo(ctx context.Context, request *apiv2pb.GetMemoRequest) (*apiv2pb.GetMemoResponse, error) {
+func (s *MemoService) GetMemo(ctx context.Context, request *apiv2pb.GetMemoRequest) (*apiv2pb.GetMemoResponse, error) {
 	memo, err := s.Store.GetMemo(ctx, &store.FindMemo{
 		ID: &request.Id,
 	})
@@ -109,14 +67,12 @@ func (s *APIV2Service) GetMemo(ctx context.Context, request *apiv2pb.GetMemoRequ
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 	if memo.Visibility != store.Public {
-		user, err := getCurrentUser(ctx, s.Store)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get user")
+		userIDPtr := ctx.Value(UserIDContextKey)
+		if userIDPtr == nil {
+			return nil, status.Errorf(codes.Unauthenticated, "unauthenticated")
 		}
-		if user == nil {
-			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
-		}
-		if memo.Visibility == store.Private && memo.CreatorID != user.ID {
+		userID := userIDPtr.(int32)
+		if memo.Visibility == store.Private && memo.CreatorID != userID {
 			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 		}
 	}
@@ -127,116 +83,39 @@ func (s *APIV2Service) GetMemo(ctx context.Context, request *apiv2pb.GetMemoRequ
 	return response, nil
 }
 
-func (s *APIV2Service) CreateMemoComment(ctx context.Context, request *apiv2pb.CreateMemoCommentRequest) (*apiv2pb.CreateMemoCommentResponse, error) {
-	// Create the comment memo first.
-	createMemoResponse, err := s.CreateMemo(ctx, request.Create)
+// getVisibilityFilter will parse the simple filter such as `visibility = "PRIVATE"` to "PRIVATE" .
+func getVisibilityFilter(filter string) (string, error) {
+	formatInvalidErr := errors.Errorf("invalid filter %q", filter)
+	e, err := cel.NewEnv(cel.Variable("visibility", cel.StringType))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create memo")
+		return "", err
 	}
-
-	// Build the relation between the comment memo and the original memo.
-	memo := createMemoResponse.Memo
-	_, err = s.Store.UpsertMemoRelation(ctx, &store.MemoRelation{
-		MemoID:        memo.Id,
-		RelatedMemoID: request.Id,
-		Type:          store.MemoRelationComment,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create memo relation")
-	}
-
-	response := &apiv2pb.CreateMemoCommentResponse{
-		Memo: memo,
-	}
-	return response, nil
-}
-
-func (s *APIV2Service) ListMemoComments(ctx context.Context, request *apiv2pb.ListMemoCommentsRequest) (*apiv2pb.ListMemoCommentsResponse, error) {
-	memoRelationComment := store.MemoRelationComment
-	memoRelations, err := s.Store.ListMemoRelations(ctx, &store.FindMemoRelation{
-		RelatedMemoID: &request.Id,
-		Type:          &memoRelationComment,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list memo relations")
-	}
-
-	var memos []*apiv2pb.Memo
-	for _, memoRelation := range memoRelations {
-		memo, err := s.Store.GetMemo(ctx, &store.FindMemo{
-			ID: &memoRelation.MemoID,
-		})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get memo")
-		}
-		if memo != nil {
-			memos = append(memos, convertMemoFromStore(memo))
-		}
-	}
-
-	response := &apiv2pb.ListMemoCommentsResponse{
-		Memos: memos,
-	}
-	return response, nil
-}
-
-// ListMemosFilterCELAttributes are the CEL attributes for ListMemosFilter.
-var ListMemosFilterCELAttributes = []cel.EnvOption{
-	cel.Variable("visibility", cel.StringType),
-	cel.Variable("created_ts_before", cel.IntType),
-	cel.Variable("created_ts_after", cel.IntType),
-}
-
-type ListMemosFilter struct {
-	Visibility      *store.Visibility
-	CreatedTsBefore *int64
-	CreatedTsAfter  *int64
-}
-
-func parseListMemosFilter(expression string) (*ListMemosFilter, error) {
-	e, err := cel.NewEnv(ListMemosFilterCELAttributes...)
-	if err != nil {
-		return nil, err
-	}
-	ast, issues := e.Compile(expression)
+	ast, issues := e.Compile(filter)
 	if issues != nil {
-		return nil, errors.Errorf("found issue %v", issues)
+		return "", status.Errorf(codes.InvalidArgument, issues.String())
 	}
-	filter := &ListMemosFilter{}
-	expr, err := cel.AstToParsedExpr(ast)
-	if err != nil {
-		return nil, err
+	expr := ast.Expr()
+	if expr == nil {
+		return "", formatInvalidErr
 	}
-	callExpr := expr.GetExpr().GetCallExpr()
-	findField(callExpr, filter)
-	return filter, nil
-}
-
-func findField(callExpr *v1alpha1.Expr_Call, filter *ListMemosFilter) {
-	if len(callExpr.Args) == 2 {
-		idExpr := callExpr.Args[0].GetIdentExpr()
-		if idExpr != nil {
-			if idExpr.Name == "visibility" {
-				visibility := store.Visibility(callExpr.Args[1].GetConstExpr().GetStringValue())
-				filter.Visibility = &visibility
-			}
-			if idExpr.Name == "created_ts_before" {
-				createdTsBefore := callExpr.Args[1].GetConstExpr().GetInt64Value()
-				filter.CreatedTsBefore = &createdTsBefore
-			}
-			if idExpr.Name == "created_ts_after" {
-				createdTsAfter := callExpr.Args[1].GetConstExpr().GetInt64Value()
-				filter.CreatedTsAfter = &createdTsAfter
-			}
-			return
-		}
+	callExpr := expr.GetCallExpr()
+	if callExpr == nil {
+		return "", formatInvalidErr
 	}
-	for _, arg := range callExpr.Args {
-		callExpr := arg.GetCallExpr()
-		if callExpr != nil {
-			findField(callExpr, filter)
-		}
+	if callExpr.Function != "_==_" {
+		return "", formatInvalidErr
 	}
+	if len(callExpr.Args) != 2 {
+		return "", formatInvalidErr
+	}
+	if callExpr.Args[0].GetIdentExpr() == nil || callExpr.Args[0].GetIdentExpr().Name != "visibility" {
+		return "", formatInvalidErr
+	}
+	constExpr := callExpr.Args[1].GetConstExpr()
+	if constExpr == nil {
+		return "", formatInvalidErr
+	}
+	return constExpr.GetStringValue(), nil
 }
 
 func convertMemoFromStore(memo *store.Memo) *apiv2pb.Memo {

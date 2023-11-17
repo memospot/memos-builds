@@ -209,6 +209,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -251,6 +256,11 @@ const docTemplate = `{
         },
         "/api/v1/idp/{idpId}": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -292,6 +302,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -330,6 +345,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -379,6 +399,11 @@ const docTemplate = `{
         },
         "/api/v1/memo": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -459,6 +484,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Visibility can be PUBLIC, PROTECTED or PRIVATE\n*You should omit fields to use their default values",
                 "consumes": [
                     "application/json"
@@ -505,6 +535,11 @@ const docTemplate = `{
         },
         "/api/v1/memo/all": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "This should also list protected memos if the user is logged in\nAuthentication is optional",
                 "produces": [
                     "application/json"
@@ -632,6 +667,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -670,6 +710,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Visibility can be PUBLIC, PROTECTED or PRIVATE\n*You should omit fields to use their default values",
                 "consumes": [
                     "application/json"
@@ -723,6 +768,11 @@ const docTemplate = `{
         },
         "/api/v1/memo/{memoId}/organizer": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -914,6 +964,150 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/memo/{memoId}/resource": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memo-resource"
+                ],
+                "summary": "Get resource list of a memo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID of memo to fetch resource list from",
+                        "name": "memoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Memo resource list",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.Resource"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ID is not a number: %s"
+                    },
+                    "500": {
+                        "description": "Failed to fetch resource list"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memo-resource"
+                ],
+                "summary": "Bind resource to memo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID of memo to bind resource to",
+                        "name": "memoId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Memo resource request object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.UpsertMemoResourceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Memo resource binded",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    "400": {
+                        "description": "ID is not a number: %s | Malformatted post memo resource request | Resource not found"
+                    },
+                    "401": {
+                        "description": "Missing user in session | Unauthorized to bind this resource"
+                    },
+                    "500": {
+                        "description": "Failed to fetch resource | Failed to upsert memo resource"
+                    }
+                }
+            }
+        },
+        "/api/v1/memo/{memoId}/resource/{resourceId}": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memo-resource"
+                ],
+                "summary": "Unbind resource from memo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID of memo to unbind resource from",
+                        "name": "memoId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID of resource to unbind from memo",
+                        "name": "resourceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Memo resource unbinded. *200 is returned even if the reference doesn't exists ",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    "400": {
+                        "description": "Memo ID is not a number: %s | Resource ID is not a number: %s | Memo not found"
+                    },
+                    "401": {
+                        "description": "Missing user in session | Unauthorized"
+                    },
+                    "500": {
+                        "description": "Failed to find memo | Failed to fetch resource list"
+                    }
+                }
+            }
+        },
         "/api/v1/ping": {
             "get": {
                 "produces": [
@@ -935,6 +1129,11 @@ const docTemplate = `{
         },
         "/api/v1/resource": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -975,6 +1174,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1017,6 +1221,11 @@ const docTemplate = `{
         },
         "/api/v1/resource/blob": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1057,6 +1266,11 @@ const docTemplate = `{
         },
         "/api/v1/resource/{resourceId}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1095,6 +1309,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1169,6 +1388,11 @@ const docTemplate = `{
         },
         "/api/v1/storage": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1195,6 +1419,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1237,6 +1466,11 @@ const docTemplate = `{
         },
         "/api/v1/storage/{storageId}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1272,6 +1506,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1318,6 +1557,11 @@ const docTemplate = `{
         },
         "/api/v1/system/setting": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1344,6 +1588,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1389,6 +1638,11 @@ const docTemplate = `{
         },
         "/api/v1/system/vacuum": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1414,6 +1668,11 @@ const docTemplate = `{
         },
         "/api/v1/tag": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1440,6 +1699,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1482,6 +1746,11 @@ const docTemplate = `{
         },
         "/api/v1/tag/delete": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1524,6 +1793,11 @@ const docTemplate = `{
         },
         "/api/v1/tag/suggestion": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1620,6 +1894,11 @@ const docTemplate = `{
         },
         "/api/v1/user/me": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1679,6 +1958,11 @@ const docTemplate = `{
         },
         "/api/v1/user/setting": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1704,7 +1988,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Created user setting",
                         "schema": {
-                            "$ref": "#/definitions/github_com_usememos_memos_store.UserSetting"
+                            "$ref": "#/definitions/store.UserSetting"
                         }
                     },
                     "400": {
@@ -1891,6 +2175,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/o/get/GetWebsiteMetadata": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "get"
+                ],
+                "summary": "Get website metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Website URL",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Extracted metadata",
+                        "schema": {
+                            "$ref": "#/definitions/getter.HTMLMeta"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing website url | Wrong url"
+                    },
+                    "406": {
+                        "description": "Failed to get website meta with url: %s"
+                    }
+                }
+            }
+        },
         "/o/r/{resourceId}": {
             "get": {
                 "description": "*Swagger UI may have problems displaying other file types than images",
@@ -1968,16 +2286,16 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_usememos_memos_store.UserSetting": {
+        "getter.HTMLMeta": {
             "type": "object",
             "properties": {
-                "key": {
+                "description": {
                     "type": "string"
                 },
-                "userID": {
-                    "type": "integer"
+                "image": {
+                    "type": "string"
                 },
-                "value": {
+                "title": {
                     "type": "string"
                 }
             }
@@ -1985,14 +2303,6 @@ const docTemplate = `{
         "profile.Profile": {
             "type": "object",
             "properties": {
-                "driver": {
-                    "description": "Driver is the database driver\nsqlite, mysql",
-                    "type": "string"
-                },
-                "dsn": {
-                    "description": "DSN points to where Memos stores its own data",
-                    "type": "string"
-                },
                 "mode": {
                     "description": "Mode can be \"prod\" or \"dev\" or \"demo\"",
                     "type": "string"
@@ -2099,11 +2409,8 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "parentID": {
-                    "description": "Composed fields\nFor those comment memos, the parent ID is the memo ID of the memo being commented.\nIf the parent ID is nil, then this memo is not a comment.",
-                    "type": "integer"
-                },
                 "pinned": {
+                    "description": "Composed fields",
                     "type": "boolean"
                 },
                 "relationList": {
@@ -2152,11 +2459,11 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "REFERENCE",
-                "COMMENT"
+                "ADDITIONAL"
             ],
             "x-enum-varnames": [
                 "MemoRelationReference",
-                "MemoRelationComment"
+                "MemoRelationAdditional"
             ]
         },
         "store.Resource": {
@@ -2188,7 +2495,7 @@ const docTemplate = `{
                 "internalPath": {
                     "type": "string"
                 },
-                "memoID": {
+                "linkedMemoAmount": {
                     "type": "integer"
                 },
                 "size": {
@@ -2275,6 +2582,9 @@ const docTemplate = `{
                 "nickname": {
                     "type": "string"
                 },
+                "openID": {
+                    "type": "string"
+                },
                 "passwordHash": {
                     "type": "string"
                 },
@@ -2294,6 +2604,20 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "Domain specific fields",
+                    "type": "string"
+                }
+            }
+        },
+        "store.UserSetting": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "userID": {
+                    "type": "integer"
+                },
+                "value": {
                     "type": "string"
                 }
             }
@@ -2363,10 +2687,16 @@ const docTemplate = `{
         "v1.CreateResourceRequest": {
             "type": "object",
             "properties": {
+                "downloadToLocal": {
+                    "type": "boolean"
+                },
                 "externalLink": {
                     "type": "string"
                 },
                 "filename": {
+                    "type": "string"
+                },
+                "internalPath": {
                     "type": "string"
                 },
                 "type": {
@@ -2568,6 +2898,41 @@ const docTemplate = `{
                 },
                 "visibility": {
                     "$ref": "#/definitions/v1.Visibility"
+                }
+            }
+        },
+        "v1.Resource": {
+            "type": "object",
+            "properties": {
+                "createdTs": {
+                    "type": "integer"
+                },
+                "creatorId": {
+                    "description": "Standard fields",
+                    "type": "integer"
+                },
+                "externalLink": {
+                    "type": "string"
+                },
+                "filename": {
+                    "description": "Domain specific fields",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "linkedMemoAmount": {
+                    "description": "Related fields",
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedTs": {
+                    "type": "integer"
                 }
             }
         },
@@ -2843,6 +3208,9 @@ const docTemplate = `{
                 "password": {
                     "type": "string"
                 },
+                "resetOpenId": {
+                    "type": "boolean"
+                },
                 "rowStatus": {
                     "$ref": "#/definitions/v1.RowStatus"
                 },
@@ -2867,6 +3235,17 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/v1.MemoRelationType"
+                }
+            }
+        },
+        "v1.UpsertMemoResourceRequest": {
+            "type": "object",
+            "properties": {
+                "resourceId": {
+                    "type": "integer"
+                },
+                "updatedTs": {
+                    "type": "integer"
                 }
             }
         },
@@ -2919,6 +3298,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "nickname": {
+                    "type": "string"
+                },
+                "openId": {
                     "type": "string"
                 },
                 "role": {
@@ -2990,8 +3372,16 @@ const docTemplate = `{
             ]
         }
     },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "description": "Insert your Open ID API Key here.",
+            "type": "apiKey",
+            "name": "openId",
+            "in": "query"
+        }
+    },
     "externalDocs": {
-        "description": "Find out more about Memos.",
+        "description": "Find out more about Memos",
         "url": "https://usememos.com/"
     }
 }`

@@ -1,4 +1,4 @@
-import { Button, Dropdown, Input, Menu, MenuButton } from "@mui/joy";
+import { Button, Input } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import * as api from "@/helpers/api";
@@ -6,14 +6,14 @@ import { useUserStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import showChangeMemberPasswordDialog from "../ChangeMemberPasswordDialog";
 import { showCommonDialog } from "../Dialog/CommonDialog";
-import Icon from "../Icon";
+import Dropdown from "../kit/Dropdown";
 
 interface State {
   createUserUsername: string;
   createUserPassword: string;
 }
 
-const MemberSection = () => {
+const PreferencesSection = () => {
   const t = useTranslate();
   const userStore = useUserStore();
   const currentUser = userStore.state.user;
@@ -78,7 +78,7 @@ const MemberSection = () => {
     showCommonDialog({
       title: t("setting.member-section.archive-member"),
       content: t("setting.member-section.archive-warning", { username: user.username }),
-      style: "danger",
+      style: "warning",
       dialogName: "archive-user-dialog",
       onConfirm: async () => {
         await userStore.patchUser({
@@ -102,7 +102,7 @@ const MemberSection = () => {
     showCommonDialog({
       title: t("setting.member-section.delete-member"),
       content: t("setting.member-section.delete-warning", { username: user.username }),
-      style: "danger",
+      style: "warning",
       dialogName: "delete-user-dialog",
       onConfirm: async () => {
         await userStore.deleteUser({
@@ -134,74 +134,70 @@ const MemberSection = () => {
       </div>
       <div className="w-full overflow-x-auto">
         <div className="inline-block min-w-full align-middle">
-          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-400">
+          <table className="min-w-full divide-y divide-gray-300">
             <thead>
-              <tr className="text-sm font-semibold text-left text-gray-900 dark:text-gray-300">
-                <th scope="col" className="py-2 pl-4 pr-3">
+              <tr>
+                <th scope="col" className="py-2 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
                   ID
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
                   {t("common.username")}
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
                   {t("common.nickname")}
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
                   {t("common.email")}
                 </th>
                 <th scope="col" className="relative py-2 pl-3 pr-4"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-500">
+            <tbody className="divide-y divide-gray-200">
               {userList.map((user) => (
                 <tr key={user.id}>
-                  <td className="whitespace-nowrap py-2 pl-4 pr-3 text-sm text-gray-900 dark:text-gray-300">{user.id}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500 dark:text-gray-300">
-                    {user.username}
-                    <span className="ml-1 italic">{user.rowStatus === "ARCHIVED" && "(Archived)"}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500 dark:text-gray-300">{user.nickname}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500 dark:text-gray-300">{user.email}</td>
+                  <td className="whitespace-nowrap py-2 pl-4 pr-3 text-sm text-gray-900">{user.id}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{user.username}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{user.nickname}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{user.email}</td>
                   <td className="relative whitespace-nowrap py-2 pl-3 pr-4 text-right text-sm font-medium flex justify-end">
                     {currentUser?.id === user.id ? (
                       <span>{t("common.yourself")}</span>
                     ) : (
-                      <Dropdown>
-                        <MenuButton size="sm">
-                          <Icon.MoreVertical className="w-4 h-auto" />
-                        </MenuButton>
-                        <Menu>
-                          <button
-                            className="w-full text-left text-sm whitespace-nowrap leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
-                            onClick={() => handleChangePasswordClick(user)}
-                          >
-                            {t("setting.account-section.change-password")}
-                          </button>
-                          {user.rowStatus === "NORMAL" ? (
+                      <Dropdown
+                        actions={
+                          <>
                             <button
-                              className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
-                              onClick={() => handleArchiveUserClick(user)}
+                              className="w-full text-left text-sm whitespace-nowrap leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
+                              onClick={() => handleChangePasswordClick(user)}
                             >
-                              {t("setting.member-section.archive-member")}
+                              {t("setting.account-section.change-password")}
                             </button>
-                          ) : (
-                            <>
+                            {user.rowStatus === "NORMAL" ? (
                               <button
                                 className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
-                                onClick={() => handleRestoreUserClick(user)}
+                                onClick={() => handleArchiveUserClick(user)}
                               >
-                                {t("common.restore")}
+                                {t("setting.member-section.archive-member")}
                               </button>
-                              <button
-                                className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-600"
-                                onClick={() => handleDeleteUserClick(user)}
-                              >
-                                {t("setting.member-section.delete-member")}
-                              </button>
-                            </>
-                          )}
-                        </Menu>
-                      </Dropdown>
+                            ) : (
+                              <>
+                                <button
+                                  className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
+                                  onClick={() => handleRestoreUserClick(user)}
+                                >
+                                  {t("common.restore")}
+                                </button>
+                                <button
+                                  className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-600"
+                                  onClick={() => handleDeleteUserClick(user)}
+                                >
+                                  {t("setting.member-section.delete-member")}
+                                </button>
+                              </>
+                            )}
+                          </>
+                        }
+                      />
                     )}
                   </td>
                 </tr>
@@ -214,4 +210,4 @@ const MemberSection = () => {
   );
 };
 
-export default MemberSection;
+export default PreferencesSection;

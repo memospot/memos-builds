@@ -131,7 +131,6 @@ def get_code_name(json_filename):
 
     # Map language code to code name
     lang_map = {
-        "ar": "ar",
         "de": "de",
         "en": "en",
         "es": "es",

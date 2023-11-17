@@ -6,19 +6,18 @@ interface Memo {
   id: MemoId;
 
   creatorUsername: string;
-  createdTs: number;
-  updatedTs: number;
+  createdTs: TimeStamp;
+  updatedTs: TimeStamp;
   rowStatus: RowStatus;
 
-  displayTs: number;
+  displayTs: TimeStamp;
   content: string;
   visibility: Visibility;
   pinned: boolean;
 
   creatorName: string;
-  resourceList: any[];
+  resourceList: Resource[];
   relationList: MemoRelation[];
-  parent?: Memo;
 }
 
 interface MemoCreate {
@@ -30,7 +29,7 @@ interface MemoCreate {
 
 interface MemoPatch {
   id: MemoId;
-  createdTs?: number;
+  createdTs?: TimeStamp;
   rowStatus?: RowStatus;
   content?: string;
   resourceIdList?: ResourceId[];

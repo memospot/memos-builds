@@ -8,9 +8,10 @@ import (
 	"sort"
 
 	"github.com/labstack/echo/v4"
-	"golang.org/x/exp/slices"
-
+	"github.com/pkg/errors"
+	"github.com/usememos/memos/api/auth"
 	"github.com/usememos/memos/store"
+	"golang.org/x/exp/slices"
 )
 
 type Tag struct {
@@ -41,10 +42,11 @@ func (s *APIV1Service) registerTagRoutes(g *echo.Group) {
 //	@Success	200	{object}	[]string	"Tag list"
 //	@Failure	400	{object}	nil			"Missing user id to find tag"
 //	@Failure	500	{object}	nil			"Failed to find tag list"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/tag [GET]
 func (s *APIV1Service) GetTagList(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing user id to find tag")
 	}
@@ -74,10 +76,11 @@ func (s *APIV1Service) GetTagList(c echo.Context) error {
 //	@Failure	400		{object}	nil					"Malformatted post tag request | Tag name shouldn't be empty"
 //	@Failure	401		{object}	nil					"Missing user in session"
 //	@Failure	500		{object}	nil					"Failed to upsert tag | Failed to create activity"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/tag [POST]
 func (s *APIV1Service) CreateTag(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -98,6 +101,9 @@ func (s *APIV1Service) CreateTag(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to upsert tag").SetInternal(err)
 	}
 	tagMessage := convertTagFromStore(tag)
+	if err := s.createTagCreateActivity(c, tagMessage); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
+	}
 	return c.JSON(http.StatusOK, tagMessage.Name)
 }
 
@@ -112,10 +118,11 @@ func (s *APIV1Service) CreateTag(c echo.Context) error {
 //	@Failure	400		{object}	nil					"Malformatted post tag request | Tag name shouldn't be empty"
 //	@Failure	401		{object}	nil					"Missing user in session"
 //	@Failure	500		{object}	nil					"Failed to delete tag name: %v"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/tag/delete [POST]
 func (s *APIV1Service) DeleteTag(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -146,10 +153,11 @@ func (s *APIV1Service) DeleteTag(c echo.Context) error {
 //	@Success	200	{object}	[]string	"Tag list"
 //	@Failure	400	{object}	nil			"Missing user session"
 //	@Failure	500	{object}	nil			"Failed to find memo list | Failed to find tag list"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/tag/suggestion [GET]
 func (s *APIV1Service) GetTagSuggestion(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing user session")
 	}
@@ -190,6 +198,27 @@ func (s *APIV1Service) GetTagSuggestion(c echo.Context) error {
 	}
 	sort.Strings(tagList)
 	return c.JSON(http.StatusOK, tagList)
+}
+
+func (s *APIV1Service) createTagCreateActivity(c echo.Context, tag *Tag) error {
+	ctx := c.Request().Context()
+	payload := ActivityTagCreatePayload{
+		TagName: tag.Name,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal activity payload")
+	}
+	activity, err := s.Store.CreateActivity(ctx, &store.Activity{
+		CreatorID: tag.CreatorID,
+		Type:      ActivityTagCreate.String(),
+		Level:     ActivityInfo.String(),
+		Payload:   string(payloadBytes),
+	})
+	if err != nil || activity == nil {
+		return errors.Wrap(err, "failed to create activity")
+	}
+	return err
 }
 
 func convertTagFromStore(tag *store.Tag) *Tag {

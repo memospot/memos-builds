@@ -1,7 +1,6 @@
 import { Button, Divider, Input, Switch, Textarea, Tooltip } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Link } from "react-router-dom";
 import * as api from "@/helpers/api";
 import { formatBytes } from "@/helpers/utils";
 import { useGlobalStore } from "@/store/module";
@@ -89,7 +88,7 @@ const SystemSection = () => {
       showCommonDialog({
         title: t("setting.system-section.enable-password-login"),
         content: t("setting.system-section.enable-password-login-warning"),
-        style: "danger",
+        style: "warning",
         dialogName: "enable-password-login-dialog",
         onConfirm: async () => {
           setState({ ...state, disablePasswordLogin: value });
@@ -371,16 +370,6 @@ const SystemSection = () => {
         value={state.additionalScript}
         onChange={(event) => handleAdditionalScriptChanged(event.target.value)}
       />
-      <div className="w-full">
-        <Link
-          className="text-gray-500 text-sm flex flex-row justify-start items-center mt-2 hover:underline hover:text-blue-600"
-          to="https://usememos.com/docs/advanced-settings/custom-style-and-script"
-          target="_blank"
-        >
-          {t("common.learn-more")}
-          <Icon.ExternalLink className="inline w-4 h-auto ml-1" />
-        </Link>
-      </div>
     </div>
   );
 };

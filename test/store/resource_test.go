@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/usememos/memos/store"
 )
 
@@ -25,13 +24,12 @@ func TestResourceStore(t *testing.T) {
 
 	correctFilename := "test.epub"
 	incorrectFilename := "test.png"
-	resource, err := ts.GetResource(ctx, &store.FindResource{
+	res, err := ts.GetResource(ctx, &store.FindResource{
 		Filename: &correctFilename,
 	})
 	require.NoError(t, err)
-	require.Equal(t, correctFilename, resource.Filename)
-	require.Equal(t, int32(1), resource.ID)
-
+	require.Equal(t, correctFilename, res.Filename)
+	require.Equal(t, int32(1), res.ID)
 	notFoundResource, err := ts.GetResource(ctx, &store.FindResource{
 		Filename: &incorrectFilename,
 	})
@@ -44,7 +42,6 @@ func TestResourceStore(t *testing.T) {
 		CreatorID: &correctCreatorID,
 	})
 	require.NoError(t, err)
-
 	notFoundResource, err = ts.GetResource(ctx, &store.FindResource{
 		CreatorID: &incorrectCreatorID,
 	})

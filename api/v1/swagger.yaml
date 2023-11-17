@@ -1,24 +1,16 @@
 basePath: /
 definitions:
-  github_com_usememos_memos_store.UserSetting:
+  getter.HTMLMeta:
     properties:
-      key:
+      description:
         type: string
-      userID:
-        type: integer
-      value:
+      image:
+        type: string
+      title:
         type: string
     type: object
   profile.Profile:
     properties:
-      driver:
-        description: |-
-          Driver is the database driver
-          sqlite, mysql
-        type: string
-      dsn:
-        description: DSN points to where Memos stores its own data
-        type: string
       mode:
         description: Mode can be "prod" or "dev" or "demo"
         type: string
@@ -89,13 +81,8 @@ definitions:
         type: integer
       id:
         type: integer
-      parentID:
-        description: |-
-          Composed fields
-          For those comment memos, the parent ID is the memo ID of the memo being commented.
-          If the parent ID is nil, then this memo is not a comment.
-        type: integer
       pinned:
+        description: Composed fields
         type: boolean
       relationList:
         items:
@@ -126,11 +113,11 @@ definitions:
   store.MemoRelationType:
     enum:
     - REFERENCE
-    - COMMENT
+    - ADDITIONAL
     type: string
     x-enum-varnames:
     - MemoRelationReference
-    - MemoRelationComment
+    - MemoRelationAdditional
   store.Resource:
     properties:
       blob:
@@ -151,7 +138,7 @@ definitions:
         type: integer
       internalPath:
         type: string
-      memoID:
+      linkedMemoAmount:
         type: integer
       size:
         type: integer
@@ -210,6 +197,8 @@ definitions:
         type: integer
       nickname:
         type: string
+      openID:
+        type: string
       passwordHash:
         type: string
       role:
@@ -222,6 +211,15 @@ definitions:
         type: integer
       username:
         description: Domain specific fields
+        type: string
+    type: object
+  store.UserSetting:
+    properties:
+      key:
+        type: string
+      userID:
+        type: integer
+      value:
         type: string
     type: object
   store.Visibility:
@@ -267,9 +265,13 @@ definitions:
     type: object
   v1.CreateResourceRequest:
     properties:
+      downloadToLocal:
+        type: boolean
       externalLink:
         type: string
       filename:
+        type: string
+      internalPath:
         type: string
       type:
         type: string
@@ -405,6 +407,30 @@ definitions:
         type: integer
       visibility:
         $ref: '#/definitions/v1.Visibility'
+    type: object
+  v1.Resource:
+    properties:
+      createdTs:
+        type: integer
+      creatorId:
+        description: Standard fields
+        type: integer
+      externalLink:
+        type: string
+      filename:
+        description: Domain specific fields
+        type: string
+      id:
+        type: integer
+      linkedMemoAmount:
+        description: Related fields
+        type: integer
+      size:
+        type: integer
+      type:
+        type: string
+      updatedTs:
+        type: integer
     type: object
   v1.Role:
     enum:
@@ -600,6 +626,8 @@ definitions:
         type: string
       password:
         type: string
+      resetOpenId:
+        type: boolean
       rowStatus:
         $ref: '#/definitions/v1.RowStatus'
       username:
@@ -616,6 +644,13 @@ definitions:
         type: integer
       type:
         $ref: '#/definitions/v1.MemoRelationType'
+    type: object
+  v1.UpsertMemoResourceRequest:
+    properties:
+      resourceId:
+        type: integer
+      updatedTs:
+        type: integer
     type: object
   v1.UpsertSystemSettingRequest:
     properties:
@@ -649,6 +684,8 @@ definitions:
       id:
         type: integer
       nickname:
+        type: string
+      openId:
         type: string
       role:
         $ref: '#/definitions/v1.Role'
@@ -698,7 +735,7 @@ definitions:
     - Protected
     - Private
 externalDocs:
-  description: Find out more about Memos.
+  description: Find out more about Memos
   url: https://usememos.com/
 info:
   contact:
@@ -864,6 +901,8 @@ paths:
           description: Missing user in session | Unauthorized
         "500":
           description: Failed to find user | Failed to create identity provider
+      security:
+      - ApiKeyAuth: []
       summary: Create Identity Provider
       tags:
       - idp
@@ -891,6 +930,8 @@ paths:
           description: Missing user in session | Unauthorized
         "500":
           description: Failed to find user | Failed to patch identity provider
+      security:
+      - ApiKeyAuth: []
       summary: Delete an identity provider by ID
       tags:
       - idp
@@ -918,6 +959,8 @@ paths:
           description: Identity provider not found
         "500":
           description: Failed to find identity provider list | Failed to find user
+      security:
+      - ApiKeyAuth: []
       summary: Get an identity provider by ID
       tags:
       - idp
@@ -950,6 +993,8 @@ paths:
           description: Missing user in session | Unauthorized
         "500":
           description: Failed to find user | Failed to patch identity provider
+      security:
+      - ApiKeyAuth: []
       summary: Update an identity provider by ID
       tags:
       - idp
@@ -1005,6 +1050,8 @@ paths:
         "500":
           description: Failed to get memo display with updated ts setting value |
             Failed to fetch memo list | Failed to compose memo response
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of memos matching optional filters
       tags:
       - memo
@@ -1041,6 +1088,8 @@ paths:
             | Failed to find user | Failed to create memo | Failed to create activity
             | Failed to upsert memo resource | Failed to upsert memo relation | Failed
             to compose memo | Failed to compose memo response
+      security:
+      - ApiKeyAuth: []
       summary: Create a memo
       tags:
       - memo
@@ -1067,6 +1116,8 @@ paths:
           description: 'Memo not found: %d'
         "500":
           description: 'Failed to find memo | Failed to delete memo ID: %v'
+      security:
+      - ApiKeyAuth: []
       summary: Delete memo by ID
       tags:
       - memo
@@ -1136,6 +1187,8 @@ paths:
           description: Failed to find memo | Failed to patch memo | Failed to upsert
             memo resource | Failed to delete memo resource | Failed to compose memo
             response
+      security:
+      - ApiKeyAuth: []
       summary: Update a memo
       tags:
       - memo
@@ -1172,6 +1225,8 @@ paths:
         "500":
           description: 'Failed to find memo | Failed to upsert memo organizer | Failed
             to find memo by ID: %v | Failed to compose memo response'
+      security:
+      - ApiKeyAuth: []
       summary: Organize memo (pin/unpin)
       tags:
       - memo-organizer
@@ -1270,6 +1325,101 @@ paths:
       summary: Delete a Memo Relation
       tags:
       - memo-relation
+  /api/v1/memo/{memoId}/resource:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID of memo to fetch resource list from
+        in: path
+        name: memoId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Memo resource list
+          schema:
+            items:
+              $ref: '#/definitions/v1.Resource'
+            type: array
+        "400":
+          description: 'ID is not a number: %s'
+        "500":
+          description: Failed to fetch resource list
+      summary: Get resource list of a memo
+      tags:
+      - memo-resource
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID of memo to bind resource to
+        in: path
+        name: memoId
+        required: true
+        type: integer
+      - description: Memo resource request object
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpsertMemoResourceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Memo resource binded
+          schema:
+            type: boolean
+        "400":
+          description: 'ID is not a number: %s | Malformatted post memo resource request
+            | Resource not found'
+        "401":
+          description: Missing user in session | Unauthorized to bind this resource
+        "500":
+          description: Failed to fetch resource | Failed to upsert memo resource
+      security:
+      - ApiKeyAuth: []
+      summary: Bind resource to memo
+      tags:
+      - memo-resource
+  /api/v1/memo/{memoId}/resource/{resourceId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID of memo to unbind resource from
+        in: path
+        name: memoId
+        required: true
+        type: integer
+      - description: ID of resource to unbind from memo
+        in: path
+        name: resourceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Memo resource unbinded. *200 is returned even if the reference
+            doesn''t exists '
+          schema:
+            type: boolean
+        "400":
+          description: 'Memo ID is not a number: %s | Resource ID is not a number:
+            %s | Memo not found'
+        "401":
+          description: Missing user in session | Unauthorized
+        "500":
+          description: Failed to find memo | Failed to fetch resource list
+      security:
+      - ApiKeyAuth: []
+      summary: Unbind resource from memo
+      tags:
+      - memo-resource
   /api/v1/memo/all:
     get:
       description: |-
@@ -1296,6 +1446,8 @@ paths:
         "500":
           description: Failed to get memo display with updated ts setting value |
             Failed to fetch all memo list | Failed to compose memo response
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of public memos matching optional filters
       tags:
       - memo
@@ -1364,6 +1516,8 @@ paths:
           description: Missing user in session
         "500":
           description: Failed to fetch resource list
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of resources
       tags:
       - resource
@@ -1393,6 +1547,8 @@ paths:
         "500":
           description: Failed to save resource | Failed to create resource | Failed
             to create activity
+      security:
+      - ApiKeyAuth: []
       summary: Create resource
       tags:
       - resource
@@ -1419,6 +1575,8 @@ paths:
           description: 'Resource not found: %d'
         "500":
           description: Failed to find resource | Failed to delete resource
+      security:
+      - ApiKeyAuth: []
       summary: Delete a resource
       tags:
       - resource
@@ -1450,6 +1608,8 @@ paths:
           description: 'Resource not found: %d'
         "500":
           description: Failed to find resource | Failed to patch resource
+      security:
+      - ApiKeyAuth: []
       summary: Update a resource
       tags:
       - resource
@@ -1478,6 +1638,8 @@ paths:
         "500":
           description: Failed to get uploading file | Failed to open file | Failed
             to save resource | Failed to create resource | Failed to create activity
+      security:
+      - ApiKeyAuth: []
       summary: Upload resource
       tags:
       - resource
@@ -1513,6 +1675,8 @@ paths:
           description: Missing user in session | Unauthorized
         "500":
           description: Failed to find user | Failed to convert storage
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of storages
       tags:
       - storage
@@ -1540,6 +1704,8 @@ paths:
         "500":
           description: Failed to find user | Failed to create storage | Failed to
             convert storage
+      security:
+      - ApiKeyAuth: []
       summary: Create storage
       tags:
       - storage
@@ -1565,6 +1731,8 @@ paths:
         "500":
           description: Failed to find user | Failed to find storage | Failed to unmarshal
             storage service id | Failed to delete storage
+      security:
+      - ApiKeyAuth: []
       summary: Delete a storage
       tags:
       - storage
@@ -1596,6 +1764,8 @@ paths:
         "500":
           description: Failed to find user | Failed to patch storage | Failed to convert
             storage
+      security:
+      - ApiKeyAuth: []
       summary: Update a storage
       tags:
       - storage
@@ -1614,6 +1784,8 @@ paths:
           description: Missing user in session | Unauthorized
         "500":
           description: Failed to find user | Failed to find system setting list
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of system settings
       tags:
       - system-setting
@@ -1642,6 +1814,8 @@ paths:
           description: Cannot disable passwords if no SSO identity provider is configured.
         "500":
           description: Failed to find user | Failed to upsert system setting
+      security:
+      - ApiKeyAuth: []
       summary: Create system setting
       tags:
       - system-setting
@@ -1658,6 +1832,8 @@ paths:
           description: Missing user in session | Unauthorized
         "500":
           description: Failed to find user | Failed to ExecVacuum database
+      security:
+      - ApiKeyAuth: []
       summary: Vacuum the database
       tags:
       - system
@@ -1676,6 +1852,8 @@ paths:
           description: Missing user id to find tag
         "500":
           description: Failed to find tag list
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of tags
       tags:
       - tag
@@ -1702,6 +1880,8 @@ paths:
           description: Missing user in session
         "500":
           description: Failed to upsert tag | Failed to create activity
+      security:
+      - ApiKeyAuth: []
       summary: Create a tag
       tags:
       - tag
@@ -1729,6 +1909,8 @@ paths:
           description: Missing user in session
         "500":
           description: 'Failed to delete tag name: %v'
+      security:
+      - ApiKeyAuth: []
       summary: Delete a tag
       tags:
       - tag
@@ -1747,6 +1929,8 @@ paths:
           description: Missing user session
         "500":
           description: Failed to find memo list | Failed to find tag list
+      security:
+      - ApiKeyAuth: []
       summary: Get a list of tags suggested from other memos contents
       tags:
       - tag
@@ -1891,6 +2075,8 @@ paths:
           description: Missing auth session
         "500":
           description: Failed to find user | Failed to find userSettingList
+      security:
+      - ApiKeyAuth: []
       summary: Get current user
       tags:
       - user
@@ -1933,7 +2119,7 @@ paths:
         "200":
           description: Created user setting
           schema:
-            $ref: '#/definitions/github_com_usememos_memos_store.UserSetting'
+            $ref: '#/definitions/store.UserSetting'
         "400":
           description: Malformatted post user setting upsert request | Invalid user
             setting format
@@ -1941,6 +2127,8 @@ paths:
           description: Missing auth session
         "500":
           description: Failed to upsert user setting
+      security:
+      - ApiKeyAuth: []
       summary: Upsert user setting
       tags:
       - user-setting
@@ -1976,6 +2164,28 @@ paths:
         "500":
           description: Failed to write GetImage blob
       summary: Get GetImage from URL
+      tags:
+      - get
+  /o/get/GetWebsiteMetadata:
+    get:
+      parameters:
+      - description: Website URL
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Extracted metadata
+          schema:
+            $ref: '#/definitions/getter.HTMLMeta'
+        "400":
+          description: Missing website url | Wrong url
+        "406":
+          description: 'Failed to get website meta with url: %s'
+      summary: Get website metadata
       tags:
       - get
   /o/r/{resourceId}:
@@ -2030,4 +2240,10 @@ paths:
       summary: Get RSS for a user
       tags:
       - rss
+securityDefinitions:
+  ApiKeyAuth:
+    description: Insert your Open ID API Key here.
+    in: query
+    name: openId
+    type: apiKey
 swagger: "2.0"
