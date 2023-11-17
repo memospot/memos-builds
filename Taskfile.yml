@@ -51,11 +51,24 @@ tasks:
     desc: |
       Checkout subtree to tag and push tag to origin.
       Usage: `task checkout-upstream -- v0.0.0` to checkout a specific tag.
-    cmds:
+    deps:
+      - checkout-upstream:posix
+      - checkout-upstream:windows
+    cmds:      
       - git rm -r memos-upstream --ignore-unmatch
-      - git subtree add --prefix=memos-upstream memos-upstream main --squash
       - git subtree pull --prefix=memos-upstream memos-upstream tags/{{.CLI_ARGS}} --squash
       - git read-tree --prefix=memos-upstream -u tags/{{.CLI_ARGS}}
       - git commit -m "Update memos-upstream to {{.CLI_ARGS}}"
       - git tag -a {{.CLI_ARGS}} -m ""
       - git push origin {{.CLI_ARGS}}
+  checkout-upstream:cleanup:posix:
+    desc: Use just `checkout-upstream`
+    platforms: [linux, darwin]
+    ignore_error: true
+    cmds:
+      - rm -rf ./memos-upstream
+  checkout-upstream:cleanup:windows:
+    desc: Use just `checkout-upstream`
+    platforms: [windows]
+    cmds:
+      - powershell -Command "Remove-Item -Path .\\memos-upstream -Recurse -Force -ErrorAction Ignore"
