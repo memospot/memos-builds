@@ -1,13 +1,14 @@
-import { Divider, Tooltip } from "@mui/joy";
-import { isEqual, uniqWith } from "lodash-es";
+import { Divider } from "@mui/joy";
 import { memo, useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { UNKNOWN_ID } from "@/helpers/consts";
 import { getRelativeTimeString } from "@/helpers/datetime";
+import useCurrentUser from "@/hooks/useCurrentUser";
+import useNavigateTo from "@/hooks/useNavigateTo";
 import { useFilterStore, useMemoStore, useUserStore } from "@/store/module";
-import { useMemoCacheStore, useUserV1Store } from "@/store/v1";
+import { useUserV1Store } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 import showChangeMemoCreatedTsDialog from "./ChangeMemoCreatedTsDialog";
 import { showCommonDialog } from "./Dialog/CommonDialog";
@@ -17,33 +18,29 @@ import showMemoEditorDialog from "./MemoEditor/MemoEditorDialog";
 import MemoRelationListView from "./MemoRelationListView";
 import MemoResourceListView from "./MemoResourceListView";
 import showPreviewImageDialog from "./PreviewImageDialog";
-import showShareMemo from "./ShareMemoDialog";
 import UserAvatar from "./UserAvatar";
 import "@/less/memo.less";
 
 interface Props {
   memo: Memo;
-  showCreator?: boolean;
-  showFull?: boolean;
   showVisibility?: boolean;
-  showRelatedMemos?: boolean;
   lazyRendering?: boolean;
 }
 
 const Memo: React.FC<Props> = (props: Props) => {
-  const { memo, showCreator, showFull, showVisibility, showRelatedMemos, lazyRendering } = props;
-  const { i18n } = useTranslation();
+  const { memo, lazyRendering } = props;
   const t = useTranslate();
+  const navigateTo = useNavigateTo();
+  const { i18n } = useTranslation();
   const filterStore = useFilterStore();
   const userStore = useUserStore();
   const memoStore = useMemoStore();
-  const memoCacheStore = useMemoCacheStore();
   const userV1Store = useUserV1Store();
+  const user = useCurrentUser();
   const [shouldRender, setShouldRender] = useState<boolean>(lazyRendering ? false : true);
-  const [createdTimeStr, setCreatedTimeStr] = useState<string>(getRelativeTimeString(memo.displayTs));
-  const [relatedMemoList, setRelatedMemoList] = useState<Memo[]>([]);
+  const [displayTime, setDisplayTime] = useState<string>(getRelativeTimeString(memo.displayTs));
   const memoContainerRef = useRef<HTMLDivElement>(null);
-  const readonly = userStore.isVisitorMode() || userStore.getCurrentUsername() !== memo.creatorUsername;
+  const readonly = memo.creatorUsername !== user?.username;
   const creator = userV1Store.getUserByUsername(memo.creatorUsername);
 
   // Prepare memo creator.
@@ -51,27 +48,12 @@ const Memo: React.FC<Props> = (props: Props) => {
     userV1Store.getOrFetchUserByUsername(memo.creatorUsername);
   }, [memo.creatorUsername]);
 
-  // Prepare related memos.
-  useEffect(() => {
-    Promise.allSettled(memo.relationList.map((memoRelation) => memoCacheStore.getOrFetchMemoById(memoRelation.relatedMemoId))).then(
-      (results) => {
-        const memoList = [];
-        for (const result of results) {
-          if (result.status === "fulfilled") {
-            memoList.push(result.value);
-          }
-        }
-        setRelatedMemoList(uniqWith(memoList, isEqual));
-      }
-    );
-  }, [memo.relationList]);
-
   // Update display time string.
   useEffect(() => {
     let intervalFlag: any = -1;
     if (Date.now() - memo.displayTs < 1000 * 60 * 60 * 24) {
       intervalFlag = setInterval(() => {
-        setCreatedTimeStr(getRelativeTimeString(memo.displayTs));
+        setDisplayTime(getRelativeTimeString(memo.displayTs));
       }, 1000 * 1);
     }
 
@@ -107,6 +89,14 @@ const Memo: React.FC<Props> = (props: Props) => {
     // Render a placeholder to occupy the space.
     return <div className={`memo-wrapper min-h-[128px] ${"memos-" + memo.id}`} ref={memoContainerRef}></div>;
   }
+
+  const handleGotoMemoDetailPage = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.altKey) {
+      showChangeMemoCreatedTsDialog(memo.id);
+    } else {
+      navigateTo(`/m/${memo.id}`);
+    }
+  };
 
   const handleTogglePinMemoBtnClick = async () => {
     try {
@@ -160,10 +150,6 @@ const Memo: React.FC<Props> = (props: Props) => {
         await memoStore.deleteMemoById(memo.id);
       },
     });
-  };
-
-  const handleGenerateMemoImageBtnClick = () => {
-    showShareMemo(memo);
   };
 
   const handleMemoContentClick = async (e: React.MouseEvent) => {
@@ -236,57 +222,29 @@ const Memo: React.FC<Props> = (props: Props) => {
     handleEditMemoClick();
   };
 
-  const handleMemoCreatedTimeClick = (e: React.MouseEvent) => {
-    if (e.altKey) {
-      e.preventDefault();
-      showChangeMemoCreatedTsDialog(memo.id);
-    }
-  };
-
-  const handleMemoVisibilityClick = (visibility: Visibility) => {
-    const currVisibilityQuery = filterStore.getState().visibility;
-    if (currVisibilityQuery === visibility) {
-      filterStore.setMemoVisibilityFilter(undefined);
-    } else {
-      filterStore.setMemoVisibilityFilter(visibility);
-    }
-  };
-
   return (
     <>
       <div className={`memo-wrapper ${"memos-" + memo.id} ${memo.pinned && !readonly ? "pinned" : ""}`} ref={memoContainerRef}>
         <div className="memo-top-wrapper">
-          <div className="status-text-container">
-            {showCreator && creator && (
+          <div className="w-full max-w-[calc(100%-20px)] flex flex-row justify-start items-center mr-1">
+            {creator && (
               <>
-                <Link className="flex flex-row justify-start items-center" to={`/u/${memo.creatorUsername}`}>
+                <Link className="flex flex-row justify-start items-center" to={`/u/${encodeURIComponent(memo.creatorUsername)}`}>
                   <UserAvatar className="!w-5 !h-auto mr-1" avatarUrl={creator.avatarUrl} />
-                  <span className="text-sm text-gray-600 dark:text-zinc-300">{creator.nickname}</span>
+                  <span className="text-sm text-gray-600 max-w-[8em] truncate dark:text-gray-400">{creator.nickname}</span>
                 </Link>
                 <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
               </>
             )}
-            <Link className="time-text" to={`/m/${memo.id}`} onClick={handleMemoCreatedTimeClick}>
-              {createdTimeStr}
-            </Link>
+            <span className="text-sm text-gray-400 select-none" onClick={handleGotoMemoDetailPage}>
+              {displayTime}
+            </span>
           </div>
           <div className="btns-container space-x-2">
-            {showVisibility && memo.visibility !== "PRIVATE" && (
-              <Tooltip title={t(`memo.visibility.${memo.visibility.toLowerCase() as Lowercase<typeof memo.visibility>}`)} placement="top">
-                <div onClick={() => handleMemoVisibilityClick(memo.visibility)}>
-                  {memo.visibility === "PUBLIC" ? (
-                    <Icon.Globe2 className="w-4 h-auto cursor-pointer rounded text-green-600" />
-                  ) : (
-                    <Icon.Users className="w-4 h-auto cursor-pointer rounded text-gray-500 dark:text-gray-400" />
-                  )}
-                </div>
-              </Tooltip>
-            )}
-            {memo.pinned && <Icon.Bookmark className="w-4 h-auto rounded text-green-600" />}
             {!readonly && (
               <>
                 <span className="btn more-action-btn">
-                  <Icon.MoreHorizontal className="icon-img" />
+                  <Icon.MoreVertical className="icon-img" />
                 </span>
                 <div className="more-action-btns-wrapper">
                   <div className="more-action-btns-container min-w-[6em]">
@@ -297,10 +255,6 @@ const Memo: React.FC<Props> = (props: Props) => {
                     <span className="btn" onClick={handleEditMemoClick}>
                       <Icon.Edit3 className="w-4 h-auto mr-2" />
                       {t("common.edit")}
-                    </span>
-                    <span className="btn" onClick={handleGenerateMemoImageBtnClick}>
-                      <Icon.Share className="w-4 h-auto mr-2" />
-                      {t("common.share")}
                     </span>
                     <span className="btn" onClick={handleMarkMemoClick}>
                       <Icon.Link className="w-4 h-auto mr-2" />
@@ -323,29 +277,12 @@ const Memo: React.FC<Props> = (props: Props) => {
         </div>
         <MemoContent
           content={memo.content}
-          showFull={showFull}
           onMemoContentClick={handleMemoContentClick}
           onMemoContentDoubleClick={handleMemoContentDoubleClick}
         />
         <MemoResourceListView resourceList={memo.resourceList} />
-        {!showRelatedMemos && <MemoRelationListView relationList={memo.relationList} />}
+        <MemoRelationListView relationList={memo.relationList} />
       </div>
-
-      {showRelatedMemos && relatedMemoList.length > 0 && (
-        <>
-          <p className="text-sm dark:text-gray-300 my-2 pl-4 opacity-50 flex flex-row items-center">
-            <Icon.Link className="w-4 h-auto mr-1" />
-            <span>Related memos</span>
-          </p>
-          {relatedMemoList.map((relatedMemo) => {
-            return (
-              <div key={relatedMemo.id} className="w-full">
-                <Memo memo={relatedMemo} showCreator />
-              </div>
-            );
-          })}
-        </>
-      )}
     </>
   );
 };
