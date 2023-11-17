@@ -1,6 +1,7 @@
 import { Autocomplete, Button, Input, List, ListItem, Option, Select, Typography } from "@mui/joy";
 import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
+import { Resource } from "@/types/proto/api/v2/resource_service";
 import { useTranslate } from "@/utils/i18n";
 import { useResourceStore } from "../store/module";
 import { generateDialog } from "./Dialog";
@@ -13,7 +14,7 @@ interface Props extends DialogProps {
   onConfirm?: (resourceList: Resource[]) => void;
 }
 
-type SelectedMode = "local-file" | "external-link" | "download-link";
+type SelectedMode = "local-file" | "external-link";
 
 interface State {
   selectedMode: SelectedMode;
@@ -32,7 +33,6 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
     filename: "",
     externalLink: "",
     type: "",
-    downloadToLocal: false,
   });
   const [fileList, setFileList] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +71,7 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
     destroy();
   };
 
-  const handleSelectedModeChanged = (mode: "local-file" | "external-link" | "download-link") => {
+  const handleSelectedModeChanged = (mode: "local-file" | "external-link") => {
     setState((state) => {
       return {
         ...state,
@@ -130,10 +130,6 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
       if (resourceCreate.filename === "" || resourceCreate.externalLink === "" || resourceCreate.type === "") {
         return false;
       }
-    } else if (state.selectedMode === "download-link") {
-      if (resourceCreate.externalLink === "") {
-        return false;
-      }
     }
     return true;
   };
@@ -166,9 +162,6 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
           createdResourceList.push(resource);
         }
       } else {
-        if (state.selectedMode === "download-link") {
-          resourceCreate.downloadToLocal = true;
-        }
         const resource = await resourceStore.createResource(resourceCreate);
         createdResourceList.push(resource);
       }
@@ -203,7 +196,6 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
         >
           <Option value="local-file">{t("resource.create-dialog.local-file.option")}</Option>
           <Option value="external-link">{t("resource.create-dialog.external-link.option")}</Option>
-          <Option value="download-link">{t("resource.create-dialog.download-link.option")}</Option>
         </Select>
 
         {state.selectedMode === "local-file" && (
@@ -284,21 +276,6 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
               freeSolo={true}
               options={fileTypeAutocompleteOptions}
               onChange={(_, value) => handleFileTypeChanged(value || "")}
-            />
-          </>
-        )}
-
-        {state.selectedMode === "download-link" && (
-          <>
-            <Typography className="!mb-1" level="body-md">
-              {t("resource.create-dialog.external-link.link")}
-            </Typography>
-            <Input
-              className="mb-2"
-              placeholder={t("resource.create-dialog.external-link.link-placeholder")}
-              value={resourceCreate.externalLink}
-              onChange={handleExternalLinkChanged}
-              fullWidth
             />
           </>
         )}

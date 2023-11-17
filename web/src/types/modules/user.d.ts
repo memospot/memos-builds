@@ -4,15 +4,14 @@ type UserRole = "HOST" | "USER";
 interface User {
   id: UserId;
 
-  createdTs: TimeStamp;
-  updatedTs: TimeStamp;
+  createdTs: number;
+  updatedTs: number;
   rowStatus: RowStatus;
 
   username: string;
   role: UserRole;
   email: string;
   nickname: string;
-  openId: string;
   avatarUrl: string;
   userSettingList: UserSetting[];
 
@@ -34,7 +33,6 @@ interface UserPatch {
   nickname?: string;
   avatarUrl?: string;
   password?: string;
-  resetOpenId?: boolean;
 }
 
 interface UserDelete {

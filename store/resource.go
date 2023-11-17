@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -16,23 +17,26 @@ type Resource struct {
 	UpdatedTs int64
 
 	// Domain specific fields
-	Filename         string
-	Blob             []byte
-	InternalPath     string
-	ExternalLink     string
-	Type             string
-	Size             int64
-	LinkedMemoAmount int
+	Filename     string
+	Blob         []byte
+	InternalPath string
+	ExternalLink string
+	Type         string
+	Size         int64
+
+	// Related fields
+	RelatedMemoID *int32
 }
 
 type FindResource struct {
-	GetBlob   bool
-	ID        *int32
-	CreatorID *int32
-	Filename  *string
-	MemoID    *int32
-	Limit     *int
-	Offset    *int
+	GetBlob        bool
+	ID             *int32
+	CreatorID      *int32
+	Filename       *string
+	MemoID         *int32
+	HasRelatedMemo bool
+	Limit          *int
+	Offset         *int
 }
 
 type UpdateResource struct {
@@ -94,6 +98,9 @@ func (s *Store) ListResources(ctx context.Context, find *FindResource) ([]*Resou
 	if v := find.MemoID; v != nil {
 		where, args = append(where, "resource.id in (SELECT resource_id FROM memo_resource WHERE memo_id = ?)"), append(args, *v)
 	}
+	if find.HasRelatedMemo {
+		where = append(where, "memo_resource.memo_id IS NOT NULL")
+	}
 
 	fields := []string{"resource.id", "resource.filename", "resource.external_link", "resource.type", "resource.size", "resource.creator_id", "resource.created_ts", "resource.updated_ts", "internal_path"}
 	if find.GetBlob {
@@ -102,13 +109,13 @@ func (s *Store) ListResources(ctx context.Context, find *FindResource) ([]*Resou
 
 	query := fmt.Sprintf(`
 		SELECT
-		  COUNT(DISTINCT memo_resource.memo_id) AS linked_memo_amount,
+			GROUP_CONCAT(memo_resource.memo_id) as related_memo_ids,
 			%s
 		FROM resource
 		LEFT JOIN memo_resource ON resource.id = memo_resource.resource_id
 		WHERE %s
 		GROUP BY resource.id
-		ORDER BY resource.id DESC
+		ORDER BY resource.created_ts DESC
 	`, strings.Join(fields, ", "), strings.Join(where, " AND "))
 	if find.Limit != nil {
 		query = fmt.Sprintf("%s LIMIT %d", query, *find.Limit)
@@ -126,8 +133,9 @@ func (s *Store) ListResources(ctx context.Context, find *FindResource) ([]*Resou
 	list := make([]*Resource, 0)
 	for rows.Next() {
 		resource := Resource{}
+		var relatedMemoIDs sql.NullString
 		dests := []any{
-			&resource.LinkedMemoAmount,
+			&relatedMemoIDs,
 			&resource.ID,
 			&resource.Filename,
 			&resource.ExternalLink,
@@ -143,6 +151,18 @@ func (s *Store) ListResources(ctx context.Context, find *FindResource) ([]*Resou
 		}
 		if err := rows.Scan(dests...); err != nil {
 			return nil, err
+		}
+		if relatedMemoIDs.Valid {
+			relatedMemoIDList := strings.Split(relatedMemoIDs.String, ",")
+			if len(relatedMemoIDList) > 0 {
+				// Only take the first related memo ID.
+				relatedMemoIDInt, err := strconv.ParseInt(relatedMemoIDList[0], 10, 32)
+				if err != nil {
+					return nil, err
+				}
+				relatedMemoID := int32(relatedMemoIDInt)
+				resource.RelatedMemoID = &relatedMemoID
+			}
 		}
 		list = append(list, &resource)
 	}

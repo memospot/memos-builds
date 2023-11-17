@@ -5,15 +5,7 @@ export function convertToMillis(localSetting: LocalSetting) {
   return hoursToMillis;
 }
 
-export function getNowTimeStamp(): number {
-  return Date.now();
-}
-
-export function getTimeStampByDate(t: Date | number | string): number {
-  if (typeof t === "string") {
-    t = t.replaceAll("-", "/");
-  }
-
+export function getTimeStampByDate(t: Date | number | string | any): number {
   return new Date(t).getTime();
 }
 
@@ -65,7 +57,7 @@ export function getTimeString(t?: Date | number | string): string {
  * - "pt-BR" locale: "30/01/2023 22:05:00"
  * - "pl" locale: "30.01.2023, 22:05:00"
  */
-export function getDateTimeString(t?: Date | number | string, locale = i18n.language): string {
+export function getDateTimeString(t?: Date | number | string | any, locale = i18n.language): string {
   const tsFromDate = getTimeStampByDate(t ? t : Date.now());
 
   return new Date(tsFromDate).toLocaleDateString(locale, {
@@ -113,7 +105,6 @@ export function getDateString(t?: Date | number | string, locale = i18n.language
  * - "x months ago"
  * - "last year"
  * - "x years ago"
- *
  */
 export const getRelativeTimeString = (time: number, locale = i18n.language, formatStyle: "long" | "short" | "narrow" = "long"): string => {
   const pastTimeMillis = Date.now() - time;
@@ -135,29 +126,22 @@ export const getRelativeTimeString = (time: number, locale = i18n.language, form
 
   // numeric: "auto" provides "yesterday" for 1 day ago, "always" provides "1 day ago"
   const formatOpts = { style: formatStyle, numeric: "auto" } as Intl.RelativeTimeFormatOptions;
-
   const relTime = new Intl.RelativeTimeFormat(locale, formatOpts);
-
   if (pastTimeMillis < minMillis) {
     return relTime.format(-Math.round(pastTimeMillis / secMillis), "second");
   }
-
   if (pastTimeMillis < hourMillis) {
     return relTime.format(-Math.round(pastTimeMillis / minMillis), "minute");
   }
-
   if (pastTimeMillis < dayMillis) {
     return relTime.format(-Math.round(pastTimeMillis / hourMillis), "hour");
   }
-
   if (pastTimeMillis < dayMillis * 7) {
     return relTime.format(-Math.round(pastTimeMillis / dayMillis), "day");
   }
-
   if (pastTimeMillis < dayMillis * 30) {
     return relTime.format(-Math.round(pastTimeMillis / (dayMillis * 7)), "week");
   }
-
   if (pastTimeMillis < dayMillis * 365) {
     return relTime.format(-Math.round(pastTimeMillis / (dayMillis * 30)), "month");
   }
