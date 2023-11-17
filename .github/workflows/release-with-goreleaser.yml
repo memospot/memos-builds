@@ -27,6 +27,9 @@ jobs:
           echo "previous_tag=$previous_tag" >> $GITHUB_ENV
         #  git checkout $latest_tag
 
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@v1.28.1
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:

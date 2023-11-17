@@ -21,7 +21,7 @@
 before:
   hooks: 
     - sh -c "cd ./memos-upstream/web && pnpm i --frozen-lockfile"
-    - sh -c "cd ./memos-upstream/web && pnpm type-gen || true"
+    - sh -c "cd ./memos-upstream/web && pnpm type-gen" || sh -c "cd ./memos-upstream/proto && buf generate" || true
     - sh -c "cd ./memos-upstream/web && pnpm build"
     # backup front-end placeholder only once
     - sh -c "cd ./memos-upstream && mv -nT ./server/dist ./server/dist.bak || true" 
@@ -105,6 +105,7 @@ archives:
         format: zip
 
 changelog:
+  skip: true
   sort: asc
   use: github
   filters:
@@ -179,6 +180,6 @@ release:
 
   #   Welcome to this new release!
   footer: |
-    **Memos upstream changelog**: https://github.com/usememos/memos/releases/tag/{{ .Tag }}
+    **[Official Memos upstream changelog](https://github.com/usememos/memos/releases/tag/{{ .Tag }})**
 
   skip_upload: false

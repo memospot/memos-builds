@@ -77,7 +77,5 @@ tasks:
     cmds:
       - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
       - git push origin
-    #  - git read-tree --prefix=memos-upstream -u tags/{{.CLI_ARGS}}
-    #  - git commit -m "Checkout memos-upstream to {{.CLI_ARGS}}"
       - git tag -a {{.CLI_ARGS}} -m "Push {{.CLI_ARGS}}"
       - git push origin {{.CLI_ARGS}}
