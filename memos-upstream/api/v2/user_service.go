@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	usernameMatcher = regexp.MustCompile("^[a-z]([a-z0-9-]{2,30}[a-z0-9])?$")
+	usernameMatcher = regexp.MustCompile("^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
 )
 
 type UserService struct {
@@ -76,33 +76,33 @@ func (s *UserService) UpdateUser(ctx context.Context, request *apiv2pb.UpdateUse
 		ID:        currentUser.ID,
 		UpdatedTs: &currentTs,
 	}
-	for _, path := range request.UpdateMask {
-		if path == "username" {
+	for _, field := range request.UpdateMask {
+		if field == "username" {
 			if !usernameMatcher.MatchString(strings.ToLower(request.User.Username)) {
 				return nil, status.Errorf(codes.InvalidArgument, "invalid username: %s", request.User.Username)
 			}
 			update.Username = &request.User.Username
-		} else if path == "nickname" {
+		} else if field == "nickname" {
 			update.Nickname = &request.User.Nickname
-		} else if path == "email" {
+		} else if field == "email" {
 			update.Email = &request.User.Email
-		} else if path == "avatar_url" {
+		} else if field == "avatar_url" {
 			update.AvatarURL = &request.User.AvatarUrl
-		} else if path == "role" {
+		} else if field == "role" {
 			role := convertUserRoleToStore(request.User.Role)
 			update.Role = &role
-		} else if path == "password" {
+		} else if field == "password" {
 			passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.User.Password), bcrypt.DefaultCost)
 			if err != nil {
 				return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to generate password hash").SetInternal(err)
 			}
 			passwordHashStr := string(passwordHash)
 			update.PasswordHash = &passwordHashStr
-		} else if path == "row_status" {
+		} else if field == "row_status" {
 			rowStatus := convertRowStatusToStore(request.User.RowStatus)
 			update.RowStatus = &rowStatus
 		} else {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid update path: %s", path)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid update path: %s", field)
 		}
 	}
 
@@ -162,8 +162,8 @@ func (s *UserService) ListUserAccessTokens(ctx context.Context, request *apiv2pb
 	}
 
 	// Sort by issued time in descending order.
-	slices.SortFunc(accessTokens, func(i, j *apiv2pb.UserAccessToken) bool {
-		return i.IssuedAt.Seconds > j.IssuedAt.Seconds
+	slices.SortFunc(accessTokens, func(i, j *apiv2pb.UserAccessToken) int {
+		return int(i.IssuedAt.Seconds - j.IssuedAt.Seconds)
 	})
 	response := &apiv2pb.ListUserAccessTokensResponse{
 		AccessTokens: accessTokens,

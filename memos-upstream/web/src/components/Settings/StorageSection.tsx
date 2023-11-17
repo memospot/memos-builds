@@ -32,7 +32,11 @@ const StorageSection = () => {
       name: "storage-service-id",
       value: JSON.stringify(storageId),
     });
-    await globalStore.fetchSystemStatus();
+    try {
+      await globalStore.fetchSystemStatus();
+    } catch (error: any) {
+      console.error(error);
+    }
     setStorageServiceId(storageId);
   };
 
@@ -40,7 +44,7 @@ const StorageSection = () => {
     showCommonDialog({
       title: t("setting.storage-section.delete-storage"),
       content: t("setting.storage-section.warning-text", { name: storage.name }),
-      style: "warning",
+      style: "danger",
       dialogName: "delete-storage-dialog",
       onConfirm: async () => {
         try {
@@ -66,13 +70,13 @@ const StorageSection = () => {
           handleActiveStorageServiceChanged(Number(event.target.value));
         }}
       >
-        <div className="w-full flex flex-row justify-start items-center gap-x-2">
+        <Radio value={"0"} label={t("setting.storage-section.type-database")} />
+        <div className="w-full mt-2 flex flex-row justify-start items-center gap-x-2">
           <Radio value={"-1"} label={t("setting.storage-section.type-local")} />
           <IconButton size="sm" onClick={() => showUpdateLocalStorageDialog(systemStatus.localStoragePath)}>
             <Icon.PenBox className="w-4 h-auto" />
           </IconButton>
         </div>
-        <Radio value={"0"} label={t("setting.storage-section.type-database")} />
         {storageList.map((storage) => (
           <Radio key={storage.id} value={storage.id} label={storage.name} />
         ))}
