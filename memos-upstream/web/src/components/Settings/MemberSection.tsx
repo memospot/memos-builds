@@ -1,12 +1,12 @@
-import { Button, Input } from "@mui/joy";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import * as api from "@/helpers/api";
+import { useTranslation } from "react-i18next";
 import { useUserStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import showChangeMemberPasswordDialog from "../ChangeMemberPasswordDialog";
-import { showCommonDialog } from "../Dialog/CommonDialog";
+import * as api from "@/helpers/api";
 import Dropdown from "../kit/Dropdown";
+import { showCommonDialog } from "../Dialog/CommonDialog";
+import showChangeMemberPasswordDialog from "../ChangeMemberPasswordDialog";
+import "@/less/settings/member-section.less";
 
 interface State {
   createUserUsername: string;
@@ -14,7 +14,7 @@ interface State {
 }
 
 const PreferencesSection = () => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const userStore = useUserStore();
   const currentUser = userStore.state.user;
   const [state, setState] = useState<State>({
@@ -28,8 +28,8 @@ const PreferencesSection = () => {
   }, []);
 
   const fetchUserList = async () => {
-    const { data } = await api.getUserList();
-    setUserList(data.sort((a, b) => a.id - b.id));
+    const { data } = (await api.getUserList()).data;
+    setUserList(data);
   };
 
   const handleUsernameInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,96 +116,88 @@ const PreferencesSection = () => {
   return (
     <div className="section-container member-section-container">
       <p className="title-text">{t("setting.member-section.create-a-member")}</p>
-      <div className="w-full flex flex-col justify-start items-start gap-2">
-        <div className="flex flex-col justify-start items-start gap-1">
-          <span className="text-sm">{t("common.username")}</span>
-          <Input type="text" placeholder={t("common.username")} value={state.createUserUsername} onChange={handleUsernameInputChange} />
+      <div className="create-member-container">
+        <div className="input-form-container">
+          <span className="field-text">{t("common.username")}</span>
+          <input
+            type="text"
+            autoComplete="new-password"
+            placeholder={t("common.username")}
+            value={state.createUserUsername}
+            onChange={handleUsernameInputChange}
+          />
         </div>
-        <div className="flex flex-col justify-start items-start gap-1">
-          <span className="text-sm">{t("common.password")}</span>
-          <Input type="password" placeholder={t("common.password")} value={state.createUserPassword} onChange={handlePasswordInputChange} />
+        <div className="input-form-container">
+          <span className="field-text">{t("common.password")}</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder={t("common.password")}
+            value={state.createUserPassword}
+            onChange={handlePasswordInputChange}
+          />
         </div>
         <div className="btns-container">
-          <Button onClick={handleCreateUserBtnClick}>{t("common.create")}</Button>
+          <button className="btn-normal" onClick={handleCreateUserBtnClick}>
+            {t("common.create")}
+          </button>
         </div>
       </div>
-      <div className="w-full flex flex-row justify-between items-center mt-6">
+      <div className="w-full flex flex-row justify-between items-center">
         <div className="title-text">{t("setting.member-list")}</div>
       </div>
-      <div className="w-full overflow-x-auto">
-        <div className="inline-block min-w-full align-middle">
-          <table className="min-w-full divide-y divide-gray-300">
-            <thead>
-              <tr>
-                <th scope="col" className="py-2 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">
-                  ID
-                </th>
-                <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                  {t("common.username")}
-                </th>
-                <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                  {t("common.nickname")}
-                </th>
-                <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                  {t("common.email")}
-                </th>
-                <th scope="col" className="relative py-2 pl-3 pr-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {userList.map((user) => (
-                <tr key={user.id}>
-                  <td className="whitespace-nowrap py-2 pl-4 pr-3 text-sm text-gray-900">{user.id}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{user.username}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{user.nickname}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500">{user.email}</td>
-                  <td className="relative whitespace-nowrap py-2 pl-3 pr-4 text-right text-sm font-medium flex justify-end">
-                    {currentUser?.id === user.id ? (
-                      <span>{t("common.yourself")}</span>
-                    ) : (
-                      <Dropdown
-                        actions={
-                          <>
-                            <button
-                              className="w-full text-left text-sm whitespace-nowrap leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
-                              onClick={() => handleChangePasswordClick(user)}
-                            >
-                              {t("setting.account-section.change-password")}
-                            </button>
-                            {user.rowStatus === "NORMAL" ? (
-                              <button
-                                className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
-                                onClick={() => handleArchiveUserClick(user)}
-                              >
-                                {t("setting.member-section.archive-member")}
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
-                                  onClick={() => handleRestoreUserClick(user)}
-                                >
-                                  {t("common.restore")}
-                                </button>
-                                <button
-                                  className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-600"
-                                  onClick={() => handleDeleteUserClick(user)}
-                                >
-                                  {t("setting.member-section.delete-member")}
-                                </button>
-                              </>
-                            )}
-                          </>
-                        }
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="member-container field-container">
+        <span className="field-text">ID</span>
+        <span className="field-text username-field">{t("common.username")}</span>
+        <span></span>
       </div>
+      {userList.map((user) => (
+        <div key={user.id} className={`member-container ${user.rowStatus === "ARCHIVED" ? "archived" : ""}`}>
+          <span className="field-text id-text">{user.id}</span>
+          <span className="field-text username-text">{user.username}</span>
+          <div className="buttons-container">
+            {currentUser?.id === user.id ? (
+              <span className="tip-text">{t("common.yourself")}</span>
+            ) : (
+              <Dropdown
+                actions={
+                  <>
+                    <button
+                      className="w-full text-left text-sm whitespace-nowrap leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
+                      onClick={() => handleChangePasswordClick(user)}
+                    >
+                      {t("setting.account-section.change-password")}
+                    </button>
+                    {user.rowStatus === "NORMAL" ? (
+                      <button
+                        className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
+                        onClick={() => handleArchiveUserClick(user)}
+                      >
+                        {t("common.archive")}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
+                          onClick={() => handleRestoreUserClick(user)}
+                        >
+                          {t("common.restore")}
+                        </button>
+                        <button
+                          className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-600"
+                          onClick={() => handleDeleteUserClick(user)}
+                        >
+                          {t("common.delete")}
+                        </button>
+                      </>
+                    )}
+                  </>
+                }
+              />
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

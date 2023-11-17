@@ -5,41 +5,37 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/usememos/memos/store"
+	"github.com/usememos/memos/api"
 )
 
 func TestMemoStore(t *testing.T) {
 	ctx := context.Background()
-	ts := NewTestingStore(ctx, t)
-	user, err := createTestingHostUser(ctx, ts)
+	store := NewTestingStore(ctx, t)
+	user, err := createTestingHostUser(ctx, store)
 	require.NoError(t, err)
-	memoCreate := &store.Memo{
+	memoCreate := &api.MemoCreate{
 		CreatorID:  user.ID,
 		Content:    "test_content",
-		Visibility: store.Public,
+		Visibility: api.Public,
 	}
-	memo, err := ts.CreateMemo(ctx, memoCreate)
+	memo, err := store.CreateMemo(ctx, memoCreate)
 	require.NoError(t, err)
 	require.Equal(t, memoCreate.Content, memo.Content)
 	memoPatchContent := "test_content_2"
-	memoPatch := &store.UpdateMemo{
+	memoPatch := &api.MemoPatch{
 		ID:      memo.ID,
 		Content: &memoPatchContent,
 	}
-	err = ts.UpdateMemo(ctx, memoPatch)
+	memo, err = store.PatchMemo(ctx, memoPatch)
 	require.NoError(t, err)
-	memo, err = ts.GetMemo(ctx, &store.FindMemo{
-		ID: &memo.ID,
-	})
-	require.NoError(t, err)
-	require.NotNil(t, memo)
-	memoList, err := ts.ListMemos(ctx, &store.FindMemo{
+	require.Equal(t, memoPatchContent, memo.Content)
+	memoList, err := store.FindMemoList(ctx, &api.MemoFind{
 		CreatorID: &user.ID,
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(memoList))
 	require.Equal(t, memo, memoList[0])
-	err = ts.DeleteMemo(ctx, &store.DeleteMemo{
+	err = store.DeleteMemo(ctx, &api.MemoDelete{
 		ID: memo.ID,
 	})
 	require.NoError(t, err)

@@ -1,4 +1,4 @@
-import { useTranslate } from "@/utils/i18n";
+import { useTranslation } from "react-i18next";
 import Icon from "../Icon";
 import { generateDialog } from "./BaseDialog";
 import "@/less/common-dialog.less";
@@ -23,10 +23,10 @@ const defaultProps = {
   confirmBtnText: "common.confirm",
   onClose: () => null,
   onConfirm: () => null,
-} as const;
+};
 
 const CommonDialog: React.FC<Props> = (props: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const { title, content, destroy, closeBtnText, confirmBtnText, onClose, onConfirm, style } = {
     ...defaultProps,
     closeBtnText: t(defaultProps.closeBtnText),

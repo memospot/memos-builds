@@ -1,13 +1,13 @@
-import { useRef, useState } from "react";
-import useDebounce from "@/hooks/useDebounce";
-import { useTranslate } from "@/utils/i18n";
+import { useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import Icon from "./Icon";
+import useDebounce from "@/hooks/useDebounce";
 
 interface ResourceSearchBarProps {
   setQuery: (queryText: string) => void;
 }
 const ResourceSearchBar = ({ setQuery }: ResourceSearchBarProps) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const [queryText, setQueryText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 

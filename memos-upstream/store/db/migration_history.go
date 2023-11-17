@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 )
 
@@ -19,6 +20,40 @@ type MigrationHistoryFind struct {
 }
 
 func (db *DB) FindMigrationHistoryList(ctx context.Context, find *MigrationHistoryFind) ([]*MigrationHistory, error) {
+	tx, err := db.DBInstance.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	list, err := findMigrationHistoryList(ctx, tx, find)
+	if err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (db *DB) UpsertMigrationHistory(ctx context.Context, upsert *MigrationHistoryUpsert) (*MigrationHistory, error) {
+	tx, err := db.DBInstance.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	migrationHistory, err := upsertMigrationHistory(ctx, tx, upsert)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return migrationHistory, nil
+}
+
+func findMigrationHistoryList(ctx context.Context, tx *sql.Tx, find *MigrationHistoryFind) ([]*MigrationHistory, error) {
 	where, args := []string{"1 = 1"}, []any{}
 
 	if v := find.Version; v != nil {
@@ -32,15 +67,15 @@ func (db *DB) FindMigrationHistoryList(ctx context.Context, find *MigrationHisto
 		FROM
 			migration_history
 		WHERE ` + strings.Join(where, " AND ") + `
-		ORDER BY created_ts DESC
+		ORDER BY version DESC
 	`
-	rows, err := db.DBInstance.QueryContext(ctx, query, args...)
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	list := make([]*MigrationHistory, 0)
+	migrationHistoryList := make([]*MigrationHistory, 0)
 	for rows.Next() {
 		var migrationHistory MigrationHistory
 		if err := rows.Scan(
@@ -50,18 +85,18 @@ func (db *DB) FindMigrationHistoryList(ctx context.Context, find *MigrationHisto
 			return nil, err
 		}
 
-		list = append(list, &migrationHistory)
+		migrationHistoryList = append(migrationHistoryList, &migrationHistory)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return list, nil
+	return migrationHistoryList, nil
 }
 
-func (db *DB) UpsertMigrationHistory(ctx context.Context, upsert *MigrationHistoryUpsert) (*MigrationHistory, error) {
-	stmt := `
+func upsertMigrationHistory(ctx context.Context, tx *sql.Tx, upsert *MigrationHistoryUpsert) (*MigrationHistory, error) {
+	query := `
 		INSERT INTO migration_history (
 			version
 		)
@@ -72,7 +107,7 @@ func (db *DB) UpsertMigrationHistory(ctx context.Context, upsert *MigrationHisto
 		RETURNING version, created_ts
 	`
 	var migrationHistory MigrationHistory
-	if err := db.DBInstance.QueryRowContext(ctx, stmt, upsert.Version).Scan(
+	if err := tx.QueryRowContext(ctx, query, upsert.Version).Scan(
 		&migrationHistory.Version,
 		&migrationHistory.CreatedTs,
 	); err != nil {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -32,16 +31,15 @@ func (p *Profile) IsDev() bool {
 func checkDSN(dataDir string) (string, error) {
 	// Convert to absolute path if relative path is supplied.
 	if !filepath.IsAbs(dataDir) {
-		relativeDir := filepath.Join(filepath.Dir(os.Args[0]), dataDir)
-		absDir, err := filepath.Abs(relativeDir)
+		absDir, err := filepath.Abs(filepath.Dir(os.Args[0]) + "/" + dataDir)
 		if err != nil {
 			return "", err
 		}
 		dataDir = absDir
 	}
 
-	// Trim trailing \ or / in case user supplies
-	dataDir = strings.TrimRight(dataDir, "\\/")
+	// Trim trailing / in case user supplies
+	dataDir = strings.TrimRight(dataDir, "/")
 
 	if _, err := os.Stat(dataDir); err != nil {
 		return "", fmt.Errorf("unable to access data folder %s, err %w", dataDir, err)
@@ -63,18 +61,7 @@ func GetProfile() (*Profile, error) {
 	}
 
 	if profile.Mode == "prod" && profile.Data == "" {
-		if runtime.GOOS == "windows" {
-			profile.Data = filepath.Join(os.Getenv("ProgramData"), "memos")
-
-			if _, err := os.Stat(profile.Data); os.IsNotExist(err) {
-				if err := os.MkdirAll(profile.Data, 0770); err != nil {
-					fmt.Printf("Failed to create data directory: %s, err: %+v\n", profile.Data, err)
-					return nil, err
-				}
-			}
-		} else {
-			profile.Data = "/var/opt/memos"
-		}
+		profile.Data = "/var/opt/memos"
 	}
 
 	dataDir, err := checkDSN(profile.Data)
@@ -84,8 +71,7 @@ func GetProfile() (*Profile, error) {
 	}
 
 	profile.Data = dataDir
-	dbFile := fmt.Sprintf("memos_%s.db", profile.Mode)
-	profile.DSN = filepath.Join(dataDir, dbFile)
+	profile.DSN = fmt.Sprintf("%s/memos_%s.db", dataDir, profile.Mode)
 	profile.Version = version.GetCurrentVersion(profile.Mode)
 
 	return &profile, nil
