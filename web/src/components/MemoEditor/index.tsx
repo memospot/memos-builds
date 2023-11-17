@@ -2,11 +2,13 @@ import { isNumber, last, uniq } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
+import useLocalStorage from "react-use/lib/useLocalStorage";
 import { upsertMemoResource } from "@/helpers/api";
 import { TAB_SPACE_WIDTH, UNKNOWN_ID } from "@/helpers/consts";
 import { clearContentQueryParam } from "@/helpers/utils";
 import { getMatchedNodes } from "@/labs/marked";
 import { useFilterStore, useGlobalStore, useMemoStore, useResourceStore, useTagStore, useUserStore } from "@/store/module";
+import { Resource } from "@/types/proto/api/v2/resource_service";
 import { useTranslate } from "@/utils/i18n";
 import showCreateResourceDialog from "../CreateResourceDialog";
 import Icon from "../Icon";
@@ -31,7 +33,6 @@ interface State {
   memoVisibility: Visibility;
   resourceList: Resource[];
   relationList: MemoRelation[];
-  fullscreen: boolean;
   isUploadingResource: boolean;
   isRequesting: boolean;
 }
@@ -40,6 +41,7 @@ const MemoEditor = (props: Props) => {
   const { className, memoId, onConfirm } = props;
   const { i18n } = useTranslation();
   const t = useTranslate();
+  const [contentCache, setContentCache] = useLocalStorage<string>(`memo-editor-${props.memoId || "0"}`, "");
   const {
     state: { systemStatus },
   } = useGlobalStore();
@@ -53,7 +55,6 @@ const MemoEditor = (props: Props) => {
     memoVisibility: "PRIVATE",
     resourceList: [],
     relationList: props.relationList ?? [],
-    fullscreen: false,
     isUploadingResource: false,
     isRequesting: false,
   });
@@ -62,6 +63,10 @@ const MemoEditor = (props: Props) => {
   const editorRef = useRef<EditorRefActions>(null);
   const user = userStore.state.user as User;
   const setting = user.setting;
+
+  useEffect(() => {
+    editorRef.current?.setContent(contentCache || "");
+  }, []);
 
   useEffect(() => {
     let visibility = setting.memoVisibility;
@@ -85,7 +90,9 @@ const MemoEditor = (props: Props) => {
             resourceList: memo.resourceList,
             relationList: memo.relationList,
           }));
-          editorRef.current?.setContent(memo.content ?? "");
+          if (!contentCache) {
+            editorRef.current?.setContent(memo.content ?? "");
+          }
         }
       });
     }
@@ -136,12 +143,6 @@ const MemoEditor = (props: Props) => {
           }
           editorRef.current?.scrollToCursor();
         }
-      }
-      return;
-    }
-    if (event.key === "Escape") {
-      if (state.fullscreen) {
-        handleFullscreenBtnClick();
       }
       return;
     }
@@ -250,6 +251,7 @@ const MemoEditor = (props: Props) => {
 
   const handleContentChange = (content: string) => {
     setHasContent(content !== "");
+    setContentCache(content);
   };
 
   const handleSaveBtnClick = async () => {
@@ -304,12 +306,6 @@ const MemoEditor = (props: Props) => {
       await tagStore.upsertTag(tagName);
     }
 
-    setState((state) => {
-      return {
-        ...state,
-        fullscreen: false,
-      };
-    });
     setState((prevState) => ({
       ...prevState,
       resourceList: [],
@@ -326,14 +322,24 @@ const MemoEditor = (props: Props) => {
     if (!editorRef.current) {
       return;
     }
-
-    const cursorPosition = editorRef.current.getCursorPosition();
-    const prevValue = editorRef.current.getContent().slice(0, cursorPosition);
-    if (prevValue === "" || prevValue.endsWith("\n")) {
-      editorRef.current?.insertText("", "- [ ] ");
+    const currentPosition = editorRef.current?.getCursorPosition();
+    const currentLineNumber = editorRef.current?.getCursorLineNumber();
+    const currentLine = editorRef.current?.getLine(currentLineNumber);
+    let newLine = "";
+    let cursorChange = 0;
+    if (/^- \[( |x|X)\] /.test(currentLine)) {
+      newLine = currentLine.replace(/^- \[( |x|X)\] /, "");
+      cursorChange = -6;
+    } else if (/^\d+\. |- /.test(currentLine)) {
+      const match = currentLine.match(/^\d+\. |- /) ?? [""];
+      newLine = currentLine.replace(/^\d+\. |- /, "- [ ] ");
+      cursorChange = -match[0].length + 6;
     } else {
-      editorRef.current?.insertText("", "\n- [ ] ");
+      newLine = "- [ ] " + currentLine;
+      cursorChange = 6;
     }
+    editorRef.current?.setLine(currentLineNumber, newLine);
+    editorRef.current.setCursorPosition(currentPosition + cursorChange);
     editorRef.current?.scrollToCursor();
   };
 
@@ -352,15 +358,6 @@ const MemoEditor = (props: Props) => {
     editorRef.current?.scrollToCursor();
   };
 
-  const handleFullscreenBtnClick = useCallback(() => {
-    setState((state) => {
-      return {
-        ...state,
-        fullscreen: !state.fullscreen,
-      };
-    });
-  }, []);
-
   const handleTagSelectorClick = useCallback((tag: string) => {
     editorRef.current?.insertText(`#${tag} `);
   }, []);
@@ -374,18 +371,17 @@ const MemoEditor = (props: Props) => {
       className: `memo-editor`,
       initialContent: "",
       placeholder: t("editor.placeholder"),
-      fullscreen: state.fullscreen,
       onContentChange: handleContentChange,
       onPaste: handlePasteEvent,
     }),
-    [state.fullscreen, i18n.language]
+    [i18n.language]
   );
 
   const allowSave = (hasContent || state.resourceList.length > 0) && !state.isUploadingResource && !state.isRequesting;
 
   return (
     <div
-      className={`${className ?? ""} memo-editor-container ${state.fullscreen ? "fullscreen" : ""}`}
+      className={`${className ?? ""} memo-editor-container`}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onDrop={handleDropEvent}
@@ -398,16 +394,13 @@ const MemoEditor = (props: Props) => {
         <div className="common-tools-container">
           <TagSelector onTagSelectorClick={(tag) => handleTagSelectorClick(tag)} />
           <button className="action-btn">
+            <Icon.Paperclip className="icon-img" onClick={handleUploadFileBtnClick} />
+          </button>
+          <button className="action-btn">
             <Icon.CheckSquare className="icon-img" onClick={handleCheckBoxBtnClick} />
           </button>
           <button className="action-btn">
             <Icon.Code className="icon-img" onClick={handleCodeBlockBtnClick} />
-          </button>
-          <button className="action-btn">
-            <Icon.Image className="icon-img" onClick={handleUploadFileBtnClick} />
-          </button>
-          <button className="action-btn" onClick={handleFullscreenBtnClick}>
-            {state.fullscreen ? <Icon.Minimize className="icon-img" /> : <Icon.Maximize className="icon-img" />}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { Resource } from "@/types/proto/api/v2/resource_service";
 
 export function getSystemStatus() {
   return axios.get<SystemStatus>("/api/v1/status");
@@ -52,10 +53,6 @@ export function getMyselfUser() {
 
 export function getUserList() {
   return axios.get<User[]>("/api/v1/user");
-}
-
-export function getUserByUsername(username: string) {
-  return axios.get<User>(`/api/v1/user/name/${username}`);
 }
 
 export function upsertUserSetting(upsert: UserSettingUpsert) {
@@ -142,17 +139,6 @@ export function getResourceList() {
   return axios.get<Resource[]>("/api/v1/resource");
 }
 
-export function getResourceListWithLimit(resourceFind?: ResourceFind) {
-  const queryList = [];
-  if (resourceFind?.offset) {
-    queryList.push(`offset=${resourceFind.offset}`);
-  }
-  if (resourceFind?.limit) {
-    queryList.push(`limit=${resourceFind.limit}`);
-  }
-  return axios.get<Resource[]>(`/api/v1/resource?${queryList.join("&")}`);
-}
-
 export function createResource(resourceCreate: ResourceCreate) {
   return axios.post<Resource>("/api/v1/resource", resourceCreate);
 }
@@ -183,12 +169,8 @@ export function deleteMemoResource(memoId: MemoId, resourceId: ResourceId) {
   return axios.delete(`/api/v1/memo/${memoId}/resource/${resourceId}`);
 }
 
-export function getTagList(tagFind?: TagFind) {
-  const queryList = [];
-  if (tagFind?.creatorUsername) {
-    queryList.push(`creatorUsername=${tagFind.creatorUsername}`);
-  }
-  return axios.get<string[]>(`/api/v1/tag?${queryList.join("&")}`);
+export function getTagList() {
+  return axios.get<string[]>(`/api/v1/tag`);
 }
 
 export function getTagSuggestionList() {
