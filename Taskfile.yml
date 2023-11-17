@@ -53,6 +53,7 @@ tasks:
       Usage: `task checkout-upstream -- v0.0.0` to checkout a specific tag.
     cmds:
       - git rm -r memos-upstream --ignore-unmatch
+      - git subtree add --prefix=memos-upstream memos-upstream main --squash
       - git subtree pull --prefix=memos-upstream memos-upstream tags/{{.CLI_ARGS}} --squash
       - git read-tree --prefix=memos-upstream -u tags/{{.CLI_ARGS}}
       - git commit -m "Update memos-upstream to {{.CLI_ARGS}}"
