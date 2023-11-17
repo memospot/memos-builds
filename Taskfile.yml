@@ -1,0 +1,60 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Build binaries for current OS/Arch
+    cmds:
+      - goreleaser build --clean --single-target
+
+  build:all:
+    desc: Build binaries for all OS/Arch
+    cmds:
+      - goreleaser build --clean
+
+  build:snapshot:
+    desc: Build binaries for current OS/Arch, ignores git status
+    cmds:
+      - goreleaser build --snapshot --clean --single-target
+
+  build:snapshot:all:
+    desc: Build binaries for all OS/Arch, ignores git status
+    cmds:
+      - goreleaser build --snapshot --clean
+
+  clean:
+    desc: Cleanup build artifacts
+    deps:
+      - clean:posix
+      - clean:windows
+  clean:posix:
+    desc: Use just `clean`
+    platforms: [linux, darwin]
+    ignore_error: true
+    cmds:
+      - rm -rf ./build
+      - rm -rf ./memos-upstream/web/node_modules
+      - rm -rf ./memos-upstream/web/dist
+      - rm -rf ./memos-upstream/server/dist
+      - mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist
+  clean:windows:
+    desc: Use just `clean`
+    platforms: [windows]
+    ignore_error: true
+    cmds:
+      - powershell -Command "Remove-Item -Path .\\build -Recurse -Force -ErrorAction Ignore"
+      - powershell -Command "Remove-Item -Path .\\memos-upstream\\web\\node_modules -Recurse -Force -ErrorAction Ignore"
+      - powershell -Command "Remove-Item -Path .\\memos-upstream\\web\\dist -Recurse -Force -ErrorAction Ignore"
+      - powershell -Command "Remove-Item -Path .\\memos-upstream\\server\\dist -Recurse -Force -ErrorAction Ignore"
+      - powershell -Command "Move-Item -Path .\\memos-upstream\\server\\dist.bak -Destination .\\memos-upstream\\server\\dist -Force -ErrorAction Ignore"
+
+  checkout-upstream:
+    desc: |
+      Checkout subtree to tag and push tag to origin.
+      Usage: `task checkout-upstream -- v0.0.0` to checkout a specific tag.
+    cmds:
+      - git rm -r memos-upstream --ignore-unmatch
+      - git subtree pull --prefix=memos-upstream memos-upstream tags/{{.CLI_ARGS}} --squash
+      - git read-tree --prefix=memos-upstream -u tags/{{.CLI_ARGS}}
+      - git commit -m "Update memos-upstream to {{.CLI_ARGS}}"
+      - git tag -a {{.CLI_ARGS}} -m ""
+      - git push origin {{.CLI_ARGS}}
