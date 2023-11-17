@@ -44,7 +44,6 @@ const useUserV1Store = create<UserV1Store>()((set, get) => ({
   },
   updateUser: async (user: Partial<User>, updateMask: string[]) => {
     const { user: updatedUser } = await userServiceClient.updateUser({
-      username: user.username,
       user: user,
       updateMask: updateMask,
     });
@@ -57,5 +56,9 @@ const useUserV1Store = create<UserV1Store>()((set, get) => ({
     return updatedUser;
   },
 }));
+
+export const extractUsernameFromName = (name: string) => {
+  return name.split("/")[1];
+};
 
 export default useUserV1Store;
