@@ -20,9 +20,9 @@
 
 before:
   hooks: 
-    - sh -c "cd ./memos-upstream/web && pnpm i --frozen-lockfile"
-    - sh -c "cd ./memos-upstream/web && pnpm type-gen" || sh -c "cd ./memos-upstream/proto && buf generate" || true
-    - sh -c "cd ./memos-upstream/web && pnpm build"
+    - sh -c "cd ./memos-upstream ; cd ./web && pnpm i --frozen-lockfile"
+    - sh -c "cd ./memos-upstream ; $(cd ./web && pnpm type-gen) || $(cd ./proto && buf generate)" || true
+    - sh -c "cd ./memos-upstream ; cd ./web && pnpm build"
     # backup front-end placeholder only once
     - sh -c "cd ./memos-upstream && mv -nT ./server/dist ./server/dist.bak || true" 
     # remove leftover from a previous local build
