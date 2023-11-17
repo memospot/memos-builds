@@ -56,6 +56,8 @@ tasks:
       - checkout-upstream:cleanup:windows
     cmds:      
       - git rm -r memos-upstream --ignore-unmatch
+      - git remote add -f memos-upstream https://github.com/usememos/memos.git || true
+      - git subtree add --prefix=memos-upstream memos-upstream main --squash
       - git subtree pull --prefix=memos-upstream memos-upstream tags/{{.CLI_ARGS}} --squash
       - git read-tree --prefix=memos-upstream -u tags/{{.CLI_ARGS}}
       - git commit -m "Update memos-upstream to {{.CLI_ARGS}}"
