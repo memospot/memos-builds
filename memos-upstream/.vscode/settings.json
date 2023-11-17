@@ -1,9 +1,0 @@
-{
-  "json.schemaDownload.enable":true,
-  "go.lintOnSave": "workspace",
-  "go.lintTool": "golangci-lint",
-  "go.inferGopath": false,
-  "go.toolsEnvVars": {
-    "GO111MODULE": "on"
-  }
-}
