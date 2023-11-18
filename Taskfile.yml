@@ -1,3 +1,12 @@
+# https://taskfile.dev
+
+# To use this Taskfile on Windows, add Git\bin (or git\usr\bin) to PATH.
+# This allows using Git's sh.exe to run posix shell commands.
+#
+# To add git to the path just for the current powershell session:
+#* $Env:Path += ";$Env:ProgramFiles\Git\bin";
+#
+
 version: "3"
 
 tasks:
@@ -32,52 +41,22 @@ tasks:
 
   clean:
     desc: Cleanup build artifacts
-    deps:
-      - clean:posix
-      - clean:windows
-  clean:posix:
-    desc: Use just `clean`
-    platforms: [linux, darwin]
     ignore_error: true
     cmds:
-      - rm -rf ./build
-      - rm -rf ./memos-upstream/web/node_modules
-      - rm -rf ./memos-upstream/web/dist
-      - rm -rf ./memos-upstream/server/dist
-      - mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist
-  clean:windows:
-    desc: Use just `clean`
-    platforms: [windows]
-    ignore_error: true
-    cmds:
-      - powershell -Command "Remove-Item -Path .\\build -Recurse -Force -ErrorAction Ignore"
-      - powershell -Command "Remove-Item -Path .\\memos-upstream\\web\\node_modules -Recurse -Force -ErrorAction Ignore"
-      - powershell -Command "Remove-Item -Path .\\memos-upstream\\web\\dist -Recurse -Force -ErrorAction Ignore"
-      - powershell -Command "Remove-Item -Path .\\memos-upstream\\server\\dist -Recurse -Force -ErrorAction Ignore"
-      - powershell -Command "Move-Item -Path .\\memos-upstream\\server\\dist.bak -Destination .\\memos-upstream\\server\\dist -Force -ErrorAction Ignore"
+      - sh -c "rm -rf ./build"
+      - sh -c "rm -rf ./memos-upstream/web/node_modules"
+      - sh -c "rm -rf ./memos-upstream/web/dist"
+      - sh -c "rm -rf ./memos-upstream/server/dist"
+      - sh -c "mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist"
 
   resetsubtree:
-    desc: >-
-      Setup subtree to tag and push tag to origin.
+    desc: |
+      Reset subtree to a tag.
       Usage: `task setup-subtree -- v0.0.0` to setup a specific tag.
-    deps:
-      - resetsubtree:posix
-      - resetsubtree:windows
     cmds:
+      - sh -c "rm -rf ./memos-upstream || true"
       - git rm -fr memos-upstream --ignore-unmatch
       - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
-  resetsubtree:posix:
-    desc: Use just `resetsubtree`
-    platforms: [linux, darwin]
-    ignore_error: true
-    cmds:
-      - rm -rf ./memos-upstream
-  resetsubtree:windows:
-    desc: Use just `resetsubtree`
-    platforms: [windows]
-    ignore_error: true
-    cmds:
-      - powershell -Command "Remove-Item -Path .\\memos-upstream -Recurse -Force -ErrorAction Ignore"
 
   pushbuild:
     desc: |
