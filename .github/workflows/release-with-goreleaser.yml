@@ -21,10 +21,10 @@ jobs:
           fetch-depth: 0
       - run: |
           git fetch --force --tags
-          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo "latest_tag=$latest_tag" >> $GITHUB_ENV          
-          previous_tag=$(git tag --sort=-creatordate | head -n 3 | tail -n 1)
-          echo "previous_tag=$previous_tag" >> $GITHUB_ENV
+        #  latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+        #  echo "latest_tag=$latest_tag" >> $GITHUB_ENV          
+        #  previous_tag=$(git tag --sort=-creatordate | head -n 3 | tail -n 1)
+        #  echo "previous_tag=$previous_tag" >> $GITHUB_ENV
         #  git checkout $latest_tag
 
       - name: Setup buf
