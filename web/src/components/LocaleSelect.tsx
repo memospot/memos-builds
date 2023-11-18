@@ -5,8 +5,8 @@ import Icon from "./Icon";
 
 interface Props {
   value: Locale;
-  className?: string;
   onChange: (locale: Locale) => void;
+  className?: string;
 }
 
 const LocaleSelect: FC<Props> = (props: Props) => {
@@ -24,22 +24,17 @@ const LocaleSelect: FC<Props> = (props: Props) => {
       onChange={(_, value) => handleSelectChange(value as Locale)}
     >
       {availableLocales.map((locale) => {
-        try {
-          const languageName = new Intl.DisplayNames([locale], { type: "language" }).of(locale);
-          if (languageName) {
-            return (
-              <Option key={locale} value={locale}>
-                {languageName.charAt(0).toUpperCase() + languageName.slice(1)}
-              </Option>
-            );
-          }
-        } catch (error) {
-          // do nth
+        const languageName = new Intl.DisplayNames([locale], { type: "language" }).of(locale);
+        if (languageName === undefined) {
+          return (
+            <Option key={locale} value={locale}>
+              {locale}
+            </Option>
+          );
         }
-
         return (
           <Option key={locale} value={locale}>
-            {locale}
+            {languageName.charAt(0).toUpperCase() + languageName.slice(1)}
           </Option>
         );
       })}

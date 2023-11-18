@@ -4,6 +4,7 @@ import { getDateString } from "@/helpers/datetime";
 import { useFilterStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
+import "@/less/memo-filter.less";
 
 const MemoFilter = () => {
   const t = useTranslate();
@@ -18,44 +19,34 @@ const MemoFilter = () => {
   }, [location]);
 
   return (
-    <div
-      className={`flex flex-row justify-start items-start w-full flex-wrap px-2 pb-2 text-sm font-mono leading-7 dark:text-gray-300 ${
-        showFilter ? "" : "!hidden"
-      }`}
-    >
+    <div className={`filter-query-container ${showFilter ? "" : "!hidden"}`}>
       <span className="mx-2 text-gray-400">{t("common.filter")}:</span>
       <div
-        className={
-          "max-w-xs flex flex-row justify-start items-center px-2 mr-2 cursor-pointer dark:text-gray-300 bg-gray-200 dark:bg-zinc-700 rounded whitespace-nowrap truncate hover:line-through " +
-          (tagQuery ? "" : "!hidden")
-        }
+        className={"filter-item-container " + (tagQuery ? "" : "!hidden")}
         onClick={() => {
           filterStore.setTagFilter(undefined);
         }}
       >
-        <Icon.Tag className="w-4 h-auto mr-1 text-gray-500 dark:text-gray-400" /> {tagQuery}
+        <Icon.Tag className="icon-text" /> {tagQuery}
         <Icon.X className="w-4 h-auto ml-1 opacity-40" />
       </div>
       <div
-        className={
-          "max-w-xs flex flex-row justify-start items-center px-2 mr-2 cursor-pointer dark:text-gray-300 bg-gray-200 dark:bg-zinc-700 rounded whitespace-nowrap truncate hover:line-through " +
-          (visibility ? "" : "!hidden")
-        }
+        className={"filter-item-container " + (visibility ? "" : "!hidden")}
         onClick={() => {
           filterStore.setMemoVisibilityFilter(undefined);
         }}
       >
-        <Icon.Eye className="w-4 h-auto mr-1 text-gray-500 dark:text-gray-400" /> {visibility}
+        <Icon.Eye className="icon-text" /> {visibility}
         <Icon.X className="w-4 h-auto ml-1 opacity-40" />
       </div>
       {duration && duration.from < duration.to ? (
         <div
-          className="max-w-xs flex flex-row justify-start items-center px-2 mr-2 cursor-pointer dark:text-gray-300 bg-gray-200 dark:bg-zinc-700 rounded whitespace-nowrap truncate hover:line-through"
+          className="filter-item-container"
           onClick={() => {
             filterStore.setFromAndToFilter();
           }}
         >
-          <Icon.Calendar className="w-4 h-auto mr-1 text-gray-500 dark:text-gray-400" />
+          <Icon.Calendar className="icon-text" />
           {t("common.filter-period", {
             from: getDateString(duration.from),
             to: getDateString(duration.to),
@@ -65,15 +56,12 @@ const MemoFilter = () => {
         </div>
       ) : null}
       <div
-        className={
-          "max-w-xs flex flex-row justify-start items-center px-2 mr-2 cursor-pointer dark:text-gray-300 bg-gray-200 dark:bg-zinc-700 rounded whitespace-nowrap truncate hover:line-through " +
-          (textQuery ? "" : "!hidden")
-        }
+        className={"filter-item-container " + (textQuery ? "" : "!hidden")}
         onClick={() => {
           filterStore.setTextFilter(undefined);
         }}
       >
-        <Icon.Search className="w-4 h-auto mr-1 text-gray-500 dark:text-gray-400" /> {textQuery}
+        <Icon.Search className="icon-text" /> {textQuery}
         <Icon.X className="w-4 h-auto ml-1 opacity-40" />
       </div>
     </div>

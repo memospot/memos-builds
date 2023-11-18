@@ -3,28 +3,28 @@ package v2
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
+	"github.com/usememos/memos/api/auth"
+	"github.com/usememos/memos/common/util"
+	"github.com/usememos/memos/store"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"github.com/usememos/memos/api/auth"
-	"github.com/usememos/memos/internal/util"
-	storepb "github.com/usememos/memos/proto/gen/store"
-	"github.com/usememos/memos/store"
 )
 
 // ContextKey is the key type of context value.
 type ContextKey int
 
 const (
-	// The key name used to store username in the context
+	// The key name used to store user id in the context
 	// user id is extracted from the jwt token subject field.
-	usernameContextKey ContextKey = iota
+	UserIDContextKey ContextKey = iota
 )
 
 // GRPCAuthInterceptor is the auth interceptor for gRPC server.
@@ -47,12 +47,12 @@ func (in *GRPCAuthInterceptor) AuthenticationInterceptor(ctx context.Context, re
 	if !ok {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to parse metadata from incoming context")
 	}
-	accessToken, err := getTokenFromMetadata(md)
+	accessTokenStr, err := getTokenFromMetadata(md)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, err.Error())
 	}
 
-	username, err := in.authenticate(ctx, accessToken)
+	userID, err := in.authenticate(ctx, accessTokenStr)
 	if err != nil {
 		if isUnauthorizeAllowedMethod(serverInfo.FullMethod) {
 			return handler(ctx, request)
@@ -60,29 +60,29 @@ func (in *GRPCAuthInterceptor) AuthenticationInterceptor(ctx context.Context, re
 		return nil, err
 	}
 	user, err := in.Store.GetUser(ctx, &store.FindUser{
-		Username: &username,
+		ID: &userID,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user")
 	}
 	if user == nil {
-		return nil, errors.Errorf("user %q not exists", username)
+		return nil, status.Errorf(codes.Unauthenticated, "user ID %q not exists in the access token", userID)
 	}
 	if isOnlyForAdminAllowedMethod(serverInfo.FullMethod) && user.Role != store.RoleHost && user.Role != store.RoleAdmin {
-		return nil, errors.Errorf("user %q is not admin", username)
+		return nil, status.Errorf(codes.PermissionDenied, "user ID %q is not admin", userID)
 	}
 
 	// Stores userID into context.
-	childCtx := context.WithValue(ctx, usernameContextKey, username)
+	childCtx := context.WithValue(ctx, UserIDContextKey, userID)
 	return handler(childCtx, request)
 }
 
-func (in *GRPCAuthInterceptor) authenticate(ctx context.Context, accessToken string) (string, error) {
-	if accessToken == "" {
-		return "", status.Errorf(codes.Unauthenticated, "access token not found")
+func (in *GRPCAuthInterceptor) authenticate(ctx context.Context, accessTokenStr string) (int32, error) {
+	if accessTokenStr == "" {
+		return 0, status.Errorf(codes.Unauthenticated, "access token not found")
 	}
-	claims := &auth.ClaimsMessage{}
-	_, err := jwt.ParseWithClaims(accessToken, claims, func(t *jwt.Token) (any, error) {
+	claims := &claimsMessage{}
+	_, err := jwt.ParseWithClaims(accessTokenStr, claims, func(t *jwt.Token) (any, error) {
 		if t.Method.Alg() != jwt.SigningMethodHS256.Name {
 			return nil, status.Errorf(codes.Unauthenticated, "unexpected access token signing method=%v, expect %v", t.Header["alg"], jwt.SigningMethodHS256)
 		}
@@ -94,49 +94,46 @@ func (in *GRPCAuthInterceptor) authenticate(ctx context.Context, accessToken str
 		return nil, status.Errorf(codes.Unauthenticated, "unexpected access token kid=%v", t.Header["kid"])
 	})
 	if err != nil {
-		return "", status.Errorf(codes.Unauthenticated, "Invalid or expired access token")
+		return 0, status.Errorf(codes.Unauthenticated, "Invalid or expired access token")
+	}
+	if !audienceContains(claims.Audience, auth.AccessTokenAudienceName) {
+		return 0, status.Errorf(codes.Unauthenticated,
+			"invalid access token, audience mismatch, got %q, expected %q. you may send request to the wrong environment",
+			claims.Audience,
+			auth.AccessTokenAudienceName,
+		)
 	}
 
-	// We either have a valid access token or we will attempt to generate new access token.
 	userID, err := util.ConvertStringToInt32(claims.Subject)
 	if err != nil {
-		return "", errors.Wrap(err, "malformed ID in the token")
+		return 0, status.Errorf(codes.Unauthenticated, "malformed ID %q in the access token", claims.Subject)
 	}
 	user, err := in.Store.GetUser(ctx, &store.FindUser{
 		ID: &userID,
 	})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get user")
+		return 0, status.Errorf(codes.Unauthenticated, "failed to find user ID %q in the access token", userID)
 	}
 	if user == nil {
-		return "", errors.Errorf("user %q not exists", userID)
+		return 0, status.Errorf(codes.Unauthenticated, "user ID %q not exists in the access token", userID)
 	}
 	if user.RowStatus == store.Archived {
-		return "", errors.Errorf("user %q is archived", userID)
+		return 0, status.Errorf(codes.Unauthenticated, "user ID %q has been deactivated by administrators", userID)
 	}
 
-	accessTokens, err := in.Store.GetUserAccessTokens(ctx, user.ID)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to get user access tokens")
-	}
-	if !validateAccessToken(accessToken, accessTokens) {
-		return "", status.Errorf(codes.Unauthenticated, "invalid access token")
-	}
-
-	return user.Username, nil
+	return userID, nil
 }
 
 func getTokenFromMetadata(md metadata.MD) (string, error) {
-	// Check the HTTP request header first.
 	authorizationHeaders := md.Get("Authorization")
 	if len(md.Get("Authorization")) > 0 {
 		authHeaderParts := strings.Fields(authorizationHeaders[0])
 		if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
-			return "", errors.New("authorization header format must be Bearer {token}")
+			return "", errors.Errorf("authorization header format must be Bearer {token}")
 		}
 		return authHeaderParts[1], nil
 	}
-	// Check the cookie header.
+	// check the HTTP cookie
 	var accessToken string
 	for _, t := range append(md.Get("grpcgateway-cookie"), md.Get("cookie")...) {
 		header := http.Header{}
@@ -149,11 +146,49 @@ func getTokenFromMetadata(md metadata.MD) (string, error) {
 	return accessToken, nil
 }
 
-func validateAccessToken(accessTokenString string, userAccessTokens []*storepb.AccessTokensUserSetting_AccessToken) bool {
-	for _, userAccessToken := range userAccessTokens {
-		if accessTokenString == userAccessToken.AccessToken {
+func audienceContains(audience jwt.ClaimStrings, token string) bool {
+	for _, v := range audience {
+		if v == token {
 			return true
 		}
 	}
 	return false
+}
+
+type claimsMessage struct {
+	Name string `json:"name"`
+	jwt.RegisteredClaims
+}
+
+// GenerateAccessToken generates an access token for web.
+func GenerateAccessToken(username string, userID int, secret string) (string, error) {
+	expirationTime := time.Now().Add(auth.AccessTokenDuration)
+	return generateToken(username, userID, auth.AccessTokenAudienceName, expirationTime, []byte(secret))
+}
+
+func generateToken(username string, userID int, aud string, expirationTime time.Time, secret []byte) (string, error) {
+	// Create the JWT claims, which includes the username and expiry time.
+	claims := &claimsMessage{
+		Name: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Audience: jwt.ClaimStrings{aud},
+			// In JWT, the expiry time is expressed as unix milliseconds.
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    auth.Issuer,
+			Subject:   strconv.Itoa(userID),
+		},
+	}
+
+	// Declare the token with the HS256 algorithm used for signing, and the claims.
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token.Header["kid"] = auth.KeyID
+
+	// Create the JWT string.
+	tokenString, err := token.SignedString(secret)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }

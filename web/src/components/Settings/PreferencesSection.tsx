@@ -7,7 +7,6 @@ import { useTranslate } from "@/utils/i18n";
 import AppearanceSelect from "../AppearanceSelect";
 import LearnMore from "../LearnMore";
 import LocaleSelect from "../LocaleSelect";
-import VisibilityIcon from "../VisibilityIcon";
 import "@/less/settings/preferences-section.less";
 
 const PreferencesSection = () => {
@@ -17,6 +16,12 @@ const PreferencesSection = () => {
   const { appearance, locale } = globalStore.state;
   const { setting, localSetting } = userStore.state.user as User;
   const [telegramUserId, setTelegramUserId] = useState<string>(setting.telegramUserId);
+  const visibilitySelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
+    return {
+      value: item.value,
+      text: t(`memo.visibility.${item.text.toLowerCase() as Lowercase<typeof item.text>}`),
+    };
+  });
 
   const dailyReviewTimeOffsetOptions: number[] = [...Array(24).keys()];
 
@@ -42,10 +47,14 @@ const PreferencesSection = () => {
     userStore.upsertLocalSetting({ ...localSetting, dailyReviewTimeOffset: value });
   };
 
+  const handleAutoCollapseChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
+    userStore.upsertLocalSetting({ ...localSetting, enableAutoCollapse: event.target.checked });
+  };
+
   const handleSaveTelegramUserId = async () => {
     try {
       await userStore.upsertUserSetting("telegram-user-id", telegramUserId);
-      toast.success(t("message.update-succeed"));
+      toast.success(t("common.dialog.success"));
     } catch (error: any) {
       console.error(error);
       toast.error(error.response.data.message);
@@ -73,16 +82,15 @@ const PreferencesSection = () => {
         <Select
           className="!min-w-fit"
           value={setting.memoVisibility}
-          startDecorator={<VisibilityIcon visibility={setting.memoVisibility} />}
           onChange={(_, visibility) => {
             if (visibility) {
               handleDefaultMemoVisibilityChanged(visibility);
             }
           }}
         >
-          {VISIBILITY_SELECTOR_ITEMS.map((item) => (
-            <Option key={item} value={item} className="whitespace-nowrap">
-              {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
+          {visibilitySelectorItems.map((item) => (
+            <Option key={item.value} value={item.value}>
+              {item.text}
             </Option>
           ))}
         </Select>
@@ -120,6 +128,11 @@ const PreferencesSection = () => {
       <label className="form-label selector">
         <span className="text-sm break-keep">{t("setting.preference-section.enable-double-click")}</span>
         <Switch className="ml-2" checked={localSetting.enableDoubleClickEditing} onChange={handleDoubleClickEnabledChanged} />
+      </label>
+
+      <label className="form-label selector">
+        <span className="normal-text">{t("setting.preference-section.auto-collapse")}</span>
+        <Switch className="ml-2" checked={localSetting.enableAutoCollapse} onChange={handleAutoCollapseChanged} />
       </label>
 
       <Divider className="!mt-3 !my-4" />
