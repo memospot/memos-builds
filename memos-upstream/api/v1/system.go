@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
-
-	"github.com/usememos/memos/internal/log"
+	"github.com/usememos/memos/api/auth"
+	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
+	"go.uber.org/zap"
 )
 
 type SystemStatus struct {
@@ -72,20 +72,26 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	systemStatus := SystemStatus{
-		Profile: profile.Profile{
-			Mode:    s.Profile.Mode,
-			Version: s.Profile.Version,
-		},
-		// Allow sign up by default.
-		AllowSignUp:      true,
-		MaxUploadSizeMiB: 32,
+		Profile:              *s.Profile,
+		DBSize:               0,
+		AllowSignUp:          false,
+		DisablePasswordLogin: false,
+		DisablePublicMemos:   false,
+		MaxUploadSizeMiB:     32,
+		AutoBackupInterval:   0,
+		AdditionalStyle:      "",
+		AdditionalScript:     "",
 		CustomizedProfile: CustomizedProfile{
-			Name:       "memos",
-			Locale:     "en",
-			Appearance: "system",
+			Name:        "memos",
+			LogoURL:     "",
+			Description: "",
+			Locale:      "en",
+			Appearance:  "system",
+			ExternalURL: "",
 		},
-		StorageServiceID: DefaultStorage,
-		LocalStoragePath: "assets/{timestamp}_{filename}",
+		StorageServiceID:         DatabaseStorage,
+		LocalStoragePath:         "assets/{timestamp}_{filename}",
+		MemoDisplayWithUpdatedTs: false,
 	}
 
 	hostUserType := store.RoleHost
@@ -158,10 +164,11 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 //	@Success	200	{boolean}	true	"Database vacuumed"
 //	@Failure	401	{object}	nil		"Missing user in session | Unauthorized"
 //	@Failure	500	{object}	nil		"Failed to find user | Failed to ExecVacuum database"
+//	@Security	ApiKeyAuth
 //	@Router		/api/v1/system/vacuum [POST]
 func (s *APIV1Service) ExecVacuum(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(userIDContextKey).(int32)
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}

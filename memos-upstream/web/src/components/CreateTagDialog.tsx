@@ -124,12 +124,9 @@ const CreateTagDialog: React.FC<Props> = (props: Props) => {
           <>
             <div className="mt-4 mb-1 text-sm w-full flex flex-row justify-start items-center">
               <span className="text-gray-400 mr-2">{t("tag-list.tag-suggestions")}</span>
-              <span
-                className="text-xs border border-gray-200 rounded-md px-1 leading-5 cursor-pointer text-gray-600 hover:shadow dark:border-zinc-700 dark:text-gray-400"
-                onClick={handleToggleShowSuggestionTags}
-              >
+              <Button size="sm" variant="outlined" onClick={handleToggleShowSuggestionTags}>
                 {showTagSuggestions ? t("tag-list.hide") : t("tag-list.show")}
-              </span>
+              </Button>
             </div>
             {showTagSuggestions && (
               <>
@@ -144,7 +141,7 @@ const CreateTagDialog: React.FC<Props> = (props: Props) => {
                     </span>
                   ))}
                 </div>
-                <Button size="sm" variant="outlined" onClick={handleSaveSuggestTagList}>
+                <Button size="sm" onClick={handleSaveSuggestTagList}>
                   {t("tag-list.save-all")}
                 </Button>
               </>

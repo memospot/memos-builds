@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from "react";
-import useToggle from "react-use/lib/useToggle";
+import useToggle from "@/hooks/useToggle";
 import Icon from "../Icon";
 
 interface Props {

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 )
 
 type SystemSetting struct {
@@ -15,12 +16,58 @@ type FindSystemSetting struct {
 }
 
 func (s *Store) UpsertSystemSetting(ctx context.Context, upsert *SystemSetting) (*SystemSetting, error) {
-	return s.driver.UpsertSystemSetting(ctx, upsert)
+	stmt := `
+		INSERT INTO system_setting (
+			name, value, description
+		)
+		VALUES (?, ?, ?)
+		ON CONFLICT(name) DO UPDATE 
+		SET
+			value = EXCLUDED.value,
+			description = EXCLUDED.description
+	`
+	if _, err := s.db.ExecContext(ctx, stmt, upsert.Name, upsert.Value, upsert.Description); err != nil {
+		return nil, err
+	}
+
+	systemSetting := upsert
+	return systemSetting, nil
 }
 
 func (s *Store) ListSystemSettings(ctx context.Context, find *FindSystemSetting) ([]*SystemSetting, error) {
-	list, err := s.driver.ListSystemSettings(ctx, find)
+	where, args := []string{"1 = 1"}, []any{}
+	if find.Name != "" {
+		where, args = append(where, "name = ?"), append(args, find.Name)
+	}
+
+	query := `
+		SELECT
+			name,
+			value,
+			description
+		FROM system_setting
+		WHERE ` + strings.Join(where, " AND ")
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := []*SystemSetting{}
+	for rows.Next() {
+		systemSettingMessage := &SystemSetting{}
+		if err := rows.Scan(
+			&systemSettingMessage.Name,
+			&systemSettingMessage.Value,
+			&systemSettingMessage.Description,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, systemSettingMessage)
+	}
+
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
@@ -51,8 +98,8 @@ func (s *Store) GetSystemSetting(ctx context.Context, find *FindSystemSetting) (
 	return systemSettingMessage, nil
 }
 
-func (s *Store) GetSystemSettingValueWithDefault(ctx context.Context, settingName string, defaultValue string) string {
-	if setting, err := s.GetSystemSetting(ctx, &FindSystemSetting{
+func (s *Store) GetSystemSettingValueWithDefault(ctx *context.Context, settingName string, defaultValue string) string {
+	if setting, err := s.GetSystemSetting(*ctx, &FindSystemSetting{
 		Name: settingName,
 	}); err == nil && setting != nil {
 		return setting.Value

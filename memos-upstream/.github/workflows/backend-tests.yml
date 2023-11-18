@@ -1,45 +1,39 @@
 name: Backend Test
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches:
       - main
       - "release/*.*.*"
-    paths:
-      - "go.mod"
-      - "go.sum"
-      - "**.go"
 
 jobs:
   go-static-checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.19
           check-latest: true
           cache: true
       - name: Verify go.mod is tidy
         run: |
-          go mod tidy -go=1.21
+          go mod tidy -go=1.19
           git diff --exit-code
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.54.1
-          args: --verbose --timeout=3m
+          version: v1.52.0
+          args: -v --timeout=3m
           skip-cache: true
 
   go-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.19
           check-latest: true
           cache: true
       - name: Run all tests

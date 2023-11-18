@@ -5,15 +5,17 @@ import Empty from "@/components/Empty";
 import Memo from "@/components/Memo";
 import MemoFilter from "@/components/MemoFilter";
 import MobileHeader from "@/components/MobileHeader";
+import SearchBar from "@/components/SearchBar";
 import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
 import useLoading from "@/hooks/useLoading";
 import { TAG_REG } from "@/labs/marked/parser";
-import { useFilterStore, useMemoStore } from "@/store/module";
+import { useFilterStore, useGlobalStore, useMemoStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 
 const Explore = () => {
   const t = useTranslate();
   const location = useLocation();
+  const globalStore = useGlobalStore();
   const filterStore = useFilterStore();
   const memoStore = useMemoStore();
   const filter = filterStore.state;
@@ -54,7 +56,7 @@ const Explore = () => {
     : memos;
 
   const sortedMemos = fetchedMemos
-    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE" && !m.parent)
+    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE")
     .sort((mi, mj) => mj.displayTs - mi.displayTs);
 
   useEffect(() => {
@@ -87,16 +89,21 @@ const Explore = () => {
   };
 
   return (
-    <section className="@container w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+    <section className="w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
       <MobileHeader showSearch={false} />
+      {globalStore.isDev() && (
+        <div className="mb-4 mt-2 w-full">
+          <SearchBar />
+        </div>
+      )}
       {!loadingState.isLoading && (
-        <div className="relative w-full h-auto flex flex-col justify-start items-start">
+        <main className="relative w-full h-auto flex flex-col justify-start items-start">
           <MemoFilter />
           {sortedMemos.map((memo) => {
-            return <Memo key={`${memo.id}-${memo.displayTs}`} memo={memo} />;
+            return <Memo key={`${memo.id}-${memo.displayTs}`} memo={memo} showCreator />;
           })}
           {isComplete ? (
-            sortedMemos.length === 0 && (
+            memos.length === 0 && (
               <div className="w-full mt-16 mb-8 flex flex-col justify-center items-center italic">
                 <Empty />
                 <p className="mt-4 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
@@ -107,7 +114,7 @@ const Explore = () => {
               {t("memo.fetch-more")}
             </p>
           )}
-        </div>
+        </main>
       )}
     </section>
   );
