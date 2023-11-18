@@ -38,7 +38,6 @@
     "sign-up": "Registriraj se",
     "sign-out": "Odjavi se",
     "type": "Tip",
-    "shortcuts": "Prečaci",
     "title": "Naslov",
     "filter": "Filtriraj",
     "filter-period": "{{from}} do {{to}}",
@@ -67,7 +66,8 @@
       "info": "Informacija",
       "success": "Uspjeh",
       "warning": "Upozorenje"
-    }
+    },
+    "mark": "Mark"
   },
   "router": {
     "back-to-home": "Natrag kući"
@@ -125,6 +125,7 @@
     "upload-successfully": "Upload je uspješan",
     "file-drag-drop-prompt": "Povuci i potegni svoj fajl ovdje kako bi bio prenesen",
     "search-bar-placeholder": "Nađi privitke",
+    "clear": "Clear",
     "create-dialog": {
       "title": "Stvori Resource",
       "upload-method": "Upload metoda",
@@ -145,15 +146,6 @@
         "option": "Link za preuzimanje"
       }
     }
-  },
-  "shortcut-list": {
-    "shortcut-title": "ime prečaca",
-    "create-shortcut": "Stvori prečac",
-    "edit-shortcut": "Uredi prečac",
-    "eligible-memo": "eligible memo",
-    "fill-previous": "Please fill in previous filter value",
-    "title-required": "Naslov je obavezan",
-    "value-required": "Filter value je tražena"
   },
   "tag-list": {
     "tip-text": "Unesi `#tag` kako bi stvorio",
@@ -268,7 +260,8 @@
       "openai-api-key-description": "Get API key",
       "openai-api-key-placeholder": "Tvoj OpenAI API Ključ",
       "openai-api-host": "OpenAI: API Host",
-      "openai-api-host-placeholder": "Default: https://api.openai.com/"
+      "openai-api-host-placeholder": "Default: https://api.openai.com/",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Slijedi sustav",

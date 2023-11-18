@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { marked } from "@/labs/marked";
 import { useUserStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 import "@/less/memo-content.less";
 
@@ -23,32 +23,29 @@ interface State {
 
 const MemoContent: React.FC<Props> = (props: Props) => {
   const { className, content, showFull, onMemoContentClick, onMemoContentDoubleClick } = props;
-  const { t } = useTranslation();
-
+  const t = useTranslate();
+  const userStore = useUserStore();
   const [state, setState] = useState<State>({
     expandButtonStatus: -1,
   });
   const memoContentContainerRef = useRef<HTMLDivElement>(null);
-
-  //variable for auto-collapse
-  const userStore = useUserStore();
   const isVisitorMode = userStore.isVisitorMode();
-  const autoCollapse: boolean = isVisitorMode ? true : (userStore.state.user as User).localSetting.enableAutoCollapse;
+  const autoCollapse: boolean = !showFull && (isVisitorMode ? true : (userStore.state.user as User).localSetting.enableAutoCollapse);
 
   useEffect(() => {
-    if (showFull) {
+    if (!autoCollapse) {
       return;
     }
 
     if (memoContentContainerRef.current) {
-      const height = memoContentContainerRef.current.clientHeight;
+      const height = memoContentContainerRef.current.scrollHeight;
       if (height > MAX_EXPAND_HEIGHT) {
         setState({
           expandButtonStatus: 0,
         });
       }
     }
-  }, []);
+  }, [autoCollapse]);
 
   const handleMemoContentClick = async (e: React.MouseEvent) => {
     if (onMemoContentClick) {
@@ -73,7 +70,7 @@ const MemoContent: React.FC<Props> = (props: Props) => {
     <div className={`memo-content-wrapper ${className || ""}`}>
       <div
         ref={memoContentContainerRef}
-        className={`memo-content-text ${autoCollapse && state.expandButtonStatus === 0 ? "max-h-64 overflow-y-hidden" : ""}`}
+        className={`memo-content-text ${autoCollapse && state.expandButtonStatus < 1 ? "max-h-64 overflow-y-hidden" : ""}`}
         onClick={handleMemoContentClick}
         onDoubleClick={handleMemoContentDoubleClick}
       >

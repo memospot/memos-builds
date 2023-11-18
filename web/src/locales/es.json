@@ -34,7 +34,6 @@
     "sign-out": "Cerrar sesión",
     "back-to-home": "Volver al Inicio",
     "type": "Tipo",
-    "shortcuts": "Atajos",
     "title": "Título",
     "filter": "Filtros",
     "tags": "Etiquetas",
@@ -49,7 +48,8 @@
     "vacuum": "Vaciar",
     "select": "Seleccionar",
     "database": "Base de datos",
-    "avatar": "Avatar"
+    "avatar": "Avatar",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Registrarse como Anfitrión",
@@ -107,15 +107,6 @@
   "memo-list": {
     "fetching-data": "obteniendo datos...",
     "fetch-more": "Click aqui para obtener más información"
-  },
-  "shortcut-list": {
-    "shortcut-title": "título del atajo",
-    "create-shortcut": "Crear Atajo",
-    "edit-shortcut": "Editar Atajo",
-    "eligible-memo": "nota elegible",
-    "fill-previous": "Introduce el valor del filtro anterior",
-    "title-required": "El título es obligatorio",
-    "value-required": "El valor del filtro es obligatorio"
   },
   "filter": {
     "new-filter": "Nuevo Filtro",
@@ -185,7 +176,8 @@
       "additional-script": "Scripts adicionales",
       "additional-style-placeholder": "Código CSS adicional",
       "additional-script-placeholder": "Código JavaScript adicional",
-      "disable-public-memos": "Deshabilitar notas públicas"
+      "disable-public-memos": "Deshabilitar notas públicas",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Según el sistema",

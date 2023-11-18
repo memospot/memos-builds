@@ -1,7 +1,6 @@
 import { useLayoutStore, useUserStore } from "../store/module";
-import ShortcutList from "./ShortcutList";
-import TagList from "./TagList";
 import SearchBar from "./SearchBar";
+import TagList from "./TagList";
 import UsageHeatMap from "./UsageHeatMap";
 
 const HomeSidebar = () => {
@@ -32,7 +31,6 @@ const HomeSidebar = () => {
         <UsageHeatMap />
         {!userStore.isVisitorMode() && (
           <>
-            <ShortcutList />
             <TagList />
           </>
         )}

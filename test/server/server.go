@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/usememos/memos/api/auth"
 	"github.com/usememos/memos/server"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
@@ -132,7 +133,7 @@ func (s *TestingServer) request(method, uri string, body io.Reader, params, head
 			h := resp.Header.Get("Set-Cookie")
 			parts := strings.Split(h, "; ")
 			for _, p := range parts {
-				if strings.HasPrefix(p, "access-token=") {
+				if strings.HasPrefix(p, fmt.Sprintf("%s=", auth.AccessTokenCookieName)) {
 					cookie = p
 					break
 				}
@@ -141,7 +142,7 @@ func (s *TestingServer) request(method, uri string, body io.Reader, params, head
 				return nil, errors.Errorf("unable to find access token in the login response headers")
 			}
 			s.cookie = cookie
-		} else if strings.Contains(uri, "/api/v1/auth/logout") {
+		} else if strings.Contains(uri, "/api/v1/auth/signout") {
 			s.cookie = ""
 		}
 	}

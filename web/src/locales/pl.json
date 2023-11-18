@@ -35,7 +35,6 @@
     "sign-out": "Wyloguj",
     "back-to-home": "Powrót do Strony Głównej",
     "type": "Typ",
-    "shortcuts": "Skróty",
     "title": "Tytuł",
     "filter": "Filtruj",
     "tags": "Tagi",
@@ -49,7 +48,8 @@
     "link": "Link",
     "vacuum": "Vacuum",
     "select": "Wybierz",
-    "database": "Baza danych"
+    "database": "Baza danych",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Zarejestruj się jako właściciel",
@@ -107,15 +107,6 @@
   "memo-list": {
     "fetching-data": "pobieranie danych...",
     "fetch-more": "Kliknij, aby pobrać więcej"
-  },
-  "shortcut-list": {
-    "shortcut-title": "krótki tytuł",
-    "create-shortcut": "Utwórz skrót",
-    "edit-shortcut": "Edytuj skrót",
-    "eligible-memo": "kwalifikująca się notatka",
-    "fill-previous": "Proszę uzupełnij poprzednią wartość filtra",
-    "title-required": "Tytuł jest wymagany",
-    "value-required": "Wartość filtra jest wymagana"
   },
   "filter": {
     "new-filter": "Nowy filtr",
@@ -194,7 +185,8 @@
       "additional-style": "Dodatkowy styl",
       "additional-script": "Dodatkowy skrypt",
       "additional-style-placeholder": "Dodatkowy kod CSS",
-      "additional-script-placeholder": "Dodatkowy kod JavaScript"
+      "additional-script-placeholder": "Dodatkowy kod JavaScript",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Systemowy",

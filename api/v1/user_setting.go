@@ -3,8 +3,11 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"net/http"
 
+	"github.com/labstack/echo/v4"
+	"github.com/usememos/memos/api/auth"
+	"github.com/usememos/memos/store"
 	"golang.org/x/exp/slices"
 )
 
@@ -17,7 +20,7 @@ const (
 	UserSettingAppearanceKey UserSettingKey = "appearance"
 	// UserSettingMemoVisibilityKey is the key type for user preference memo default visibility.
 	UserSettingMemoVisibilityKey UserSettingKey = "memo-visibility"
-	// UserSettingTelegramUserID is the key type for telegram UserID of memos user.
+	// UserSettingTelegramUserIDKey is the key type for telegram UserID of memos user.
 	UserSettingTelegramUserIDKey UserSettingKey = "telegram-user-id"
 )
 
@@ -42,6 +45,7 @@ var (
 		"en",
 		"es",
 		"fr",
+		"hi",
 		"hr",
 		"it",
 		"ja",
@@ -63,19 +67,64 @@ var (
 )
 
 type UserSetting struct {
-	UserID int
-	Key    UserSettingKey `json:"key"`
-	// Value is a JSON string with basic value
-	Value string `json:"value"`
-}
-
-type UserSettingUpsert struct {
-	UserID int            `json:"-"`
+	UserID int32          `json:"userId"`
 	Key    UserSettingKey `json:"key"`
 	Value  string         `json:"value"`
 }
 
-func (upsert UserSettingUpsert) Validate() error {
+type UpsertUserSettingRequest struct {
+	UserID int32          `json:"-"`
+	Key    UserSettingKey `json:"key"`
+	Value  string         `json:"value"`
+}
+
+func (s *APIV1Service) registerUserSettingRoutes(g *echo.Group) {
+	g.POST("/user/setting", s.UpsertUserSetting)
+}
+
+// UpsertUserSetting godoc
+//
+//	@Summary	Upsert user setting
+//	@Tags		user-setting
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		UpsertUserSettingRequest	true	"Request object."
+//	@Success	200		{object}	store.UserSetting			"Created user setting"
+//	@Failure	400		{object}	nil							"Malformatted post user setting upsert request | Invalid user setting format"
+//	@Failure	401		{object}	nil							"Missing auth session"
+//	@Failure	500		{object}	nil							"Failed to upsert user setting"
+//	@Security	ApiKeyAuth
+//	@Router		/api/v1/user/setting [POST]
+func (s *APIV1Service) UpsertUserSetting(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Missing auth session")
+	}
+
+	userSettingUpsert := &UpsertUserSettingRequest{}
+	if err := json.NewDecoder(c.Request().Body).Decode(userSettingUpsert); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Malformatted post user setting upsert request").SetInternal(err)
+	}
+	if err := userSettingUpsert.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid user setting format").SetInternal(err)
+	}
+
+	userSettingUpsert.UserID = userID
+	userSetting, err := s.Store.UpsertUserSetting(ctx, &store.UserSetting{
+		UserID: userID,
+		Key:    userSettingUpsert.Key.String(),
+		Value:  userSettingUpsert.Value,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to upsert user setting").SetInternal(err)
+	}
+
+	userSettingMessage := convertUserSettingFromStore(userSetting)
+	return c.JSON(http.StatusOK, userSettingMessage)
+}
+
+func (upsert UpsertUserSettingRequest) Validate() error {
 	if upsert.Key == UserSettingLocaleKey {
 		localeValue := "en"
 		err := json.Unmarshal([]byte(upsert.Value), &localeValue)
@@ -104,16 +153,9 @@ func (upsert UserSettingUpsert) Validate() error {
 			return fmt.Errorf("invalid user setting memo visibility value")
 		}
 	} else if upsert.Key == UserSettingTelegramUserIDKey {
-		var s string
-		err := json.Unmarshal([]byte(upsert.Value), &s)
+		var key string
+		err := json.Unmarshal([]byte(upsert.Value), &key)
 		if err != nil {
-			return fmt.Errorf("invalid user setting telegram user id value")
-		}
-
-		if s == "" {
-			return nil
-		}
-		if _, err := strconv.Atoi(s); err != nil {
 			return fmt.Errorf("invalid user setting telegram user id value")
 		}
 	} else {
@@ -123,12 +165,10 @@ func (upsert UserSettingUpsert) Validate() error {
 	return nil
 }
 
-type UserSettingFind struct {
-	UserID *int
-
-	Key UserSettingKey `json:"key"`
-}
-
-type UserSettingDelete struct {
-	UserID int
+func convertUserSettingFromStore(userSetting *store.UserSetting) *UserSetting {
+	return &UserSetting{
+		UserID: userSetting.UserID,
+		Key:    UserSettingKey(userSetting.Key),
+		Value:  userSetting.Value,
+	}
 }

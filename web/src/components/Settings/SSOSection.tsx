@@ -1,15 +1,25 @@
+import { Divider } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
 import * as api from "@/helpers/api";
-import { Divider } from "@mui/joy";
+import { useGlobalStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import showCreateIdentityProviderDialog from "../CreateIdentityProviderDialog";
-import Dropdown from "../kit/Dropdown";
 import { showCommonDialog } from "../Dialog/CommonDialog";
-import HelpButton from "../kit/HelpButton";
+import LearnMore from "../LearnMore";
+import Dropdown from "../kit/Dropdown";
+
+interface State {
+  disablePasswordLogin: boolean;
+}
 
 const SSOSection = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
+  const globalStore = useGlobalStore();
+  const systemStatus = globalStore.state.systemStatus;
+  const [state] = useState<State>({
+    disablePasswordLogin: systemStatus.disablePasswordLogin,
+  });
   const [identityProviderList, setIdentityProviderList] = useState<IdentityProvider[]>([]);
 
   useEffect(() => {
@@ -22,9 +32,15 @@ const SSOSection = () => {
   };
 
   const handleDeleteIdentityProvider = async (identityProvider: IdentityProvider) => {
+    let content = t("setting.sso-section.confirm-delete", { name: identityProvider.name });
+
+    if (state.disablePasswordLogin) {
+      content += "\n\n" + t("setting.sso-section.disabled-password-login-warning");
+    }
+
     showCommonDialog({
       title: t("setting.sso-section.delete-sso"),
-      content: t("setting.sso-section.confirm-delete", { name: identityProvider.name }),
+      content: content,
       style: "warning",
       dialogName: "delete-identity-provider-dialog",
       onConfirm: async () => {
@@ -43,7 +59,7 @@ const SSOSection = () => {
     <div className="section-container">
       <div className="mb-2 w-full flex flex-row justify-start items-center gap-1">
         <span className="font-mono text-sm text-gray-400">{t("setting.sso-section.sso-list")}</span>
-        <HelpButton icon="help" url="https://usememos.com/docs/keycloak" />
+        <LearnMore url="https://usememos.com/docs/keycloak" />
         <button
           className="btn-normal px-2 py-0 ml-1"
           onClick={() => showCreateIdentityProviderDialog(undefined, fetchIdentityProviderList)}
@@ -57,7 +73,7 @@ const SSOSection = () => {
       {identityProviderList.map((identityProvider) => (
         <div
           key={identityProvider.id}
-          className="py-2 w-full border-t last:border-b dark:border-zinc-700 flex flex-row items-center justify-between"
+          className="py-2 w-full border-b last:border-b dark:border-zinc-700 flex flex-row items-center justify-between"
         >
           <div className="flex flex-row items-center">
             <p className="ml-2">

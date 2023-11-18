@@ -1,12 +1,12 @@
 import { last } from "lodash-es";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
+import Icon from "@/components/Icon";
 import * as api from "@/helpers/api";
 import { absolutifyLink } from "@/helpers/utils";
 import { useUserStore } from "@/store/module";
-import Icon from "@/components/Icon";
+import { useTranslate } from "@/utils/i18n";
 
 interface State {
   loading: boolean;
@@ -14,7 +14,7 @@ interface State {
 }
 
 const AuthCallback = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const [searchParams] = useSearchParams();
   const userStore = useUserStore();
   const [state, setState] = useState<State>({

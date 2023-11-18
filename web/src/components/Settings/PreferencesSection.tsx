@@ -1,17 +1,16 @@
-import { Input, Button, Divider, Switch, Option, Select } from "@mui/joy";
-import { useState } from "react";
+import { Button, Divider, Input, Option, Select, Switch } from "@mui/joy";
+import React, { useState } from "react";
 import { toast } from "react-hot-toast";
-import React from "react";
-import { useTranslation } from "react-i18next";
-import { useGlobalStore, useUserStore } from "@/store/module";
 import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
+import { useGlobalStore, useUserStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import AppearanceSelect from "../AppearanceSelect";
+import LearnMore from "../LearnMore";
 import LocaleSelect from "../LocaleSelect";
-import HelpButton from "../kit/HelpButton";
 import "@/less/settings/preferences-section.less";
 
 const PreferencesSection = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const globalStore = useGlobalStore();
   const userStore = useUserStore();
   const { appearance, locale } = globalStore.state;
@@ -20,7 +19,7 @@ const PreferencesSection = () => {
   const visibilitySelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
     return {
       value: item.value,
-      text: t(`memo.visibility.${item.text.toLowerCase()}`),
+      text: t(`memo.visibility.${item.text.toLowerCase() as Lowercase<typeof item.text>}`),
     };
   });
 
@@ -141,7 +140,7 @@ const PreferencesSection = () => {
       <div className="mb-2 w-full flex flex-row justify-between items-center">
         <div className="w-auto flex items-center">
           <span className="text-sm mr-1">{t("setting.preference-section.telegram-user-id")}</span>
-          <HelpButton icon="help" url="https://usememos.com/docs/integration/telegram-bot" />
+          <LearnMore url="https://usememos.com/docs/integration/telegram-bot" />
         </div>
         <Button onClick={handleSaveTelegramUserId}>{t("common.save")}</Button>
       </div>

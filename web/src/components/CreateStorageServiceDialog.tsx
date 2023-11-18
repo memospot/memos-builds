@@ -1,12 +1,12 @@
 import { Button, Input, Typography } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
 import * as api from "@/helpers/api";
+import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
+import LearnMore from "./LearnMore";
 import RequiredBadge from "./RequiredBadge";
-import HelpButton from "./kit/HelpButton";
 
 interface Props extends DialogProps {
   storage?: ObjectStorage;
@@ -14,7 +14,7 @@ interface Props extends DialogProps {
 }
 
 const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const { destroy, storage, confirmCallback } = props;
   const [basicInfo, setBasicInfo] = useState({
     name: "",
@@ -106,13 +106,15 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
   return (
     <>
       <div className="dialog-header-container">
-        <span className="title-text ml-auto">{t("setting.storage-section." + (isCreating ? "create" : "update") + "-storage")}</span>
+        <span className="title-text ml-auto">
+          {t(isCreating ? "setting.storage-section.create-storage" : "setting.storage-section.update-storage")}
+        </span>
         <button className="btn close-btn ml-auto" onClick={handleCloseBtnClick}>
           <Icon.X />
         </button>
       </div>
       <div className="dialog-content-container min-w-[19rem]">
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("common.name")}
           <RequiredBadge />
         </Typography>
@@ -128,7 +130,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           }
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.endpoint")}
           <RequiredBadge />
         </Typography>
@@ -139,7 +141,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ endPoint: e.target.value })}
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.region")}
           <RequiredBadge />
         </Typography>
@@ -150,7 +152,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ region: e.target.value })}
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.accesskey")}
           <RequiredBadge />
         </Typography>
@@ -161,7 +163,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ accessKey: e.target.value })}
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.secretkey")}
           <RequiredBadge />
         </Typography>
@@ -172,7 +174,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ secretKey: e.target.value })}
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.bucket")}
           <RequiredBadge />
         </Typography>
@@ -183,11 +185,9 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ bucket: e.target.value })}
           fullWidth
         />
-        <div className="flex flex-row">
-          <Typography className="!mb-1" level="body2">
-            {t("setting.storage-section.path")}
-          </Typography>
-          <HelpButton text={t("setting.storage-section.path-description")} url="https://usememos.com/docs/local-storage" />
+        <div className="flex flex-row items-center mb-1">
+          <Typography level="body-md">{t("setting.storage-section.path")}</Typography>
+          <LearnMore className="ml-1" title={t("setting.storage-section.path-description")} url="https://usememos.com/docs/local-storage" />
         </div>
         <Input
           className="mb-2"
@@ -196,7 +196,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ path: e.target.value })}
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.url-prefix")}
         </Typography>
         <Input
@@ -206,7 +206,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
           onChange={(e) => setPartialS3Config({ urlPrefix: e.target.value })}
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.storage-section.url-suffix")}
         </Typography>
         <Input
@@ -221,7 +221,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
             {t("common.cancel")}
           </Button>
           <Button onClick={handleConfirmBtnClick} disabled={!allowConfirmAction()}>
-            {t("common." + (isCreating ? "create" : "update"))}
+            {t(isCreating ? "common.create" : "common.update")}
           </Button>
         </div>
       </div>
