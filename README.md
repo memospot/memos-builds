@@ -1,22 +1,20 @@
 # memos
 
-<img height="72px" src="https://usememos.com/logo.png" alt="✍️ memos" align="right" />
+<img height="72px" src="https://usememos.com/logo.webp" alt="✍️ memos" align="right" />
 
 A privacy-first, lightweight note-taking service. Easily capture and share your great thoughts.
 
-<a href="https://www.usememos.com">Home Page</a> •
-<a href="https://www.usememos.com/blog">Blogs</a> •
-<a href="https://www.usememos.com/docs">Docs</a> •
-<a href="https://demo.usememos.com/">Live Demo</a>
+<a href="https://usememos.com/docs">Documentation</a> •
+<a href="https://demo.usememos.com/">Live Demo</a> •
+Discuss in <a href="https://discord.gg/tfPJa4UmAv">Discord</a> / <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a>
 
 <p>
   <a href="https://github.com/usememos/memos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/usememos/memos?logo=github" /></a>
   <a href="https://hub.docker.com/r/neosmemo/memos"><img alt="Docker pull" src="https://img.shields.io/docker/pulls/neosmemo/memos.svg"/></a>
-  <a href="https://hosted.weblate.org/engage/memos-i18n/"><img src="https://hosted.weblate.org/widget/memos-i18n/english/svg-badge.svg" alt="Translation status" /></a>
   <a href="https://discord.gg/tfPJa4UmAv"><img alt="Discord" src="https://img.shields.io/badge/discord-chat-5865f2?logo=discord&logoColor=f5f5f5" /></a>
 </p>
 
-![demo](https://www.usememos.com/demo.webp)
+![demo](https://usememos.com/demo.webp)
 
 ## Key points
 
@@ -34,7 +32,7 @@ docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos ghcr.io/usem
 
 > The `~/.memos/` directory will be used as the data directory on your local machine, while `/var/opt/memos` is the directory of the volume in Docker and should not be modified.
 
-Learn more about [other installation methods](https://www.usememos.com/docs/install).
+Learn more about [other installation methods](https://usememos.com/docs#installation).
 
 ## Contribution
 
@@ -53,10 +51,14 @@ Contributions are what make the open-source community such an amazing place to l
 - [eallion/memos.top](https://github.com/eallion/memos.top) - Static page rendered with the Memos API
 - [eindex/logseq-memos-sync](https://github.com/EINDEX/logseq-memos-sync) - Logseq plugin
 - [JakeLaoyu/memos-import-from-flomo](https://github.com/JakeLaoyu/memos-import-from-flomo) - Import data. Support from flomo, wechat reading
-- [Quick Memo](https://www.icloud.com/shortcuts/1eaef307112843ed9f91d256f5ee7ad9) - Shortcuts (iOS, iPadOS or macOS)
+- [Send to memos](https://sharecuts.cn/shortcut/12640) - A shortcut for iOS
 - [Memos Raycast Extension](https://www.raycast.com/JakeYu/memos) - Raycast extension
 - [Memos Desktop](https://github.com/xudaolong/memos-desktop) - Third party client for MacOS and Windows
 - [MemosGallery](https://github.com/BarryYangi/MemosGallery) - A static Gallery rendered with the Memos API
+
+## Acknowledgements
+
+- Thanks [Uffizzi](https://www.uffizzi.com/) for sponsoring preview environments for PRs.
 
 ## Star history
 

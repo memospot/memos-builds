@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/usememos/memos/api/auth"
-	"github.com/usememos/memos/internal/util"
+	"github.com/usememos/memos/common/util"
 	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/store"
 )
@@ -36,15 +36,15 @@ func extractTokenFromHeader(c echo.Context) (string, error) {
 }
 
 func findAccessToken(c echo.Context) string {
-	// Check the HTTP request header first.
-	accessToken, _ := extractTokenFromHeader(c)
-	if accessToken == "" {
-		// Check the cookie.
-		cookie, _ := c.Cookie(auth.AccessTokenCookieName)
-		if cookie != nil {
-			accessToken = cookie.Value
-		}
+	accessToken := ""
+	cookie, _ := c.Cookie(auth.AccessTokenCookieName)
+	if cookie != nil {
+		accessToken = cookie.Value
 	}
+	if accessToken == "" {
+		accessToken, _ = extractTokenFromHeader(c)
+	}
+
 	return accessToken
 }
 

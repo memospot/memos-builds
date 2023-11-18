@@ -3,7 +3,6 @@ package test
 import (
 	"fmt"
 	"net"
-	"os"
 	"testing"
 
 	"github.com/usememos/memos/server/profile"
@@ -28,26 +27,11 @@ func GetTestingProfile(t *testing.T) *profile.Profile {
 	dir := t.TempDir()
 	mode := "dev"
 	port := getUnusedPort()
-	driver := getDriverFromEnv()
-	dsn := os.Getenv("DSN")
-	if driver == "sqlite" {
-		dsn = fmt.Sprintf("%s/memos_%s.db", dir, mode)
-	}
-	println("dsn", dsn, driver)
 	return &profile.Profile{
 		Mode:    mode,
 		Port:    port,
 		Data:    dir,
-		DSN:     dsn,
-		Driver:  driver,
+		DSN:     fmt.Sprintf("%s/memos_%s.db", dir, mode),
 		Version: version.GetCurrentVersion(mode),
 	}
-}
-
-func getDriverFromEnv() string {
-	driver := os.Getenv("DRIVER")
-	if driver == "" {
-		driver = "sqlite"
-	}
-	return driver
 }

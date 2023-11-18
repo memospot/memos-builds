@@ -6,7 +6,6 @@ import "api/v2/common.proto";
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
-import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "gen/api/v2";
@@ -16,19 +15,12 @@ service UserService {
     option (google.api.http) = {get: "/api/v2/users/{username}"};
     option (google.api.method_signature) = "username";
   }
-  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {
-    option (google.api.http) = {
-      post: "/v1/users"
-      body: "user"
-    };
-    option (google.api.method_signature) = "user";
-  }
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/v2/users/{user.username}"
-      body: "user"
+      post: "/api/v2/users/{username}"
+      body: "*"
     };
-    option (google.api.method_signature) = "user,update_mask";
+    option (google.api.method_signature) = "username";
   }
   // ListUserAccessTokens returns a list of access tokens for a user.
   rpc ListUserAccessTokens(ListUserAccessTokensRequest) returns (ListUserAccessTokensResponse) {
@@ -86,18 +78,13 @@ message GetUserResponse {
   User user = 1;
 }
 
-message CreateUserRequest {
-  User user = 1;
-}
-
-message CreateUserResponse {
-  User user = 1;
-}
-
 message UpdateUserRequest {
-  User user = 1 [(google.api.field_behavior) = REQUIRED];
+  string username = 1;
 
-  google.protobuf.FieldMask update_mask = 2;
+  User user = 2;
+
+  // The update mask applies to the user resource.
+  repeated string update_mask = 3;
 }
 
 message UpdateUserResponse {

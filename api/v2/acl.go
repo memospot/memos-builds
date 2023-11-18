@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/usememos/memos/api/auth"
-	"github.com/usememos/memos/internal/util"
+	"github.com/usememos/memos/common/util"
 	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/store"
 )
@@ -127,16 +127,15 @@ func (in *GRPCAuthInterceptor) authenticate(ctx context.Context, accessToken str
 }
 
 func getTokenFromMetadata(md metadata.MD) (string, error) {
-	// Check the HTTP request header first.
 	authorizationHeaders := md.Get("Authorization")
 	if len(md.Get("Authorization")) > 0 {
 		authHeaderParts := strings.Fields(authorizationHeaders[0])
 		if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
-			return "", errors.New("authorization header format must be Bearer {token}")
+			return "", errors.Errorf("authorization header format must be Bearer {token}")
 		}
 		return authHeaderParts[1], nil
 	}
-	// Check the cookie header.
+	// check the HTTP cookie
 	var accessToken string
 	for _, t := range append(md.Get("grpcgateway-cookie"), md.Get("cookie")...) {
 		header := http.Header{}

@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"github.com/usememos/memos/internal/log"
+	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
 )
@@ -72,20 +72,26 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	systemStatus := SystemStatus{
-		Profile: profile.Profile{
-			Mode:    s.Profile.Mode,
-			Version: s.Profile.Version,
-		},
-		// Allow sign up by default.
-		AllowSignUp:      true,
-		MaxUploadSizeMiB: 32,
+		Profile:              *s.Profile,
+		DBSize:               0,
+		AllowSignUp:          false,
+		DisablePasswordLogin: false,
+		DisablePublicMemos:   false,
+		MaxUploadSizeMiB:     32,
+		AutoBackupInterval:   0,
+		AdditionalStyle:      "",
+		AdditionalScript:     "",
 		CustomizedProfile: CustomizedProfile{
-			Name:       "memos",
-			Locale:     "en",
-			Appearance: "system",
+			Name:        "memos",
+			LogoURL:     "",
+			Description: "",
+			Locale:      "en",
+			Appearance:  "system",
+			ExternalURL: "",
 		},
-		StorageServiceID: DefaultStorage,
-		LocalStoragePath: "assets/{timestamp}_{filename}",
+		StorageServiceID:         LocalStorage,
+		LocalStoragePath:         "assets/{timestamp}_{filename}",
+		MemoDisplayWithUpdatedTs: false,
 	}
 
 	hostUserType := store.RoleHost

@@ -13,7 +13,7 @@ interface State {
   createUserPassword: string;
 }
 
-const MemberSection = () => {
+const PreferencesSection = () => {
   const t = useTranslate();
   const userStore = useUserStore();
   const currentUser = userStore.state.user;
@@ -78,7 +78,7 @@ const MemberSection = () => {
     showCommonDialog({
       title: t("setting.member-section.archive-member"),
       content: t("setting.member-section.archive-warning", { username: user.username }),
-      style: "danger",
+      style: "warning",
       dialogName: "archive-user-dialog",
       onConfirm: async () => {
         await userStore.patchUser({
@@ -102,7 +102,7 @@ const MemberSection = () => {
     showCommonDialog({
       title: t("setting.member-section.delete-member"),
       content: t("setting.member-section.delete-warning", { username: user.username }),
-      style: "danger",
+      style: "warning",
       dialogName: "delete-user-dialog",
       onConfirm: async () => {
         await userStore.deleteUser({
@@ -214,4 +214,4 @@ const MemberSection = () => {
   );
 };
 
-export default MemberSection;
+export default PreferencesSection;

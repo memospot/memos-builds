@@ -33,28 +33,9 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
 
   const suggestionsRef = useRef<string[]>([]);
   suggestionsRef.current = (() => {
-    const input = getCurrentWord()[0].slice(1).toLowerCase();
-
-    const customMatches = (tag: string, input: string) => {
-      const tagLowerCase = tag.toLowerCase();
-      const inputLowerCase = input.toLowerCase();
-      let inputIndex = 0;
-
-      for (let i = 0; i < tagLowerCase.length; i++) {
-        if (tagLowerCase[i] === inputLowerCase[inputIndex]) {
-          inputIndex++;
-          if (inputIndex === inputLowerCase.length) {
-            return true;
-          }
-        }
-      }
-
-      return false;
-    };
-
-    const matchedTags = tagsRef.current.filter((tag) => customMatches(tag, input));
-
-    return matchedTags.slice(0, 5);
+    const partial = getCurrentWord()[0].slice(1).toLowerCase();
+    const matches = (str: string) => str.startsWith(partial) && partial.length < str.length;
+    return tagsRef.current.filter((tag) => matches(tag.toLowerCase())).slice(0, 5);
   })();
 
   const isVisibleRef = useRef(false);
@@ -113,7 +94,7 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
   if (!isVisibleRef.current || !position) return null;
   return (
     <div
-      className="z-20 p-1 mt-1 -ml-2 absolute max-w-[12rem] rounded font-mono shadow bg-zinc-200 dark:bg-zinc-600"
+      className="tag-suggestions z-20 p-1 absolute max-w-[12rem] rounded font-mono shadow bg-zinc-200 dark:bg-zinc-600"
       style={{ left: position.left, top: position.top + position.height }}
     >
       {suggestionsRef.current.map((tag, i) => (

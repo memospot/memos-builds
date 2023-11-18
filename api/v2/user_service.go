@@ -23,10 +23,25 @@ import (
 )
 
 var (
-	usernameMatcher = regexp.MustCompile("^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$")
+	usernameMatcher = regexp.MustCompile("^[a-z]([a-z0-9-]{2,30}[a-z0-9])?$")
 )
 
-func (s *APIV2Service) GetUser(ctx context.Context, request *apiv2pb.GetUserRequest) (*apiv2pb.GetUserResponse, error) {
+type UserService struct {
+	apiv2pb.UnimplementedUserServiceServer
+
+	Store  *store.Store
+	Secret string
+}
+
+// NewUserService creates a new UserService.
+func NewUserService(store *store.Store, secret string) *UserService {
+	return &UserService{
+		Store:  store,
+		Secret: secret,
+	}
+}
+
+func (s *UserService) GetUser(ctx context.Context, request *apiv2pb.GetUserRequest) (*apiv2pb.GetUserResponse, error) {
 	user, err := s.Store.GetUser(ctx, &store.FindUser{
 		Username: &request.Username,
 	})
@@ -44,49 +59,15 @@ func (s *APIV2Service) GetUser(ctx context.Context, request *apiv2pb.GetUserRequ
 	return response, nil
 }
 
-func (s *APIV2Service) CreateUser(ctx context.Context, request *apiv2pb.CreateUserRequest) (*apiv2pb.CreateUserResponse, error) {
+func (s *UserService) UpdateUser(ctx context.Context, request *apiv2pb.UpdateUserRequest) (*apiv2pb.UpdateUserResponse, error) {
 	currentUser, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
-	if currentUser.Role != store.RoleHost {
+	if currentUser.Username != request.Username && currentUser.Role != store.RoleAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
-
-	if !usernameMatcher.MatchString(strings.ToLower(request.User.Username)) {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid username: %s", request.User.Username)
-	}
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.User.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to generate password hash").SetInternal(err)
-	}
-
-	user, err := s.Store.CreateUser(ctx, &store.User{
-		Username:     request.User.Username,
-		Role:         convertUserRoleToStore(request.User.Role),
-		Email:        request.User.Email,
-		Nickname:     request.User.Nickname,
-		PasswordHash: string(passwordHash),
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create user: %v", err)
-	}
-
-	response := &apiv2pb.CreateUserResponse{
-		User: convertUserFromStore(user),
-	}
-	return response, nil
-}
-
-func (s *APIV2Service) UpdateUser(ctx context.Context, request *apiv2pb.UpdateUserRequest) (*apiv2pb.UpdateUserResponse, error) {
-	currentUser, err := getCurrentUser(ctx, s.Store)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
-	}
-	if currentUser.Username != request.User.Username && currentUser.Role != store.RoleAdmin {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
-	}
-	if request.UpdateMask == nil || len(request.UpdateMask.Paths) == 0 {
+	if request.UpdateMask == nil || len(request.UpdateMask) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "update mask is empty")
 	}
 
@@ -95,33 +76,33 @@ func (s *APIV2Service) UpdateUser(ctx context.Context, request *apiv2pb.UpdateUs
 		ID:        currentUser.ID,
 		UpdatedTs: &currentTs,
 	}
-	for _, field := range request.UpdateMask.Paths {
-		if field == "username" {
+	for _, path := range request.UpdateMask {
+		if path == "username" {
 			if !usernameMatcher.MatchString(strings.ToLower(request.User.Username)) {
 				return nil, status.Errorf(codes.InvalidArgument, "invalid username: %s", request.User.Username)
 			}
 			update.Username = &request.User.Username
-		} else if field == "nickname" {
+		} else if path == "nickname" {
 			update.Nickname = &request.User.Nickname
-		} else if field == "email" {
+		} else if path == "email" {
 			update.Email = &request.User.Email
-		} else if field == "avatar_url" {
+		} else if path == "avatar_url" {
 			update.AvatarURL = &request.User.AvatarUrl
-		} else if field == "role" {
+		} else if path == "role" {
 			role := convertUserRoleToStore(request.User.Role)
 			update.Role = &role
-		} else if field == "password" {
+		} else if path == "password" {
 			passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.User.Password), bcrypt.DefaultCost)
 			if err != nil {
 				return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to generate password hash").SetInternal(err)
 			}
 			passwordHashStr := string(passwordHash)
 			update.PasswordHash = &passwordHashStr
-		} else if field == "row_status" {
+		} else if path == "row_status" {
 			rowStatus := convertRowStatusToStore(request.User.RowStatus)
 			update.RowStatus = &rowStatus
 		} else {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid update path: %s", field)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid update path: %s", path)
 		}
 	}
 
@@ -136,32 +117,16 @@ func (s *APIV2Service) UpdateUser(ctx context.Context, request *apiv2pb.UpdateUs
 	return response, nil
 }
 
-func (s *APIV2Service) ListUserAccessTokens(ctx context.Context, request *apiv2pb.ListUserAccessTokensRequest) (*apiv2pb.ListUserAccessTokensResponse, error) {
+func (s *UserService) ListUserAccessTokens(ctx context.Context, request *apiv2pb.ListUserAccessTokensRequest) (*apiv2pb.ListUserAccessTokensResponse, error) {
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
-	if user == nil {
+	if user == nil || user.Username != request.Username {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
 
-	userID := user.ID
-	// List access token for other users need to be verified.
-	if user.Username != request.Username {
-		// Normal users can only list their access tokens.
-		if user.Role == store.RoleUser {
-			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
-		}
-
-		// The request user must be exist.
-		requestUser, err := s.Store.GetUser(ctx, &store.FindUser{Username: &request.Username})
-		if requestUser == nil || err != nil {
-			return nil, status.Errorf(codes.NotFound, "fail to find user %s", request.Username)
-		}
-		userID = requestUser.ID
-	}
-
-	userAccessTokens, err := s.Store.GetUserAccessTokens(ctx, userID)
+	userAccessTokens, err := s.Store.GetUserAccessTokens(ctx, user.ID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list access tokens: %v", err)
 	}
@@ -197,8 +162,8 @@ func (s *APIV2Service) ListUserAccessTokens(ctx context.Context, request *apiv2p
 	}
 
 	// Sort by issued time in descending order.
-	slices.SortFunc(accessTokens, func(i, j *apiv2pb.UserAccessToken) int {
-		return int(i.IssuedAt.Seconds - j.IssuedAt.Seconds)
+	slices.SortFunc(accessTokens, func(i, j *apiv2pb.UserAccessToken) bool {
+		return i.IssuedAt.Seconds > j.IssuedAt.Seconds
 	})
 	response := &apiv2pb.ListUserAccessTokensResponse{
 		AccessTokens: accessTokens,
@@ -206,7 +171,7 @@ func (s *APIV2Service) ListUserAccessTokens(ctx context.Context, request *apiv2p
 	return response, nil
 }
 
-func (s *APIV2Service) CreateUserAccessToken(ctx context.Context, request *apiv2pb.CreateUserAccessTokenRequest) (*apiv2pb.CreateUserAccessTokenResponse, error) {
+func (s *UserService) CreateUserAccessToken(ctx context.Context, request *apiv2pb.CreateUserAccessTokenRequest) (*apiv2pb.CreateUserAccessTokenResponse, error) {
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
@@ -216,22 +181,7 @@ func (s *APIV2Service) CreateUserAccessToken(ctx context.Context, request *apiv2
 	if request.ExpiresAt != nil {
 		expiresAt = request.ExpiresAt.AsTime()
 	}
-
-	// Create access token for other users need to be verified.
-	if user.Username != request.Username {
-		// Normal users can only create access tokens for others.
-		if user.Role == store.RoleUser {
-			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
-		}
-
-		// The request user must be exist.
-		requestUser, err := s.Store.GetUser(ctx, &store.FindUser{Username: &request.Username})
-		if requestUser == nil || err != nil {
-			return nil, status.Errorf(codes.NotFound, "fail to find user %s", request.Username)
-		}
-	}
-
-	accessToken, err := auth.GenerateAccessToken(request.Username, user.ID, expiresAt, []byte(s.Secret))
+	accessToken, err := auth.GenerateAccessToken(user.Username, user.ID, expiresAt, []byte(s.Secret))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate access token: %v", err)
 	}
@@ -271,7 +221,7 @@ func (s *APIV2Service) CreateUserAccessToken(ctx context.Context, request *apiv2
 	return response, nil
 }
 
-func (s *APIV2Service) DeleteUserAccessToken(ctx context.Context, request *apiv2pb.DeleteUserAccessTokenRequest) (*apiv2pb.DeleteUserAccessTokenResponse, error) {
+func (s *UserService) DeleteUserAccessToken(ctx context.Context, request *apiv2pb.DeleteUserAccessTokenRequest) (*apiv2pb.DeleteUserAccessTokenResponse, error) {
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
@@ -303,7 +253,7 @@ func (s *APIV2Service) DeleteUserAccessToken(ctx context.Context, request *apiv2
 	return &apiv2pb.DeleteUserAccessTokenResponse{}, nil
 }
 
-func (s *APIV2Service) UpsertAccessTokenToStore(ctx context.Context, user *store.User, accessToken, description string) error {
+func (s *UserService) UpsertAccessTokenToStore(ctx context.Context, user *store.User, accessToken, description string) error {
 	userAccessTokens, err := s.Store.GetUserAccessTokens(ctx, user.ID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get user access tokens")

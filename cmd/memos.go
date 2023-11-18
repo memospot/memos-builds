@@ -12,10 +12,9 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"github.com/usememos/memos/internal/log"
+	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/server"
 	_profile "github.com/usememos/memos/server/profile"
-	"github.com/usememos/memos/server/service/metric"
 	"github.com/usememos/memos/store"
 	"github.com/usememos/memos/store/db"
 )
@@ -32,46 +31,35 @@ const (
 )
 
 var (
-	profile      *_profile.Profile
-	mode         string
-	addr         string
-	port         int
-	data         string
-	driver       string
-	dsn          string
-	enableMetric bool
+	profile *_profile.Profile
+	mode    string
+	addr    string
+	port    int
+	data    string
 
 	rootCmd = &cobra.Command{
 		Use:   "memos",
 		Short: `An open-source, self-hosted memo hub with knowledge management and social networking.`,
 		Run: func(_cmd *cobra.Command, _args []string) {
 			ctx, cancel := context.WithCancel(context.Background())
-			dbDriver, err := db.NewDBDriver(profile)
-			if err != nil {
+			db := db.NewDB(profile)
+			if err := db.Open(); err != nil {
 				cancel()
-				log.Error("failed to create db driver", zap.Error(err))
+				log.Error("failed to open db", zap.Error(err))
 				return
 			}
-			if err := dbDriver.Migrate(ctx); err != nil {
+			if err := db.Migrate(ctx); err != nil {
 				cancel()
 				log.Error("failed to migrate db", zap.Error(err))
 				return
 			}
 
-			store := store.New(dbDriver, profile)
+			store := store.New(db.DBInstance, profile)
 			s, err := server.NewServer(ctx, profile, store)
 			if err != nil {
 				cancel()
 				log.Error("failed to create server", zap.Error(err))
 				return
-			}
-
-			if profile.Metric {
-				println("metric collection is enabled")
-				// nolint
-				metric.NewMetricClient(s.ID, *profile)
-			} else {
-				println("metric collection is disabled")
 			}
 
 			c := make(chan os.Signal, 1)
@@ -113,9 +101,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&addr, "addr", "a", "", "address of server")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 8081, "port of server")
 	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "", "data directory")
-	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "", "", "database driver")
-	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "database source name(aka. DSN)")
-	rootCmd.PersistentFlags().BoolVarP(&enableMetric, "metric", "", true, "allow metric collection")
 
 	err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
 	if err != nil {
@@ -133,24 +118,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("driver", rootCmd.PersistentFlags().Lookup("driver"))
-	if err != nil {
-		panic(err)
-	}
-	err = viper.BindPFlag("dsn", rootCmd.PersistentFlags().Lookup("dsn"))
-	if err != nil {
-		panic(err)
-	}
-	err = viper.BindPFlag("metric", rootCmd.PersistentFlags().Lookup("metric"))
-	if err != nil {
-		panic(err)
-	}
 
 	viper.SetDefault("mode", "demo")
-	viper.SetDefault("driver", "sqlite")
 	viper.SetDefault("addr", "")
 	viper.SetDefault("port", 8081)
-	viper.SetDefault("metric", true)
 	viper.SetEnvPrefix("memos")
 }
 
@@ -165,14 +136,11 @@ func initConfig() {
 
 	println("---")
 	println("Server profile")
-	println("data:", profile.Data)
 	println("dsn:", profile.DSN)
 	println("addr:", profile.Addr)
 	println("port:", profile.Port)
 	println("mode:", profile.Mode)
-	println("driver:", profile.Driver)
 	println("version:", profile.Version)
-	println("metric:", profile.Metric)
 	println("---")
 }
 

@@ -1,34 +1,39 @@
 import { lazy } from "react";
 import { createBrowserRouter, redirect } from "react-router-dom";
 import App from "@/App";
+import Archived from "@/pages/Archived";
+import DailyReview from "@/pages/DailyReview";
+import Resources from "@/pages/Resources";
+import Setting from "@/pages/Setting";
 import { initialGlobalState, initialUserState } from "@/store/module";
 
 const Root = lazy(() => import("@/layouts/Root"));
-const SignIn = lazy(() => import("@/pages/SignIn"));
-const SignUp = lazy(() => import("@/pages/SignUp"));
+const Auth = lazy(() => import("@/pages/Auth"));
 const AuthCallback = lazy(() => import("@/pages/AuthCallback"));
 const Explore = lazy(() => import("@/pages/Explore"));
 const Home = lazy(() => import("@/pages/Home"));
 const UserProfile = lazy(() => import("@/pages/UserProfile"));
 const MemoDetail = lazy(() => import("@/pages/MemoDetail"));
 const EmbedMemo = lazy(() => import("@/pages/EmbedMemo"));
-const Archived = lazy(() => import("@/pages/Archived"));
-const DailyReview = lazy(() => import("@/pages/DailyReview"));
-const Resources = lazy(() => import("@/pages/Resources"));
-const Inboxes = lazy(() => import("@/pages/Inboxes"));
-const Setting = lazy(() => import("@/pages/Setting"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-const initialGlobalStateLoader = async () => {
-  try {
-    await initialGlobalState();
-  } catch (error) {
-    // do nth
-  }
-  return null;
-};
+const initialGlobalStateLoader = (() => {
+  let done = false;
 
-const initialUserStateLoader = async (redirectWhenNotFound = true) => {
+  return async () => {
+    if (done) {
+      return;
+    }
+    done = true;
+    try {
+      await initialGlobalState();
+    } catch (error) {
+      // do nth
+    }
+  };
+})();
+
+const userStateLoader = async () => {
   let user = undefined;
   try {
     user = await initialUserState();
@@ -36,7 +41,7 @@ const initialUserStateLoader = async (redirectWhenNotFound = true) => {
     // do nothing.
   }
 
-  if (!user && redirectWhenNotFound) {
+  if (!user) {
     return redirect("/explore");
   }
   return null;
@@ -46,15 +51,14 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
-    loader: () => initialGlobalStateLoader(),
+    loader: async () => {
+      await initialGlobalStateLoader();
+      return null;
+    },
     children: [
       {
         path: "/auth",
-        element: <SignIn />,
-      },
-      {
-        path: "/auth/signup",
-        element: <SignUp />,
+        element: <Auth />,
       },
       {
         path: "/auth/callback",
@@ -67,54 +71,53 @@ const router = createBrowserRouter([
           {
             path: "",
             element: <Home />,
-            loader: () => initialUserStateLoader(),
+            loader: userStateLoader,
           },
           {
             path: "explore",
             element: <Explore />,
-            loader: () => initialUserStateLoader(false),
+            loader: async () => {
+              try {
+                await initialUserState();
+              } catch (error) {
+                // do nothing.
+              }
+              return null;
+            },
           },
           {
             path: "review",
             element: <DailyReview />,
-            loader: () => initialUserStateLoader(),
+            loader: userStateLoader,
           },
           {
             path: "resources",
             element: <Resources />,
-            loader: () => initialUserStateLoader(),
-          },
-          {
-            path: "inbox",
-            element: <Inboxes />,
-            loader: () => initialUserStateLoader(),
+            loader: userStateLoader,
           },
           {
             path: "archived",
             element: <Archived />,
-            loader: () => initialUserStateLoader(),
+            loader: userStateLoader,
           },
           {
             path: "setting",
             element: <Setting />,
-            loader: () => initialUserStateLoader(),
+            loader: userStateLoader,
           },
         ],
       },
       {
         path: "/m/:memoId",
         element: <MemoDetail />,
-        loader: () => initialUserStateLoader(false),
       },
       {
         path: "/m/:memoId/embed",
         element: <EmbedMemo />,
-        loader: () => initialUserStateLoader(false),
       },
       {
         path: "/u/:username",
         element: <UserProfile />,
-        loader: () => initialUserStateLoader(false),
       },
       {
         path: "*",
