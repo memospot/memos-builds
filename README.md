@@ -67,6 +67,8 @@ Most binaries are packed with [UPX](https://upx.github.io/). This may trigger fa
 
 ⚠ It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite driver) is not compatible with these targets.
 
+⚠ The oldest version of Memos supported by this repository CI is v0.13.2, as CGO was used before that. Supporting legacy versions would require a very complex build system, which is not worth the effort.
+
 ## Support
 
 ⚠ Memos official first-class [support](https://github.com/usememos/memos/issues) is for the official Docker container.
