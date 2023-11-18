@@ -34,7 +34,6 @@
     "sign-out": "Logga ut",
     "back-to-home": "Tillbaka hem",
     "type": "Typ",
-    "shortcuts": "Genvägar",
     "title": "Titel",
     "filter": "Filter",
     "tags": "Taggar",
@@ -49,7 +48,8 @@
     "vacuum": "Vacuum",
     "select": "Select",
     "avatar": "Avatar",
-    "database": "Databas"
+    "database": "Databas",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Registera dig som värd",
@@ -107,15 +107,6 @@
   "memo-list": {
     "fetching-data": "hämtar data...",
     "fetch-more": "Klicka här för att hämta mer"
-  },
-  "shortcut-list": {
-    "shortcut-title": "Genvägs titel",
-    "create-shortcut": "Skapa genväg",
-    "edit-shortcut": "Ändra genväg",
-    "eligible-memo": "kvalificerad anteckning",
-    "fill-previous": "Vänligen fyll i tidigare filtervärde",
-    "title-required": "Titel krävs",
-    "value-required": "Filtervärde krävs"
   },
   "filter": {
     "new-filter": "Nytt filter",
@@ -185,7 +176,8 @@
       "additional-script": "Ytterligare skript",
       "additional-style-placeholder": "Ytterligare CSS kod",
       "additional-script-placeholder": "Ytterligare JavaScript kod",
-      "disable-public-memos": "Inaktivera offentliga anteckningar"
+      "disable-public-memos": "Inaktivera offentliga anteckningar",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Follow system",

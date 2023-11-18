@@ -30,15 +30,6 @@ const (
 	// ActivityMemoDelete is the type for deleting memos.
 	ActivityMemoDelete ActivityType = "memo.delete"
 
-	// Shortcut related.
-
-	// ActivityShortcutCreate is the type for creating shortcuts.
-	ActivityShortcutCreate ActivityType = "shortcut.create"
-	// ActivityShortcutUpdate is the type for updating shortcuts.
-	ActivityShortcutUpdate ActivityType = "shortcut.update"
-	// ActivityShortcutDelete is the type for deleting shortcuts.
-	ActivityShortcutDelete ActivityType = "shortcut.delete"
-
 	// Resource related.
 
 	// ActivityResourceCreate is the type for creating resources.
@@ -59,6 +50,10 @@ const (
 	ActivityServerStart ActivityType = "server.start"
 )
 
+func (t ActivityType) String() string {
+	return string(t)
+}
+
 // ActivityLevel is the level of activities.
 type ActivityLevel string
 
@@ -71,14 +66,18 @@ const (
 	ActivityError ActivityLevel = "ERROR"
 )
 
+func (l ActivityLevel) String() string {
+	return string(l)
+}
+
 type ActivityUserCreatePayload struct {
-	UserID   int    `json:"userId"`
+	UserID   int32  `json:"userId"`
 	Username string `json:"username"`
 	Role     Role   `json:"role"`
 }
 
 type ActivityUserAuthSignInPayload struct {
-	UserID int    `json:"userId"`
+	UserID int32  `json:"userId"`
 	IP     string `json:"ip"`
 }
 
@@ -90,11 +89,6 @@ type ActivityUserAuthSignUpPayload struct {
 type ActivityMemoCreatePayload struct {
 	Content    string `json:"content"`
 	Visibility string `json:"visibility"`
-}
-
-type ActivityShortcutCreatePayload struct {
-	Title   string `json:"title"`
-	Payload string `json:"payload"`
 }
 
 type ActivityResourceCreatePayload struct {
@@ -113,10 +107,10 @@ type ActivityServerStartPayload struct {
 }
 
 type Activity struct {
-	ID int `json:"id"`
+	ID int32 `json:"id"`
 
 	// Standard fields
-	CreatorID int   `json:"creatorId"`
+	CreatorID int32 `json:"creatorId"`
 	CreatedTs int64 `json:"createdTs"`
 
 	// Domain specific fields
@@ -128,7 +122,7 @@ type Activity struct {
 // ActivityCreate is the API message for creating an activity.
 type ActivityCreate struct {
 	// Standard fields
-	CreatorID int
+	CreatorID int32
 
 	// Domain specific fields
 	Type    ActivityType `json:"type"`

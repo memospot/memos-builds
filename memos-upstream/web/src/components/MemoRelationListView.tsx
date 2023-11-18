@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMemoCacheStore } from "@/store/zustand";
+import { useMemoCacheStore } from "@/store/v1";
 import Icon from "./Icon";
 
 interface Props {
@@ -13,10 +13,10 @@ const MemoRelationListView = (props: Props) => {
 
   useEffect(() => {
     const fetchRelatedMemoList = async () => {
-      const requests = relationList.map((relation) => memoCacheStore.getOrFetchMemoById(relation.relatedMemoId));
-      const memoList = await Promise.all(requests);
+      const memoList = await Promise.all(relationList.map((relation) => memoCacheStore.getOrFetchMemoById(relation.relatedMemoId)));
       setRelatedMemoList(memoList);
     };
+
     fetchRelatedMemoList();
   }, [relationList]);
 

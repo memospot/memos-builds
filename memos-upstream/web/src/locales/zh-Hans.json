@@ -49,7 +49,6 @@
     "select": "选择",
     "settings": "设置",
     "share": "分享",
-    "shortcuts": "捷径",
     "sign-in": "登录",
     "sign-in-with": "使用{{provider}}登录",
     "sign-out": "注销",
@@ -66,7 +65,15 @@
     "version": "版本",
     "visibility": "可见性",
     "yourself": "你自己",
-    "new": "新建"
+    "new": "新建",
+    "dialog": {
+      "help": "帮助",
+      "info": "信息",
+      "error": "错误",
+      "warning": "警告",
+      "success": "成功"
+    },
+    "mark": "引用"
   },
   "about": {
     "about-memos": "关于Memos",
@@ -87,15 +94,6 @@
     "archived-memos": "已归档的备忘录",
     "fetching-data": "请求数据中...",
     "no-archived-memos": "没有归档的备忘录"
-  },
-  "ask-ai": {
-    "go-to-settings": "前往设置",
-    "not-enabled": "您尚未设置 OpenAI API 密钥。",
-    "placeholder": "随便问",
-    "title": "问 AI",
-    "default-message-group-title": "默认会话",
-    "create-message-group-title": "新建会话",
-    "label-message-group-name-title": "会话名称"
   },
   "auth": {
     "host-tip": "你正在注册为管理员用户账号。",
@@ -167,10 +165,10 @@
     }
   },
   "heatmap": {
-    "day": "天",
-    "days": "天",
-    "memo-in": " 条 memos",
-    "memos-in": " 条 memos",
+    "day": "天中",
+    "days": "天中",
+    "memo-in": " 条备忘录，在过去的",
+    "memos-in": " 条备忘录，在过去的",
     "memo-on": "{{date}} 记了 {{amount}} 条备忘录",
     "memos-on": "{{date}} 记了 {{amount}} 条备忘录"
   },
@@ -218,8 +216,7 @@
     "memo-updated-datetime": "备忘录创建日期时间已更改。",
     "memos-ready": "所有备忘录已就绪 🎉",
     "new-password-not-match": "新密码不匹配。",
-    "no-memos": "没有备忘录了 🌃",
-    "no-resource": "没有资源了 🌃",
+    "no-data": "也许寻觅无果，也许可重新设定标准。",
     "not-allow-chinese": "不允许包含中文",
     "not-allow-space": "不允许包含空格",
     "page-not-found": "404 - 未找到网页 😥",
@@ -241,7 +238,9 @@
     "too-long": "过长",
     "too-short": "过短",
     "update-succeed": "更新成功",
-    "user-not-found": "未找到该用户"
+    "user-not-found": "未找到该用户",
+    "maximum-upload-size-is": "允许的最大上传大小为 {{size}} MiB",
+    "file-exceeds-upload-limit-of": "文件 {{file}} 超出了 {{size}} MiB 的上传限制"
   },
   "resource": {
     "clear": "清除",
@@ -337,7 +336,8 @@
       "telegram-user-id": "Telegram UserID",
       "telegram-user-id-placeholder": "向Telegram机器人发送任意消息以获取",
       "theme": "主题",
-      "updated_ts": "更新时间"
+      "updated_ts": "更新时间",
+      "default-resource-visibility": "默认资源可见性"
     },
     "sso": "SSO",
     "sso-section": {
@@ -410,10 +410,14 @@
         "title": "自定义服务"
       },
       "database-file-size": "数据库文件大小",
+      "disable-password-login": "禁用密码登录",
+      "disable-password-login-warning": "所有用户将无法使用密码登录。如果配置的身份提供程序失效，不在数据库中恢复此设置将无法登录。删除身份提供程序时也要格外小心❗",
+      "disable-password-login-final-warning": "如果你知道自己在做什么，请输入 \"CONFIRM\"",
+      "enable-password-login": "启用密码登录",
+      "enable-password-login-warning": "启用所有用户的密码登录。如果希望用户同时使用 SSO 和密码登录，请开启密码登录",
       "disable-public-memos": "禁用公共备忘录",
       "ignore-version-upgrade": "忽略版本升级",
       "telegram-bot-token": "Telegram 机器人 Token",
-      "telegram-bot-token-description": "从 Telegram 的 @BotFather 处获取",
       "telegram-bot-token-description": "Telegram 机器人Token或`http.../bot<token>`格式的代理地址",
       "telegram-bot-token-placeholder": "Telegram 的机器人 Token",
       "openai-api-host": "OpenAI：API Host",
@@ -421,22 +425,22 @@
       "openai-api-key": "OpenAI：API 密钥",
       "openai-api-key-description": "获取 API Key",
       "openai-api-key-placeholder": "您的 OpenAI API Key",
-      "server-name": "服务名称"
+      "server-name": "服务名称",
+      "max-upload-size-hint": "建议值为 32 MiB。",
+      "max-upload-size": "最大上传大小 (MiB)",
+      "auto-backup-interval": "自动备份间隔(单位：秒)",
+      "auto-backup-interval-hint": "设置为0禁止自动备份，重启后生效",
+      "display-with-updated-time": "显示最后修改时间"
     }
-  },
-  "shortcut-list": {
-    "create-shortcut": "创建捷径",
-    "edit-shortcut": "编辑捷径",
-    "eligible-memo": "符合条件的备忘录",
-    "fill-previous": "请填写之前的过滤值",
-    "shortcut-title": "捷径标题",
-    "title-required": "标题是必填项",
-    "value-required": "过滤值是必填项"
   },
   "tag-list": {
     "all-tags": "全部标签",
     "create-tag": "创建标签",
     "tag-name": "标签名称",
-    "tip-text": "输入`#tag`来创建标签"
+    "tip-text": "输入`#tag`来创建标签",
+    "tag-suggestions": "标签建议",
+    "show": "展开",
+    "hide": "收起",
+    "save-all": "全部保存"
   }
 }

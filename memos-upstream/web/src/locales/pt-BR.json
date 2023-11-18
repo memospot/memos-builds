@@ -38,7 +38,6 @@
     "sign-up": "Registrar",
     "sign-out": "Sair",
     "type": "Tipo",
-    "shortcuts": "Atalhos",
     "title": "Título",
     "filter": "Filtro",
     "filter-period": "{{from}} até {{to}}",
@@ -67,7 +66,8 @@
       "info": "Informação",
       "success": "Sucesso",
       "warning": "Aviso"
-    }
+    },
+    "mark": "Mark"
   },
   "router": {
     "back-to-home": "Voltar ao início"
@@ -125,6 +125,7 @@
     "upload-successfully": "Carregado com êxito",
     "file-drag-drop-prompt": "Arraste e solte o arquivo aqui para carregá-lo",
     "search-bar-placeholder": "Pesquisar recurso",
+    "clear": "Clear",
     "create-dialog": {
       "title": "Criar recurso",
       "upload-method": "Método de carregamento",
@@ -142,15 +143,6 @@
         "type-placeholder": "Tipo do arquivo"
       }
     }
-  },
-  "shortcut-list": {
-    "shortcut-title": "título do atalho",
-    "create-shortcut": "Criar atalho",
-    "edit-shortcut": "Editar atalho",
-    "eligible-memo": "memo elegível",
-    "fill-previous": "Por favor, preencha o valor do filtro anterior",
-    "title-required": "O título do atalho é obrigatório",
-    "value-required": "O valor do filtro é obrigatório"
   },
   "tag-list": {
     "tip-text": "Insira `#tag` para criar uma nova",
@@ -260,7 +252,8 @@
       "openai-api-key-description": "Obter chave de API",
       "openai-api-key-placeholder": "Sua chave de API da OpenAI",
       "openai-api-host": "OpenAI: Host de API",
-      "openai-api-host-placeholder": "Padrão: https://api.openai.com/"
+      "openai-api-host-placeholder": "Padrão: https://api.openai.com/",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Sistema",

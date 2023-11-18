@@ -12,19 +12,16 @@ interface CustomizedProfile {
   externalUrl: string;
 }
 
-interface OpenAIConfig {
-  key: string;
-  host: string;
-}
-
 interface SystemStatus {
   host?: User;
   profile: Profile;
   dbSize: number;
   // System settings
   allowSignUp: boolean;
+  disablePasswordLogin: boolean;
   disablePublicMemos: boolean;
   maxUploadSizeMiB: number;
+  autoBackupInterval: number;
   additionalStyle: string;
   additionalScript: string;
   customizedProfile: CustomizedProfile;

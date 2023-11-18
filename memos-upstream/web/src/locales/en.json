@@ -38,7 +38,6 @@
     "sign-up": "Sign up",
     "sign-out": "Sign out",
     "type": "Type",
-    "shortcuts": "Shortcuts",
     "title": "Title",
     "filter": "Filter",
     "filter-period": "{{from}} to {{to}}",
@@ -67,7 +66,8 @@
       "info": "Information",
       "success": "Success",
       "warning": "Warning"
-    }
+    },
+    "mark": "Mark"
   },
   "router": {
     "back-to-home": "Back to Home"
@@ -85,7 +85,7 @@
     "save": "Save",
     "placeholder": "Any thoughts...",
     "only-image-supported": "Only image file supported.",
-    "cant-empty": "Content can't be empty",
+    "cant-empty": "Content can’t be empty",
     "local": "Local",
     "resources": "Resources"
   },
@@ -95,7 +95,7 @@
     "embed": "Embed",
     "archived-memos": "Archived Memos",
     "no-archived-memos": "No archived memos.",
-    "fetching-data": "fetching data...",
+    "fetching-data": "Fetching data...",
     "fetch-more": "Click here to fetch more",
     "archived-at": "Archived at",
     "search-placeholder": "Search memos",
@@ -106,11 +106,11 @@
       "disabled": "Public memos are disabled"
     },
     "delete-memo": "Delete Memo",
-    "delete-confirm": "Are you sure to delete this memo?\n\nTHIS ACTION IS IRREVERSIBLE❗"
+    "delete-confirm": "Are you sure you want to delete this memo?\n\nTHIS ACTION IS IRREVERSIBLE❗"
   },
   "resource": {
     "no-resources": "No resources.",
-    "fetching-data": "fetching data...",
+    "fetching-data": "Fetching data...",
     "copy-link": "Copy Link",
     "reset-link": "Reset Link",
     "reset-resource-link": "Reset Resource Link",
@@ -125,6 +125,7 @@
     "upload-successfully": "Upload successfully",
     "file-drag-drop-prompt": "Drag and drop your file here to upload file",
     "search-bar-placeholder": "Search resource",
+    "clear": "Clear",
     "create-dialog": {
       "title": "Create Resource",
       "upload-method": "Upload method",
@@ -146,20 +147,16 @@
       }
     }
   },
-  "shortcut-list": {
-    "shortcut-title": "shortcut title",
-    "create-shortcut": "Create Shortcut",
-    "edit-shortcut": "Edit Shortcut",
-    "eligible-memo": "eligible memo",
-    "fill-previous": "Please fill in previous filter value",
-    "title-required": "Title is required",
-    "value-required": "Filter value is required"
-  },
   "tag-list": {
     "tip-text": "Input `#tag` to create",
     "create-tag": "Create Tag",
     "all-tags": "All Tags",
-    "tag-name": "TAG_NAME"
+    "tag-name": "TAG_NAME",
+    "invalid-tag-name": "Invalid tag name",
+    "tag-suggestions": "Tag suggestions",
+    "show": "Show",
+    "hide": "Hide",
+    "save-all": "Save all"
   },
   "daily-review": {
     "title": "Daily Review",
@@ -196,7 +193,7 @@
       "mobile-editor-style": "Mobile editor style",
       "default-memo-sort-option": "Memo display time",
       "telegram-user-id": "Telegram UserID",
-      "telegram-user-id-placeholder": "Send any words to Your Telegram Bot to get",
+      "telegram-user-id-placeholder": "Send any words to your Telegram Bot as a memo",
       "created_ts": "Created Time",
       "updated_ts": "Updated Time",
       "daily-review-time-offset": "Daily Review Time Offset",
@@ -253,10 +250,17 @@
       },
       "database-file-size": "Database File Size",
       "allow-user-signup": "Allow user signup",
+      "disable-password-login": "Disable password login",
+      "disable-password-login-warning": "This will disable password login for all users. It is not possible to log in without reverting this setting in the database if your configured identity providers fail. You’ll also have to be extra carefull when removing an identity provider❗",
+      "disable-password-login-final-warning": "Please type \"CONFIRM\" if you know what you are doing.",
+      "enable-password-login": "Enable password login",
+      "enable-password-login-warning": "This will enable password login for all users. Continue only if you want to users to be able to log in using both SSO and password❗",
       "ignore-version-upgrade": "Ignore version upgrade",
       "disable-public-memos": "Disable public memos",
       "max-upload-size": "Maximum upload size (MiB)",
       "max-upload-size-hint": "Recommended value is 32 MiB.",
+      "auto-backup-interval": "Auto backup interval (seconds)",
+      "auto-backup-interval-hint": "Set 0 to disable auto backup. Reboot is required after changing this value.",
       "additional-style": "Additional style",
       "additional-script": "Additional script",
       "additional-style-placeholder": "Additional CSS code",
@@ -264,11 +268,7 @@
       "telegram-bot-token": "Telegram Bot Token",
       "telegram-bot-token-description": "Telegram Bot Token or API Proxy like `http.../bot<token>`",
       "telegram-bot-token-placeholder": "Your Telegram Bot token",
-      "openai-api-key": "OpenAI: API Key",
-      "openai-api-key-description": "Get API key",
-      "openai-api-key-placeholder": "Your OpenAI API Key",
-      "openai-api-host": "OpenAI: API Host",
-      "openai-api-host-placeholder": "Default: https://api.openai.com/"
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Follow system",
@@ -294,39 +294,51 @@
       "authorization-endpoint": "Authorization endpoint",
       "token-endpoint": "Token endpoint",
       "user-endpoint": "User endpoint",
-      "scopes": "Scopes"
+      "scopes": "Scopes",
+      "disabled-password-login-warning": "Password-login is disabled, be extra careful when removing identity providers❗"
     }
   },
-  "filter": {
-    "new-filter": "New Filter",
-    "type": {
-      "tag": "Tag",
-      "type": "Type",
-      "text": "Text",
-      "display-time": "Display Time",
-      "visibility": "Visibility"
-    },
-    "operator": {
-      "contains": "Contains",
-      "not-contains": "Does not contain",
-      "is": "Is",
-      "is-not": "Is Not",
-      "before": "Before",
-      "after": "After"
-    },
-    "value": {
-      "not-tagged": "No tags",
-      "linked": "Has links",
-      "has-attachment": "Has attachments"
-    },
-    "text-placeholder": "Starts with ^ to use regex",
-    "and": "And",
-    "or": "Or"
+  "amount-text": {
+    "memo_one": "MEMO",
+    "memo_other": "MEMOS",
+    "tag_one": "TAG",
+    "tag_other": "TAGS",
+    "day_one": "TAG",
+    "day_other": "TAGE"
+  },
+  "days": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "embed-memo": {
+    "title": "Embed Memo",
+    "text": "Copy and paste the below code into your blog or website.",
+    "only-public-supported": "* Only public memos can be embedded.",
+    "copy": "Copy"
+  },
+  "heatmap": {
+    "memo-in": "memo in {{period}}",
+    "memos-in": "memos in {{period}}",
+    "memo-on": "{{amount}} memo on {{date}}",
+    "memos-on": "{{amount}} memos on {{date}}",
+    "day": "day",
+    "days": "days"
+  },
+  "about": {
+    "about-memos": "About Memos",
+    "memos-description": "Memos is a web-based note-taking application that you can use to write, organize, and share notes.",
+    "no-server-description": "No description configured for this server.",
+    "powered-by": "Powered by",
+    "other-projects": "Other Projects"
   },
   "message": {
-    "no-memos": "no memos 🌃",
+    "no-data": "Maybe no data was found, or maybe it should be another option.",
     "memos-ready": "all memos are ready 🎉",
-    "no-resource": "no resource 🌃",
     "resource-ready": "all resource are ready 🎉",
     "restored-successfully": "Restored successfully",
     "memo-updated-datetime": "Memo created datetime changed.",
@@ -345,7 +357,7 @@
     "signup-failed": "Signup failed",
     "user-not-found": "User not found",
     "password-changed": "Password Changed",
-    "private-only": "This memo is private only.",
+    "private-only": "This memo is set to private.",
     "copied": "Copied",
     "succeed-copy-content": "Content copied successfully.",
     "succeed-copy-code": "Code copied successfully.",
@@ -358,9 +370,9 @@
     "count-selected-resources": "Total selected",
     "too-short": "Too short",
     "too-long": "Too long",
-    "not-allow-space": "Don't allow space",
-    "not-allow-chinese": "Don't allow chinese",
-    "succeed-vacuum-database": "Succeed to vacuum database",
+    "not-allow-space": "Don’t allow space",
+    "not-allow-chinese": "Don’t allow chinese",
+    "succeed-vacuum-database": "Successfully vacuumed database.",
     "succeed-update-additional-style": "Additional style updated successfully.",
     "succeed-copy-resource-link": "Resource link copied successfully.",
     "succeed-update-customized-profile": "Profile successfully customized.",
@@ -368,45 +380,8 @@
     "update-succeed": "Update succeeded",
     "page-not-found": "404 - Page Not Found 😥",
     "maximum-upload-size-is": "Maximum allowed upload size is {{size}} MiB",
-    "file-exceeds-upload-limit-of": "File {{file}} exceeds upload limit of {{size}} MiB"
-  },
-  "days": {
-    "mon": "Mon",
-    "tue": "Tue",
-    "wed": "Wed",
-    "thu": "Thu",
-    "fri": "Fri",
-    "sat": "Sat",
-    "sun": "Sun"
-  },
-  "ask-ai": {
-    "title": "Ask AI",
-    "not-enabled": "You have not set up your OpenAI API key.",
-    "go-to-settings": "Go to settings",
-    "placeholder": "Ask anything…",
-    "default-message-group-title": "Default Session",
-    "create-message-group-title": "Create Session",
-    "label-message-group-name-title": "Session Name"
-  },
-  "embed-memo": {
-    "title": "Embed Memo",
-    "text": "Copy and paste the below codes into your blog or website.",
-    "only-public-supported": "* Only public memos can be embedded.",
-    "copy": "Copy"
-  },
-  "heatmap": {
-    "memo-in": "memo in {{period}}",
-    "memos-in": "memos in {{period}}",
-    "memo-on": "{{amount}} memo on {{date}}",
-    "memos-on": "{{amount}} memos on {{date}}",
-    "day": "day",
-    "days": "days"
-  },
-  "about": {
-    "about-memos": "About Memos",
-    "memos-description": "Memos is a web-based note-taking application that you can use to write, organize, and share notes.",
-    "no-server-description": "No description configured for this server.",
-    "powered-by": "Powered by",
-    "other-projects": "Other Projects"
+    "file-exceeds-upload-limit-of": "File {{file}} exceeds upload limit of {{size}} MiB",
+    "updating-setting-failed": "Updating setting failed",
+    "password-login-disabled": "Can't remove last identity provider when password login is disabled"
   }
 }

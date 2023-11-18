@@ -1,3 +1,4 @@
+import axios from "axios";
 import * as api from "@/helpers/api";
 import storage from "@/helpers/storage";
 import i18n from "@/i18n";
@@ -11,8 +12,10 @@ export const initialGlobalState = async () => {
     appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
+      disablePasswordLogin: false,
       disablePublicMemos: false,
       maxUploadSizeMiB: 0,
+      autoBackupInterval: 0,
       additionalStyle: "",
       additionalScript: "",
       memoDisplayWithUpdatedTs: false,
@@ -35,7 +38,7 @@ export const initialGlobalState = async () => {
     defaultGlobalState.appearance = storageAppearance;
   }
 
-  const { data } = (await api.getSystemStatus()).data;
+  const { data } = await api.getSystemStatus();
   if (data) {
     const customizedProfile = data.customizedProfile;
     defaultGlobalState.systemStatus = {
@@ -64,11 +67,19 @@ export const useGlobalStore = () => {
     getState: () => {
       return store.getState().global;
     },
+    getDisablePublicMemos: () => {
+      return store.getState().global.systemStatus.disablePublicMemos;
+    },
     isDev: () => {
       return state.systemStatus.profile.mode !== "prod";
     },
     fetchSystemStatus: async () => {
-      const { data: systemStatus } = (await api.getSystemStatus()).data;
+      const { data: systemStatus } = await api.getSystemStatus();
+      // TODO: update this when api v2 is ready.
+      const {
+        data: { systemInfo },
+      } = await axios.get("/api/v2/system/info");
+      systemStatus.dbSize = Number(systemInfo.dbSize);
       store.dispatch(setGlobalState({ systemStatus: systemStatus }));
       return systemStatus;
     },

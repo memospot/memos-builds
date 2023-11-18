@@ -3,7 +3,12 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
+
+	"github.com/labstack/echo/v4"
+	"github.com/usememos/memos/api/auth"
+	"github.com/usememos/memos/store"
 )
 
 type SystemSettingName string
@@ -15,6 +20,8 @@ const (
 	SystemSettingSecretSessionName SystemSettingName = "secret-session"
 	// SystemSettingAllowSignUpName is the name of allow signup setting.
 	SystemSettingAllowSignUpName SystemSettingName = "allow-signup"
+	// SystemSettingDisablePasswordLoginName is the name of disable password login setting.
+	SystemSettingDisablePasswordLoginName SystemSettingName = "disable-password-login"
 	// SystemSettingDisablePublicMemosName is the name of disable public memos setting.
 	SystemSettingDisablePublicMemosName SystemSettingName = "disable-public-memos"
 	// SystemSettingMaxUploadSizeMiBName is the name of max upload size setting.
@@ -29,12 +36,14 @@ const (
 	SystemSettingStorageServiceIDName SystemSettingName = "storage-service-id"
 	// SystemSettingLocalStoragePathName is the name of local storage path.
 	SystemSettingLocalStoragePathName SystemSettingName = "local-storage-path"
-	// SystemSettingOpenAIConfigName is the name of OpenAI config.
-	SystemSettingOpenAIConfigName SystemSettingName = "openai-config"
-	// SystemSettingTelegramBotToken is the name of Telegram Bot Token.
-	SystemSettingTelegramBotTokenName         SystemSettingName = "telegram-bot-token"
+	// SystemSettingTelegramBotTokenName is the name of Telegram Bot Token.
+	SystemSettingTelegramBotTokenName SystemSettingName = "telegram-bot-token"
+	// SystemSettingMemoDisplayWithUpdatedTsName is the name of memo display with updated ts.
 	SystemSettingMemoDisplayWithUpdatedTsName SystemSettingName = "memo-display-with-updated-ts"
+	// SystemSettingAutoBackupIntervalName is the name of auto backup interval as seconds.
+	SystemSettingAutoBackupIntervalName SystemSettingName = "auto-backup-interval"
 )
+const systemSettingUnmarshalError = `failed to unmarshal value from system setting "%v"`
 
 // CustomizedProfile is the struct definition for SystemSettingCustomizedProfileName system setting item.
 type CustomizedProfile struct {
@@ -52,41 +61,8 @@ type CustomizedProfile struct {
 	ExternalURL string `json:"externalUrl"`
 }
 
-type OpenAIConfig struct {
-	Key  string `json:"key"`
-	Host string `json:"host"`
-}
-
 func (key SystemSettingName) String() string {
-	switch key {
-	case SystemSettingServerIDName:
-		return "server-id"
-	case SystemSettingSecretSessionName:
-		return "secret-session"
-	case SystemSettingAllowSignUpName:
-		return "allow-signup"
-	case SystemSettingDisablePublicMemosName:
-		return "disable-public-memos"
-	case SystemSettingMaxUploadSizeMiBName:
-		return "max-upload-size-mib"
-	case SystemSettingAdditionalStyleName:
-		return "additional-style"
-	case SystemSettingAdditionalScriptName:
-		return "additional-script"
-	case SystemSettingCustomizedProfileName:
-		return "customized-profile"
-	case SystemSettingStorageServiceIDName:
-		return "storage-service-id"
-	case SystemSettingLocalStoragePathName:
-		return "local-storage-path"
-	case SystemSettingOpenAIConfigName:
-		return "openai-config"
-	case SystemSettingTelegramBotTokenName:
-		return "telegram-bot-token"
-	case SystemSettingMemoDisplayWithUpdatedTsName:
-		return "memo-display-with-updated-ts"
-	}
-	return ""
+	return string(key)
 }
 
 type SystemSetting struct {
@@ -96,19 +72,130 @@ type SystemSetting struct {
 	Description string `json:"description"`
 }
 
-type SystemSettingUpsert struct {
+type UpsertSystemSettingRequest struct {
 	Name        SystemSettingName `json:"name"`
 	Value       string            `json:"value"`
 	Description string            `json:"description"`
 }
 
-const systemSettingUnmarshalError = `failed to unmarshal value from system setting "%v"`
+func (s *APIV1Service) registerSystemSettingRoutes(g *echo.Group) {
+	g.GET("/system/setting", s.GetSystemSettingList)
+	g.POST("/system/setting", s.CreateSystemSetting)
+}
 
-func (upsert SystemSettingUpsert) Validate() error {
+// GetSystemSettingList godoc
+//
+//	@Summary	Get a list of system settings
+//	@Tags		system-setting
+//	@Produce	json
+//	@Success	200	{object}	[]SystemSetting	"System setting list"
+//	@Failure	401	{object}	nil				"Missing user in session | Unauthorized"
+//	@Failure	500	{object}	nil				"Failed to find user | Failed to find system setting list"
+//	@Security	ApiKeyAuth
+//	@Router		/api/v1/system/setting [GET]
+func (s *APIV1Service) GetSystemSettingList(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
+	}
+
+	user, err := s.Store.GetUser(ctx, &store.FindUser{
+		ID: &userID,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find user").SetInternal(err)
+	}
+	if user == nil || user.Role != store.RoleHost {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
+	}
+
+	list, err := s.Store.ListSystemSettings(ctx, &store.FindSystemSetting{})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting list").SetInternal(err)
+	}
+
+	systemSettingList := make([]*SystemSetting, 0, len(list))
+	for _, systemSetting := range list {
+		systemSettingList = append(systemSettingList, convertSystemSettingFromStore(systemSetting))
+	}
+	return c.JSON(http.StatusOK, systemSettingList)
+}
+
+// CreateSystemSetting godoc
+//
+//	@Summary	Create system setting
+//	@Tags		system-setting
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		UpsertSystemSettingRequest	true	"Request object."
+//	@Success	200		{object}	store.SystemSetting			"Created system setting"
+//	@Failure	400		{object}	nil							"Malformatted post system setting request | invalid system setting"
+//	@Failure	401		{object}	nil							"Missing user in session | Unauthorized"
+//	@Failure	403		{object}	nil							"Cannot disable passwords if no SSO identity provider is configured."
+//	@Failure	500		{object}	nil							"Failed to find user | Failed to upsert system setting"
+//	@Security	ApiKeyAuth
+//	@Router		/api/v1/system/setting [POST]
+func (s *APIV1Service) CreateSystemSetting(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	if !ok {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
+	}
+
+	user, err := s.Store.GetUser(ctx, &store.FindUser{
+		ID: &userID,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find user").SetInternal(err)
+	}
+	if user == nil || user.Role != store.RoleHost {
+		return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
+	}
+
+	systemSettingUpsert := &UpsertSystemSettingRequest{}
+	if err := json.NewDecoder(c.Request().Body).Decode(systemSettingUpsert); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Malformatted post system setting request").SetInternal(err)
+	}
+	if err := systemSettingUpsert.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid system setting").SetInternal(err)
+	}
+	if systemSettingUpsert.Name == SystemSettingDisablePasswordLoginName {
+		var disablePasswordLogin bool
+		if err := json.Unmarshal([]byte(systemSettingUpsert.Value), &disablePasswordLogin); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid system setting").SetInternal(err)
+		}
+
+		identityProviderList, err := s.Store.ListIdentityProviders(ctx, &store.FindIdentityProvider{})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to upsert system setting").SetInternal(err)
+		}
+		if disablePasswordLogin && len(identityProviderList) == 0 {
+			return echo.NewHTTPError(http.StatusForbidden, "Cannot disable passwords if no SSO identity provider is configured.")
+		}
+	}
+
+	systemSetting, err := s.Store.UpsertSystemSetting(ctx, &store.SystemSetting{
+		Name:        systemSettingUpsert.Name.String(),
+		Value:       systemSettingUpsert.Value,
+		Description: systemSettingUpsert.Description,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to upsert system setting").SetInternal(err)
+	}
+	return c.JSON(http.StatusOK, convertSystemSettingFromStore(systemSetting))
+}
+
+func (upsert UpsertSystemSettingRequest) Validate() error {
 	switch settingName := upsert.Name; settingName {
 	case SystemSettingServerIDName:
 		return fmt.Errorf("updating %v is not allowed", settingName)
 	case SystemSettingAllowSignUpName:
+		var value bool
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+		}
+	case SystemSettingDisablePasswordLoginName:
 		var value bool
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
 			return fmt.Errorf(systemSettingUnmarshalError, settingName)
@@ -157,10 +244,13 @@ func (upsert SystemSettingUpsert) Validate() error {
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
 			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	case SystemSettingOpenAIConfigName:
-		value := OpenAIConfig{}
+	case SystemSettingAutoBackupIntervalName:
+		var value int
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
 			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+		}
+		if value < 0 {
+			return fmt.Errorf("must be positive")
 		}
 	case SystemSettingTelegramBotTokenName:
 		if upsert.Value == "" {
@@ -189,6 +279,10 @@ func (upsert SystemSettingUpsert) Validate() error {
 	return nil
 }
 
-type SystemSettingFind struct {
-	Name SystemSettingName `json:"name"`
+func convertSystemSettingFromStore(systemSetting *store.SystemSetting) *SystemSetting {
+	return &SystemSetting{
+		Name:        SystemSettingName(systemSetting.Name),
+		Value:       systemSetting.Value,
+		Description: systemSetting.Description,
+	}
 }

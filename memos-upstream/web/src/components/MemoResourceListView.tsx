@@ -1,8 +1,9 @@
+import classNames from "classnames";
 import { absolutifyLink } from "@/helpers/utils";
-import { getResourceUrl } from "@/utils/resource";
-import SquareDiv from "./kit/SquareDiv";
-import showPreviewImageDialog from "./PreviewImageDialog";
+import { getResourceType, getResourceUrl } from "@/utils/resource";
 import MemoResource from "./MemoResource";
+import showPreviewImageDialog from "./PreviewImageDialog";
+import SquareDiv from "./kit/SquareDiv";
 import "@/less/memo-resources.less";
 
 interface Props {
@@ -22,14 +23,15 @@ const MemoResourceListView: React.FC<Props> = (props: Props) => {
     ...getDefaultProps(),
     ...props,
   };
-  const availableResourceList = resourceList.filter((resource) => resource.type.startsWith("image") || resource.type.startsWith("video"));
-  const otherResourceList = resourceList.filter((resource) => !availableResourceList.includes(resource));
+  const imageResourceList = resourceList.filter((resource) => getResourceType(resource).startsWith("image"));
+  const videoResourceList = resourceList.filter((resource) => resource.type.startsWith("video"));
+  const otherResourceList = resourceList.filter(
+    (resource) => !imageResourceList.includes(resource) && !videoResourceList.includes(resource)
+  );
 
-  const imgUrls = availableResourceList
-    .filter((resource) => resource.type.startsWith("image"))
-    .map((resource) => {
-      return getResourceUrl(resource);
-    });
+  const imgUrls = imageResourceList.map((resource) => {
+    return getResourceUrl(resource);
+  });
 
   const handleImageClick = (imgUrl: string) => {
     const index = imgUrls.findIndex((url) => url === imgUrl);
@@ -38,37 +40,56 @@ const MemoResourceListView: React.FC<Props> = (props: Props) => {
 
   return (
     <>
-      <div className={`resource-wrapper ${className || ""}`}>
-        {availableResourceList.length > 0 && (
-          <div className="images-wrapper">
-            {availableResourceList.map((resource) => {
+      {imageResourceList.length > 0 &&
+        (imageResourceList.length === 1 ? (
+          <div className="mt-2 max-w-[90%] max-h-64 flex justify-center items-center shadow rounded overflow-hidden hide-scrollbar hover:shadow-md">
+            <img
+              className="cursor-pointer min-h-full w-auto min-w-full object-cover"
+              src={getResourceUrl(imageResourceList[0])}
+              onClick={() => handleImageClick(getResourceUrl(imageResourceList[0]))}
+              decoding="async"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className={classNames("w-full mt-2 grid gap-2 grid-cols-2 sm:grid-cols-3")}>
+            {imageResourceList.map((resource) => {
               const url = getResourceUrl(resource);
-              if (resource.type.startsWith("image")) {
-                return (
-                  <SquareDiv key={resource.id} className="memo-resource">
-                    <img
-                      src={resource.externalLink ? url : url + "?thumbnail=1"}
-                      onClick={() => handleImageClick(url)}
-                      decoding="async"
-                      loading="lazy"
-                    />
-                  </SquareDiv>
-                );
-              } else if (resource.type.startsWith("video")) {
-                return (
-                  <SquareDiv key={resource.id} className="memo-resource">
-                    <video preload="metadata" controls key={resource.id}>
-                      <source src={absolutifyLink(url)} type={resource.type} />
-                    </video>
-                  </SquareDiv>
-                );
-              } else {
-                return null;
-              }
+              return (
+                <SquareDiv
+                  key={resource.id}
+                  className="flex justify-center items-center shadow rounded overflow-hidden hide-scrollbar hover:shadow-md"
+                >
+                  <img
+                    className="cursor-pointer min-h-full w-auto min-w-full object-cover"
+                    src={resource.externalLink ? url : url + "?thumbnail=1"}
+                    onClick={() => handleImageClick(url)}
+                    decoding="async"
+                    loading="lazy"
+                  />
+                </SquareDiv>
+              );
+            })}
+          </div>
+        ))}
+
+      <div className={`resource-wrapper ${className || ""}`}>
+        {videoResourceList.length > 0 && (
+          <div className="images-wrapper">
+            {videoResourceList.map((resource) => {
+              const url = getResourceUrl(resource);
+              return (
+                <SquareDiv key={resource.id} className="memo-resource">
+                  <video preload="metadata" controls key={resource.id}>
+                    <source src={absolutifyLink(url)} type={resource.type} />
+                  </video>
+                </SquareDiv>
+              );
             })}
           </div>
         )}
       </div>
+
       {otherResourceList.length > 0 && (
         <div className="w-full flex flex-row justify-start flex-wrap mt-2">
           {otherResourceList.map((resource) => {

@@ -1,12 +1,12 @@
+import { Button, Divider, Input, Option, Select, Typography } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Button, Divider, Input, Option, Select, Typography } from "@mui/joy";
 import * as api from "@/helpers/api";
 import { UNKNOWN_ID } from "@/helpers/consts";
 import { absolutifyLink } from "@/helpers/utils";
+import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
-import { useTranslation } from "react-i18next";
 
 const templateList: IdentityProvider[] = [
   {
@@ -101,7 +101,7 @@ interface Props extends DialogProps {
 }
 
 const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const identityProviderTypes = [...new Set(templateList.map((t) => t.type))];
   const { confirmCallback, destroy, identityProvider } = props;
   const [basicInfo, setBasicInfo] = useState({
@@ -170,7 +170,6 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
     if (type === "OAUTH2") {
       if (
         oauth2Config.clientId === "" ||
-        oauth2Config.clientSecret === "" ||
         oauth2Config.authUrl === "" ||
         oauth2Config.tokenUrl === "" ||
         oauth2Config.userInfoUrl === "" ||
@@ -179,7 +178,13 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
       ) {
         return false;
       }
+      if (isCreating) {
+        if (oauth2Config.clientSecret === "") {
+          return false;
+        }
+      }
     }
+
     return true;
   };
 
@@ -231,7 +236,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
   return (
     <>
       <div className="dialog-header-container">
-        <p className="title-text ml-auto">{t("setting.sso-section." + (isCreating ? "create" : "update") + "-sso")}</p>
+        <p className="title-text ml-auto">{t(isCreating ? "setting.sso-section.create-sso" : "setting.sso-section.update-sso")}</p>
         <button className="btn close-btn ml-auto" onClick={handleCloseBtnClick}>
           <Icon.X />
         </button>
@@ -239,7 +244,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
       <div className="dialog-content-container min-w-[19rem]">
         {isCreating && (
           <>
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("common.type")}
             </Typography>
             <Select className="w-full mb-4" value={type} onChange={(_, e) => setType(e ?? type)}>
@@ -249,7 +254,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
                 </Option>
               ))}
             </Select>
-            <Typography className="mb-2" level="body2">
+            <Typography className="mb-2" level="body-md">
               {t("setting.sso-section.template")}
             </Typography>
             <Select className="mb-1 h-auto w-full" value={selectedTemplate} onChange={(_, e) => setSelectedTemplate(e ?? selectedTemplate)}>
@@ -262,7 +267,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
             <Divider className="!my-2" />
           </>
         )}
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("common.name")}
           <span className="text-red-600">*</span>
         </Typography>
@@ -278,7 +283,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
           }
           fullWidth
         />
-        <Typography className="!mb-1" level="body2">
+        <Typography className="!mb-1" level="body-md">
           {t("setting.sso-section.identifier-filter")}
         </Typography>
         <Input
@@ -301,7 +306,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
                 {t("setting.sso-section.redirect-url")}: {absolutifyLink("/auth/callback")}
               </p>
             )}
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.client-id")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -312,7 +317,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ clientId: e.target.value })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.client-secret")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -323,7 +328,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ clientSecret: e.target.value })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.authorization-endpoint")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -334,7 +339,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ authUrl: e.target.value })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.token-endpoint")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -345,7 +350,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ tokenUrl: e.target.value })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.user-endpoint")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -356,7 +361,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ userInfoUrl: e.target.value })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.scopes")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -368,7 +373,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               fullWidth
             />
             <Divider className="!my-2" />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.identifier")}
               <span className="text-red-600">*</span>
             </Typography>
@@ -379,7 +384,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ fieldMapping: { ...oauth2Config.fieldMapping, identifier: e.target.value } })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("setting.sso-section.display-name")}
             </Typography>
             <Input
@@ -389,7 +394,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
               onChange={(e) => setPartialOAuth2Config({ fieldMapping: { ...oauth2Config.fieldMapping, displayName: e.target.value } })}
               fullWidth
             />
-            <Typography className="!mb-1" level="body2">
+            <Typography className="!mb-1" level="body-md">
               {t("common.email")}
             </Typography>
             <Input
@@ -406,7 +411,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
             {t("common.cancel")}
           </Button>
           <Button onClick={handleConfirmBtnClick} disabled={!allowConfirmAction()}>
-            {t("common." + (isCreating ? "create" : "update"))}
+            {t(isCreating ? "common.create" : "common.update")}
           </Button>
         </div>
       </div>

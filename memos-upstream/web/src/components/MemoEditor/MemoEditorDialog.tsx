@@ -1,6 +1,9 @@
+import { useEffect } from "react";
+import { useTagStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
+import MemoEditor from ".";
 import { generateDialog } from "../Dialog";
 import Icon from "../Icon";
-import MemoEditor from ".";
 
 interface Props extends DialogProps {
   memoId?: MemoId;
@@ -8,6 +11,13 @@ interface Props extends DialogProps {
 }
 
 const MemoEditorDialog: React.FC<Props> = ({ memoId, relationList, destroy }: Props) => {
+  const t = useTranslate();
+  const tagStore = useTagStore();
+
+  useEffect(() => {
+    tagStore.fetchTags();
+  }, []);
+
   const handleCloseBtnClick = () => {
     destroy();
   };
@@ -15,7 +25,7 @@ const MemoEditorDialog: React.FC<Props> = ({ memoId, relationList, destroy }: Pr
   return (
     <>
       <div className="dialog-header-container">
-        <p className="title-text flex items-center">MEMOS</p>
+        <p className="title-text flex items-center">{t("amount-text.memo_one")}</p>
         <button className="btn close-btn" onClick={handleCloseBtnClick}>
           <Icon.X />
         </button>

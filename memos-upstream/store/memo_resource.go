@@ -3,111 +3,66 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
-
-	"github.com/usememos/memos/api"
-	"github.com/usememos/memos/common"
 )
 
-// memoResourceRaw is the store model for an MemoResource.
-// Fields have exactly the same meanings as MemoResource.
-type memoResourceRaw struct {
-	MemoID     int
-	ResourceID int
+type MemoResource struct {
+	MemoID     int32
+	ResourceID int32
 	CreatedTs  int64
 	UpdatedTs  int64
 }
 
-func (raw *memoResourceRaw) toMemoResource() *api.MemoResource {
-	return &api.MemoResource{
-		MemoID:     raw.MemoID,
-		ResourceID: raw.ResourceID,
-		CreatedTs:  raw.CreatedTs,
-		UpdatedTs:  raw.UpdatedTs,
-	}
+type UpsertMemoResource struct {
+	MemoID     int32
+	ResourceID int32
+	CreatedTs  int64
+	UpdatedTs  *int64
 }
 
-func (s *Store) FindMemoResourceList(ctx context.Context, find *api.MemoResourceFind) ([]*api.MemoResource, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
+type FindMemoResource struct {
+	MemoID     *int32
+	ResourceID *int32
+}
 
-	memoResourceRawList, err := findMemoResourceList(ctx, tx, find)
-	if err != nil {
+type DeleteMemoResource struct {
+	MemoID     *int32
+	ResourceID *int32
+}
+
+func (s *Store) UpsertMemoResource(ctx context.Context, upsert *UpsertMemoResource) (*MemoResource, error) {
+	set := []string{"memo_id", "resource_id"}
+	args := []any{upsert.MemoID, upsert.ResourceID}
+	placeholder := []string{"?", "?"}
+
+	if v := upsert.UpdatedTs; v != nil {
+		set, args, placeholder = append(set, "updated_ts"), append(args, v), append(placeholder, "?")
+	}
+
+	query := `
+		INSERT INTO memo_resource (
+			` + strings.Join(set, ", ") + `
+		)
+		VALUES (` + strings.Join(placeholder, ",") + `)
+		ON CONFLICT(memo_id, resource_id) DO UPDATE 
+		SET
+			updated_ts = EXCLUDED.updated_ts
+		RETURNING memo_id, resource_id, created_ts, updated_ts
+	`
+	memoResource := &MemoResource{}
+	if err := s.db.QueryRowContext(ctx, query, args...).Scan(
+		&memoResource.MemoID,
+		&memoResource.ResourceID,
+		&memoResource.CreatedTs,
+		&memoResource.UpdatedTs,
+	); err != nil {
 		return nil, err
 	}
 
-	list := []*api.MemoResource{}
-	for _, raw := range memoResourceRawList {
-		memoResource := raw.toMemoResource()
-		list = append(list, memoResource)
-	}
-
-	return list, nil
+	return memoResource, nil
 }
 
-func (s *Store) FindMemoResource(ctx context.Context, find *api.MemoResourceFind) (*api.MemoResource, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	list, err := findMemoResourceList(ctx, tx, find)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(list) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("not found")}
-	}
-
-	memoResourceRaw := list[0]
-
-	return memoResourceRaw.toMemoResource(), nil
-}
-
-func (s *Store) UpsertMemoResource(ctx context.Context, upsert *api.MemoResourceUpsert) (*api.MemoResource, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	memoResourceRaw, err := upsertMemoResource(ctx, tx, upsert)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, FormatError(err)
-	}
-
-	return memoResourceRaw.toMemoResource(), nil
-}
-
-func (s *Store) DeleteMemoResource(ctx context.Context, delete *api.MemoResourceDelete) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return FormatError(err)
-	}
-	defer tx.Rollback()
-
-	if err := deleteMemoResource(ctx, tx, delete); err != nil {
-		return FormatError(err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return FormatError(err)
-	}
-
-	return nil
-}
-
-func findMemoResourceList(ctx context.Context, tx *sql.Tx, find *api.MemoResourceFind) ([]*memoResourceRaw, error) {
+func (s *Store) ListMemoResources(ctx context.Context, find *FindMemoResource) ([]*MemoResource, error) {
 	where, args := []string{"1 = 1"}, []any{}
 
 	if v := find.MemoID; v != nil {
@@ -127,87 +82,63 @@ func findMemoResourceList(ctx context.Context, tx *sql.Tx, find *api.MemoResourc
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY updated_ts DESC
 	`
-	rows, err := tx.QueryContext(ctx, query, args...)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, FormatError(err)
+		return nil, err
 	}
 	defer rows.Close()
 
-	memoResourceRawList := make([]*memoResourceRaw, 0)
+	list := make([]*MemoResource, 0)
 	for rows.Next() {
-		var memoResourceRaw memoResourceRaw
+		var memoResource MemoResource
 		if err := rows.Scan(
-			&memoResourceRaw.MemoID,
-			&memoResourceRaw.ResourceID,
-			&memoResourceRaw.CreatedTs,
-			&memoResourceRaw.UpdatedTs,
+			&memoResource.MemoID,
+			&memoResource.ResourceID,
+			&memoResource.CreatedTs,
+			&memoResource.UpdatedTs,
 		); err != nil {
-			return nil, FormatError(err)
+			return nil, err
 		}
 
-		memoResourceRawList = append(memoResourceRawList, &memoResourceRaw)
+		list = append(list, &memoResource)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return memoResourceRawList, nil
+	return list, nil
 }
 
-func upsertMemoResource(ctx context.Context, tx *sql.Tx, upsert *api.MemoResourceUpsert) (*memoResourceRaw, error) {
-	set := []string{"memo_id", "resource_id"}
-	args := []any{upsert.MemoID, upsert.ResourceID}
-	placeholder := []string{"?", "?"}
-
-	if v := upsert.UpdatedTs; v != nil {
-		set, args, placeholder = append(set, "updated_ts"), append(args, v), append(placeholder, "?")
+func (s *Store) GetMemoResource(ctx context.Context, find *FindMemoResource) (*MemoResource, error) {
+	list, err := s.ListMemoResources(ctx, find)
+	if err != nil {
+		return nil, err
+	}
+	if len(list) == 0 {
+		return nil, nil
 	}
 
-	query := `
-		INSERT INTO memo_resource (
-			` + strings.Join(set, ", ") + `
-		)
-		VALUES (` + strings.Join(placeholder, ",") + `)
-		ON CONFLICT(memo_id, resource_id) DO UPDATE 
-		SET
-			updated_ts = EXCLUDED.updated_ts
-		RETURNING memo_id, resource_id, created_ts, updated_ts
-	`
-	var memoResourceRaw memoResourceRaw
-	if err := tx.QueryRowContext(ctx, query, args...).Scan(
-		&memoResourceRaw.MemoID,
-		&memoResourceRaw.ResourceID,
-		&memoResourceRaw.CreatedTs,
-		&memoResourceRaw.UpdatedTs,
-	); err != nil {
-		return nil, FormatError(err)
-	}
-
-	return &memoResourceRaw, nil
+	memoResource := list[0]
+	return memoResource, nil
 }
 
-func deleteMemoResource(ctx context.Context, tx *sql.Tx, delete *api.MemoResourceDelete) error {
+func (s *Store) DeleteMemoResource(ctx context.Context, delete *DeleteMemoResource) error {
 	where, args := []string{}, []any{}
-
 	if v := delete.MemoID; v != nil {
 		where, args = append(where, "memo_id = ?"), append(args, *v)
 	}
 	if v := delete.ResourceID; v != nil {
 		where, args = append(where, "resource_id = ?"), append(args, *v)
 	}
-
 	stmt := `DELETE FROM memo_resource WHERE ` + strings.Join(where, " AND ")
-	result, err := tx.ExecContext(ctx, stmt, args...)
+	result, err := s.db.ExecContext(ctx, stmt, args...)
 	if err != nil {
-		return FormatError(err)
+		return err
 	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return &common.Error{Code: common.NotFound, Err: fmt.Errorf("memo resource not found")}
+	if _, err = result.RowsAffected(); err != nil {
+		return err
 	}
-
 	return nil
 }
 
@@ -230,7 +161,7 @@ func vacuumMemoResource(ctx context.Context, tx *sql.Tx) error {
 		)`
 	_, err := tx.ExecContext(ctx, stmt)
 	if err != nil {
-		return FormatError(err)
+		return err
 	}
 
 	return nil

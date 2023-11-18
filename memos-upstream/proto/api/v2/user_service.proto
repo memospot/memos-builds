@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package memos.api.v2;
+
+import "api/v2/common.proto";
+import "api/v2/memo_service.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+
+option go_package = "gen/api/v2";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (google.api.http) = {get: "/api/v2/users/{name}"};
+    option (google.api.method_signature) = "name";
+  }
+}
+
+message User {
+  int32 id = 1;
+
+  RowStatus row_status = 2;
+
+  int64 created_ts = 3;
+
+  int64 updated_ts = 4;
+
+  string username = 5;
+
+  Role role = 6;
+
+  string email = 7;
+
+  string nickname = 8;
+
+  string open_id = 9;
+
+  string avatar_url = 10;
+}
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+
+  HOST = 1;
+
+  ADMIN = 2;
+
+  USER = 3;
+}
+
+message GetUserRequest {
+  string name = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message UserSetting {
+  // The user id of the setting.
+  int32 user_id = 1;
+
+  enum Key {
+    KEY_UNSPECIFIED = 0;
+    // The preferred locale.
+    LOCALE = 1;
+    // The preferred appearance.
+    APPEARANCE = 2;
+    // The default visibility of the memo when creating a new memo.
+    MEMO_VISIBILITY = 3;
+    // User's telegram id
+    TELEGRAM_USER_ID = 4;
+  }
+  // The key of the setting.
+  Key key = 2;
+
+  // The value of the setting.
+  UserSettingValue value = 3;
+}
+
+message UserSettingValue {
+  oneof value {
+    // Default value as a string.
+    string string_value = 1;
+    Visibility visibility_value = 2;
+  }
+}

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useFilterStore, useTagStore } from "@/store/module";
 import useToggle from "@/hooks/useToggle";
-import Icon from "./Icon";
+import { useFilterStore, useTagStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import showCreateTagDialog from "./CreateTagDialog";
+import Icon from "./Icon";
 
 interface Tag {
   key: string;
@@ -12,7 +12,7 @@ interface Tag {
 }
 
 const TagList = () => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const filterStore = useFilterStore();
   const tagStore = useTagStore();
   const tagsText = tagStore.state.tags;

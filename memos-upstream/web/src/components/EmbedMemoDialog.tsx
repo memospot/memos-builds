@@ -1,16 +1,16 @@
 import copy from "copy-to-clipboard";
 import React from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
-import Icon from "./Icon";
+import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
+import Icon from "./Icon";
 
 interface Props extends DialogProps {
   memoId: MemoId;
 }
 
 const EmbedMemoDialog: React.FC<Props> = (props: Props) => {
-  const { t } = useTranslation();
+  const t = useTranslate();
   const { memoId, destroy } = props;
 
   const memoEmbeddedCode = () => {
