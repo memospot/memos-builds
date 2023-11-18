@@ -47,25 +47,26 @@ builds:
     # - multiple GOAMD64 (v1-v4) SIMD targets currently aren't supported by goreleaser
     goos:
       - darwin
-      # - freebsd
+      - freebsd
       - linux
       - windows
     goarch:
-      # - '386'
+      - '386'
       - amd64
       - arm
       - arm64
-      # - ppc64le
+      - ppc64le
       - riscv64
-      # - s390x
+      - s390x
     goarm:
       # - '5' # use software floating point; for CPUs without a VFP co-processor
       - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
       - "7" # use VFPv3; Cortex-A cores
     goamd64:
-      # - v1 # baseline: all x86_64 CPUs
+      - v1 # baseline: all x86_64 CPUs
       - v2 # CMPXCHG16B, LAHF, SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3 (circa 2009: Intel Nehalem/circa 2013: AMD Jaguar)
-      # - v3 # AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, OSXSAVE (circa 2015: Intel Haswell and AMD Excavator)
+      - v3 # AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, OSXSAVE (circa 2015: Intel Haswell and AMD Excavator)
+      # - v4 # AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
     ignore:
       - goos: windows
         goarch: arm
