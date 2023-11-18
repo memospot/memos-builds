@@ -20,10 +20,15 @@ You may put `nssm.exe` in the same directory as `memos.exe`, or add its director
 
 ```powershell
 # Install memos as a service
-nssm install memos "C:\ProgramData\memos\memos.exe" --mode prod --port 5230
+nssm install memos "C:\ProgramData\memos\memos.exe"
+
+# For all supported environment variables,
+# see https://github.com/usememos/memos/blob/main/cmd/memos.go
+# For setting up MySQL, see https://www.usememos.com/docs/advanced-settings/mysql
+nssm set memos AppEnvironmentExtra MEMOS_MODE="prod" MEMOS_PORT="5230" MEMOS_DATA="C:\ProgramData\memos" MEMOS_METRIC="true"
 
 # Delay auto start
-nssm set memos DisplayName "memos service"
+nssm set memos DisplayName "Memos service"
 
 # Configure extra service parameters
 nssm set memos Description "A privacy-first, lightweight note-taking service. https://usememos.com/"
@@ -50,11 +55,19 @@ Now, in the same directory, create the service configuration file `memos-service
 ```xml
 <service>
     <id>memos</id>
-    <name>memos service</name>
+    <name>Memos service</name>
     <description>A privacy-first, lightweight note-taking service. https://usememos.com/</description>
     <onfailure action="restart" delay="10 sec"/>
     <executable>%BASE%\memos.exe</executable>
-    <arguments>--mode prod --port 5230</arguments>
+    <!-- For all supported environment variables, see 
+    https://github.com/usememos/memos/blob/main/cmd/memos.go -->
+    <!-- For setting up MySQL,
+    see https://www.usememos.com/docs/advanced-settings/mysql -->
+    <env name="MEMOS_MODE" value="prod" />
+    <env name="MEMOS_ADDR" value="" />
+    <env name="MEMOS_PORT" value="5230" />
+    <env name="MEMOS_DATA" value="%ProgramData%\memos" />
+    <env name="MEMOS_METRIC" value="true" />
     <delayedAutoStart>true</delayedAutoStart>
     <log mode="none" />
 </service>

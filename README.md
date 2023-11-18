@@ -85,12 +85,25 @@ You should manually setup a system service to start Memos on boot.
 Sample service environment setup. Adjust to openrc or systemd as needed.
 
 ```sh
-MEMOS_MODE="prod" # dev, prod, demo
+# For all supported environment variables,
+# see https://github.com/usememos/memos/blob/main/cmd/memos.go
+
+# dev, prod, demo
+MEMOS_MODE="prod"
+# set addr to 127.0.0.1 to restrict access to localhost
+MEMOS_ADDR=""
+# port to listen on
 MEMOS_PORT="5230"
-MEMOS_ADDR="" # set this to 127.0.0.1 to restrict access
-MEMOS_DATA="/opt/memos" # data directory
-MEMOS_DRIVER="sqlite" # sqlite, mysql
-MEMOS_DSN="" # database connection string
+# data directory: database and asset uploads
+MEMOS_DATA="/opt/memos"
+# database driver: sqlite, mysql
+MEMOS_DRIVER="sqlite"
+# database connection string: leave empty for sqlite
+# see: https://www.usememos.com/docs/advanced-settings/mysql
+MEMOS_DSN="dbuser:dbpass@tcp(dbhost)/dbname"
+# allow metric collection
+MEMOS_METRIC="true"
+
 ./memos
 
 # Alternatively:
@@ -103,18 +116,18 @@ MEMOS_DSN="" # database connection string
   <source
     media="(prefers-color-scheme: dark)"
     srcset="
-      https://api.star-history.com/svg?repos=usememos/memos,lincolnthalles/memos-builds,lincolnthalles/memospot&type=Date&theme=dark
+      https://api.star-history.com/svg?repos=lincolnthalles/memos-builds&type=Date&theme=dark
     "
   />
   <source
     media="(prefers-color-scheme: light)"
     srcset="
-      https://api.star-history.com/svg?repos=usememos/memos,lincolnthalles/memos-builds,lincolnthalles/memospot&type=Date
+      https://api.star-history.com/svg?repos=lincolnthalles/memos-builds&type=Date
     "
   />
   <img
     alt="Star History Chart"
-    src="https://api.star-history.com/svg?repos=usememos/memos,lincolnthalles/memos-builds,lincolnthalles/memospot&type=Date"
+    src="https://api.star-history.com/svg?repos=lincolnthalles/memos-builds&type=Date"
   />
 </picture>
 
