@@ -13,8 +13,6 @@ import (
 	"github.com/usememos/memos/store"
 	"github.com/usememos/memos/store/db"
 
-	"github.com/gorilla/sessions"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -81,30 +79,32 @@ func NewServer(ctx context.Context, profile *profile.Profile) (*Server, error) {
 	}
 	s.ID = serverID
 
-	secretSessionName := "usememos"
+	embedFrontend(e)
+
+	secret := "usememos"
 	if profile.Mode == "prod" {
-		secretSessionName, err = s.getSystemSecretSessionName(ctx)
+		secret, err = s.getSystemSecretSessionName(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
-	e.Use(session.Middleware(sessions.NewCookieStore([]byte(secretSessionName))))
-
-	embedFrontend(e)
 
 	rootGroup := e.Group("")
 	s.registerRSSRoutes(rootGroup)
 
 	publicGroup := e.Group("/o")
-	s.registerResourcePublicRoutes(publicGroup)
+	publicGroup.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return JWTMiddleware(s, next, secret)
+	})
 	registerGetterPublicRoutes(publicGroup)
+	s.registerResourcePublicRoutes(publicGroup)
 
 	apiGroup := e.Group("/api")
 	apiGroup.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return aclMiddleware(s, next)
+		return JWTMiddleware(s, next, secret)
 	})
 	s.registerSystemRoutes(apiGroup)
-	s.registerAuthRoutes(apiGroup)
+	s.registerAuthRoutes(apiGroup, secret)
 	s.registerUserRoutes(apiGroup)
 	s.registerMemoRoutes(apiGroup)
 	s.registerShortcutRoutes(apiGroup)

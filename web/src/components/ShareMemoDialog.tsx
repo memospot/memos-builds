@@ -5,17 +5,18 @@ import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import copy from "copy-to-clipboard";
 import { toLower } from "lodash-es";
-import toImage from "../labs/html2image";
-import { useGlobalStore, useMemoStore, useUserStore } from "../store/module";
-import { VISIBILITY_SELECTOR_ITEMS } from "../helpers/consts";
-import * as utils from "../helpers/utils";
-import { getMemoStats } from "../helpers/api";
-import useLoading from "../hooks/useLoading";
+import toImage from "@/labs/html2image";
+import { useGlobalStore, useMemoStore, useUserStore } from "@/store/module";
+import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
+import { getDateTimeString, getTimeStampByDate } from "@/helpers/datetime";
+import { getMemoStats } from "@/helpers/api";
+import useLoading from "@/hooks/useLoading";
 import Icon from "./Icon";
 import { generateDialog } from "./Dialog";
 import MemoContent from "./MemoContent";
 import MemoResources from "./MemoResources";
-import "../less/share-memo-dialog.less";
+import showEmbedMemoDialog from "./EmbedMemoDialog";
+import "@/less/share-memo-dialog.less";
 
 interface Props extends DialogProps {
   memo: Memo;
@@ -23,7 +24,8 @@ interface Props extends DialogProps {
 
 interface State {
   memoAmount: number;
-  memoVisibility: string;
+  memoVisibility: Visibility;
+  showQRCode: boolean;
 }
 
 const ShareMemoDialog: React.FC<Props> = (props: Props) => {
@@ -37,24 +39,22 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const [state, setState] = useState<State>({
     memoAmount: 0,
     memoVisibility: propsMemo.visibility,
+    showQRCode: true,
   });
   const createLoadingState = useLoading(false);
   const loadingState = useLoading();
   const memoElRef = useRef<HTMLDivElement>(null);
   const memo = {
     ...propsMemo,
-    createdAtStr: utils.getDateTimeString(propsMemo.createdTs),
+    createdAtStr: getDateTimeString(propsMemo.createdTs),
   };
-  const createdDays = Math.ceil((Date.now() - utils.getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24);
+  const createdDays = Math.ceil((Date.now() - getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24);
 
   useEffect(() => {
     getMemoStats(user.id)
       .then(({ data: { data } }) => {
-        setState((state) => {
-          return {
-            ...state,
-            memoAmount: data.length,
-          };
+        setPartialState({
+          memoAmount: data.length,
         });
         loadingState.setFinish();
       })
@@ -62,6 +62,13 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
         console.error(error);
       });
   }, []);
+
+  const setPartialState = (partialState: Partial<State>) => {
+    setState({
+      ...state,
+      ...partialState,
+    });
+  };
 
   const handleCloseBtnClick = () => {
     destroy();
@@ -80,7 +87,7 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
       .then((url) => {
         const a = document.createElement("a");
         a.href = url;
-        a.download = `memos-${utils.getDateTimeString(Date.now())}.png`;
+        a.download = `memos-${getDateTimeString(Date.now())}.png`;
         a.click();
 
         createLoadingState.setFinish();
@@ -88,6 +95,10 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
       .catch((err) => {
         console.error(err);
       });
+  };
+
+  const handleShowEmbedMemoDialog = () => {
+    showEmbedMemoDialog(memo.id);
   };
 
   const handleCopyLinkBtnClick = () => {
@@ -104,8 +115,7 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
 
   const handleMemoVisibilityOptionChanged = async (value: string) => {
     const visibilityValue = value as Visibility;
-    setState({
-      ...state,
+    setPartialState({
       memoVisibility: visibilityValue,
     });
     await memoStore.patchMemo({
@@ -116,40 +126,15 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
 
   return (
     <>
-      <div className="dialog-header-container">
-        <p className="title-text">{t("common.share")} Memo</p>
+      <div className="dialog-header-container py-3 px-4 !mb-0 rounded-t-lg">
+        <p className="">{t("common.share")} Memo</p>
         <button className="btn close-btn" onClick={handleCloseBtnClick}>
           <Icon.X className="icon-img" />
         </button>
       </div>
-      <div className="dialog-content-container">
-        <div className="memo-container" ref={memoElRef}>
-          <span className="time-text">{memo.createdAtStr}</span>
-          <div className="memo-content-wrapper">
-            <MemoContent content={memo.content} showFull={true} />
-            <MemoResources resourceList={memo.resourceList} />
-          </div>
-          <div className="watermark-container">
-            <div className="logo-container">
-              <img className="logo-img" src={`${systemStatus.customizedProfile.logoUrl || "/logo.png"}`} alt="" />
-            </div>
-            <div className="userinfo-container">
-              <span className="name-text">{user.nickname || user.username}</span>
-              <span className="usage-text">
-                {state.memoAmount} MEMOS / {createdDays} DAYS
-              </span>
-            </div>
-            <QRCodeSVG
-              value={`${window.location.origin}/m/${memo.id}`}
-              size={64}
-              bgColor={"#F3F4F6"}
-              fgColor={"#4B5563"}
-              level={"L"}
-              includeMargin={false}
-            />
-          </div>
-        </div>
-        <div className="px-4 py-3 w-full flex flex-row justify-between items-center">
+      <div className="dialog-content-container w-full flex flex-col justify-start items-start relative">
+        <div className="px-4 pb-3 w-full flex flex-row justify-start items-center">
+          <span className="text-sm mr-2">{t("common.visibility")}:</span>
           <Select
             className="!min-w-[10rem] w-auto text-sm"
             value={state.memoVisibility}
@@ -165,19 +150,53 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
               </Option>
             ))}
           </Select>
-          <div className="flex flex-row justify-end items-center">
-            <button disabled={createLoadingState.isLoading} className="btn-normal mr-2" onClick={handleDownloadBtnClick}>
-              {createLoadingState.isLoading ? (
-                <Icon.Loader className="w-4 h-auto mr-1 animate-spin" />
-              ) : (
-                <Icon.Download className="w-4 h-auto mr-1" />
-              )}
-              <span>{t("common.image")}</span>
-            </button>
-            <button className="btn-normal" onClick={handleCopyLinkBtnClick}>
-              <Icon.Link className="w-4 h-auto mr-1" />
-              <span>{t("common.link")}</span>
-            </button>
+        </div>
+        <div className="px-4 pb-3 w-full flex flex-row justify-start items-center space-x-2">
+          <button disabled={createLoadingState.isLoading} className="btn-normal h-8" onClick={handleDownloadBtnClick}>
+            {createLoadingState.isLoading ? (
+              <Icon.Loader className="w-4 h-auto mr-1 animate-spin" />
+            ) : (
+              <Icon.Download className="w-4 h-auto mr-1" />
+            )}
+            {t("common.image")}
+          </button>
+          <button className="btn-normal h-8" onClick={handleShowEmbedMemoDialog}>
+            <Icon.Code className="w-4 h-auto mr-1" />
+            {t("memo.embed")}
+          </button>
+          <button className="btn-normal h-8" onClick={handleCopyLinkBtnClick}>
+            <Icon.Link className="w-4 h-auto mr-1" />
+            {t("common.link")}
+          </button>
+        </div>
+        <div className="w-full rounded-lg border-t overflow-clip">
+          <div
+            className="w-full h-auto select-none relative flex flex-col justify-start items-start bg-white dark:bg-zinc-800"
+            ref={memoElRef}
+          >
+            <span className="w-full px-6 pt-5 pb-2 text-sm text-gray-500">{memo.createdAtStr}</span>
+            <div className="w-full px-6 text-base pb-4">
+              <MemoContent content={memo.content} showFull={true} />
+              <MemoResources className="!grid-cols-2" resourceList={memo.resourceList} />
+            </div>
+            <div className="flex flex-row justify-between items-center w-full bg-gray-100 dark:bg-zinc-700 py-4 px-6">
+              <div className="mr-2">
+                <img className="h-10 w-auto rounded-lg" src={`${systemStatus.customizedProfile.logoUrl || "/logo.webp"}`} alt="" />
+              </div>
+              <div className="w-auto grow truncate flex mr-2 flex-col justify-center items-start">
+                <span className="w-full text-sm truncate font-bold text-gray-600 dark:text-gray-300">{user.nickname || user.username}</span>
+                <span className="text-xs text-gray-400">
+                  {state.memoAmount} MEMOS / {createdDays} DAYS
+                </span>
+              </div>
+              <QRCodeSVG
+                value={`${window.location.origin}/m/${memo.id}`}
+                size={40}
+                bgColor={"#F3F4F6"}
+                fgColor={"#4B5563"}
+                includeMargin={false}
+              />
+            </div>
           </div>
         </div>
       </div>

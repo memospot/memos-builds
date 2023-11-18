@@ -1,28 +1,22 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Button, Divider, Input, Switch, Textarea } from "@mui/joy";
-import { useGlobalStore } from "../../store/module";
-import * as api from "../../helpers/api";
+import { Button, Divider, Input, Switch, Textarea, Typography } from "@mui/joy";
+import { formatBytes } from "@/helpers/utils";
+import { useGlobalStore } from "@/store/module";
+import * as api from "@/helpers/api";
+import Icon from "../Icon";
 import showUpdateCustomizedProfileDialog from "../UpdateCustomizedProfileDialog";
 import "@/less/settings/system-section.less";
 
 interface State {
   dbSize: number;
   allowSignUp: boolean;
+  ignoreUpgrade: boolean;
   disablePublicMemos: boolean;
   additionalStyle: string;
   additionalScript: string;
 }
-
-const formatBytes = (bytes: number) => {
-  if (bytes <= 0) return "0 Bytes";
-  const k = 1024,
-    dm = 2,
-    sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
-    i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + sizes[i];
-};
 
 const SystemSection = () => {
   const { t } = useTranslation();
@@ -31,6 +25,7 @@ const SystemSection = () => {
   const [state, setState] = useState<State>({
     dbSize: systemStatus.dbSize,
     allowSignUp: systemStatus.allowSignUp,
+    ignoreUpgrade: systemStatus.ignoreUpgrade,
     additionalStyle: systemStatus.additionalStyle,
     additionalScript: systemStatus.additionalScript,
     disablePublicMemos: systemStatus.disablePublicMemos,
@@ -45,6 +40,15 @@ const SystemSection = () => {
   }, []);
 
   useEffect(() => {
+    api.getSystemSetting().then(({ data: { data: systemSettings } }) => {
+      const openAIConfigSetting = systemSettings.find((setting) => setting.name === "openai-config");
+      if (openAIConfigSetting) {
+        setOpenAIConfig(JSON.parse(openAIConfigSetting.value));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     setState({
       ...state,
       dbSize: systemStatus.dbSize,
@@ -55,22 +59,24 @@ const SystemSection = () => {
     });
   }, [systemStatus]);
 
-  useEffect(() => {
-    api.getSystemSetting().then(({ data: { data: systemSettings } }) => {
-      const openAIConfigSetting = systemSettings.find((setting) => setting.name === "openAIConfig");
-      if (openAIConfigSetting) {
-        setOpenAIConfig(JSON.parse(openAIConfigSetting.value));
-      }
-    });
-  }, []);
-
   const handleAllowSignUpChanged = async (value: boolean) => {
     setState({
       ...state,
       allowSignUp: value,
     });
     await api.upsertSystemSetting({
-      name: "allowSignUp",
+      name: "allow-signup",
+      value: JSON.stringify(value),
+    });
+  };
+
+  const handleIgnoreUpgradeChanged = async (value: boolean) => {
+    setState({
+      ...state,
+      ignoreUpgrade: value,
+    });
+    await api.upsertSystemSetting({
+      name: "ignore-upgrade",
       value: JSON.stringify(value),
     });
   };
@@ -97,10 +103,17 @@ const SystemSection = () => {
     });
   };
 
+  const handleOpenAIConfigHostChanged = (value: string) => {
+    setOpenAIConfig({
+      ...openAIConfig,
+      host: value,
+    });
+  };
+
   const handleSaveOpenAIConfig = async () => {
     try {
       await api.upsertSystemSetting({
-        name: "openAIConfig",
+        name: "openai-config",
         value: JSON.stringify(openAIConfig),
       });
     } catch (error) {
@@ -108,13 +121,6 @@ const SystemSection = () => {
       return;
     }
     toast.success("OpenAI Config updated");
-  };
-
-  const handleOpenAIConfigHostChanged = (value: string) => {
-    setOpenAIConfig({
-      ...openAIConfig,
-      host: value,
-    });
   };
 
   const handleAdditionalStyleChanged = (value: string) => {
@@ -127,7 +133,7 @@ const SystemSection = () => {
   const handleSaveAdditionalStyle = async () => {
     try {
       await api.upsertSystemSetting({
-        name: "additionalStyle",
+        name: "additional-style",
         value: JSON.stringify(state.additionalStyle),
       });
     } catch (error) {
@@ -147,7 +153,7 @@ const SystemSection = () => {
   const handleSaveAdditionalScript = async () => {
     try {
       await api.upsertSystemSetting({
-        name: "additionalScript",
+        name: "additional-script",
         value: JSON.stringify(state.additionalScript),
       });
     } catch (error) {
@@ -164,7 +170,7 @@ const SystemSection = () => {
     });
     globalStore.setSystemStatus({ disablePublicMemos: value });
     await api.upsertSystemSetting({
-      name: "disablePublicMemos",
+      name: "disable-public-memos",
       value: JSON.stringify(value),
     });
   };
@@ -190,12 +196,26 @@ const SystemSection = () => {
         <Switch checked={state.allowSignUp} onChange={(event) => handleAllowSignUpChanged(event.target.checked)} />
       </div>
       <div className="form-label">
+        <span className="normal-text">{t("setting.system-section.ignore-version-upgrade")}</span>
+        <Switch checked={state.ignoreUpgrade} onChange={(event) => handleIgnoreUpgradeChanged(event.target.checked)} />
+      </div>
+      <div className="form-label">
         <span className="normal-text">{t("setting.system-section.disable-public-memos")}</span>
         <Switch checked={state.disablePublicMemos} onChange={(event) => handleDisablePublicMemosChanged(event.target.checked)} />
       </div>
       <Divider className="!mt-3 !my-4" />
       <div className="form-label">
-        <span className="normal-text">OpenAI API Key</span>
+        <span className="normal-text">{t("setting.system-section.openai-api-key")}</span>
+        <Typography className="!mb-1" level="body2">
+          <a
+            className="ml-2 text-sm text-blue-600 hover:opacity-80 hover:underline"
+            href="https://platform.openai.com/account/api-keys"
+            target="_blank"
+          >
+            {t("setting.system-section.openai-api-key-description")}
+            <Icon.ExternalLink className="inline -mt-1 ml-1 w-4 h-auto opacity-80" />
+          </a>
+        </Typography>
         <Button onClick={handleSaveOpenAIConfig}>{t("common.save")}</Button>
       </div>
       <Input
@@ -204,12 +224,12 @@ const SystemSection = () => {
           fontFamily: "monospace",
           fontSize: "14px",
         }}
-        placeholder="Write only"
+        placeholder={t("setting.system-section.openai-api-key-placeholder")}
         value={openAIConfig.key}
         onChange={(event) => handleOpenAIConfigKeyChanged(event.target.value)}
       />
       <div className="form-label mt-2">
-        <span className="normal-text">OpenAI API Host</span>
+        <span className="normal-text">{t("setting.system-section.openai-api-host")}</span>
       </div>
       <Input
         className="w-full"
@@ -217,7 +237,7 @@ const SystemSection = () => {
           fontFamily: "monospace",
           fontSize: "14px",
         }}
-        placeholder="OpenAI Host. Default: https://api.openai.com"
+        placeholder={t("setting.system-section.openai-api-host-placeholder")}
         value={openAIConfig.host}
         onChange={(event) => handleOpenAIConfigHostChanged(event.target.value)}
       />
