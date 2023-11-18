@@ -2,16 +2,33 @@ package v2
 
 import (
 	"context"
+	"os"
 	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
+	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
 )
 
-func (s *APIV2Service) GetSystemInfo(ctx context.Context, _ *apiv2pb.GetSystemInfoRequest) (*apiv2pb.GetSystemInfoResponse, error) {
+type SystemService struct {
+	apiv2pb.UnimplementedSystemServiceServer
+
+	Profile *profile.Profile
+	Store   *store.Store
+}
+
+// NewSystemService creates a new SystemService.
+func NewSystemService(profile *profile.Profile, store *store.Store) *SystemService {
+	return &SystemService{
+		Profile: profile,
+		Store:   store,
+	}
+}
+
+func (s *SystemService) GetSystemInfo(ctx context.Context, _ *apiv2pb.GetSystemInfoRequest) (*apiv2pb.GetSystemInfoResponse, error) {
 	defaultSystemInfo := &apiv2pb.SystemInfo{}
 
 	// Get the database size if the user is a host.
@@ -20,11 +37,11 @@ func (s *APIV2Service) GetSystemInfo(ctx context.Context, _ *apiv2pb.GetSystemIn
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
 	if currentUser != nil && currentUser.Role == store.RoleHost {
-		size, err := s.Store.GetCurrentDBSize(ctx)
+		fi, err := os.Stat(s.Profile.DSN)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get db size: %v", err)
+			return nil, status.Errorf(codes.Internal, "failed to get file info: %v", err)
 		}
-		defaultSystemInfo.DbSize = size
+		defaultSystemInfo.DbSize = fi.Size()
 	}
 
 	response := &apiv2pb.GetSystemInfoResponse{
@@ -33,7 +50,7 @@ func (s *APIV2Service) GetSystemInfo(ctx context.Context, _ *apiv2pb.GetSystemIn
 	return response, nil
 }
 
-func (s *APIV2Service) UpdateSystemInfo(ctx context.Context, request *apiv2pb.UpdateSystemInfoRequest) (*apiv2pb.UpdateSystemInfoResponse, error) {
+func (s *SystemService) UpdateSystemInfo(ctx context.Context, request *apiv2pb.UpdateSystemInfoRequest) (*apiv2pb.UpdateSystemInfoResponse, error) {
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
@@ -41,12 +58,12 @@ func (s *APIV2Service) UpdateSystemInfo(ctx context.Context, request *apiv2pb.Up
 	if user.Role != store.RoleHost {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
-	if request.UpdateMask == nil || len(request.UpdateMask.Paths) == 0 {
+	if request.UpdateMask == nil || len(request.UpdateMask) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "update mask is required")
 	}
 
 	// Update system settings.
-	for _, path := range request.UpdateMask.Paths {
+	for _, path := range request.UpdateMask {
 		if path == "allow_registration" {
 			_, err := s.Store.UpsertSystemSetting(ctx, &store.SystemSetting{
 				Name:  "allow-signup",

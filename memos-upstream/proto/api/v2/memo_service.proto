@@ -9,10 +9,6 @@ import "google/api/client.proto";
 option go_package = "gen/api/v2";
 
 service MemoService {
-  rpc CreateMemo(CreateMemoRequest) returns (CreateMemoResponse) {
-    option (google.api.http) = {post: "/api/v2/memos"};
-  }
-
   rpc ListMemos(ListMemosRequest) returns (ListMemosResponse) {
     option (google.api.http) = {get: "/api/v2/memos"};
   }
@@ -21,26 +17,6 @@ service MemoService {
     option (google.api.http) = {get: "/api/v2/memos/{id}"};
     option (google.api.method_signature) = "id";
   }
-
-  rpc CreateMemoComment(CreateMemoCommentRequest) returns (CreateMemoCommentResponse) {
-    option (google.api.http) = {post: "/api/v2/memos/{id}/comments"};
-    option (google.api.method_signature) = "id";
-  }
-
-  rpc ListMemoComments(ListMemoCommentsRequest) returns (ListMemoCommentsResponse) {
-    option (google.api.http) = {get: "/api/v2/memos/{id}/comments"};
-    option (google.api.method_signature) = "id";
-  }
-}
-
-enum Visibility {
-  VISIBILITY_UNSPECIFIED = 0;
-
-  PRIVATE = 1;
-
-  PROTECTED = 2;
-
-  PUBLIC = 3;
 }
 
 message Memo {
@@ -61,16 +37,6 @@ message Memo {
   bool pinned = 8;
 }
 
-message CreateMemoRequest {
-  string content = 1;
-
-  Visibility visibility = 2;
-}
-
-message CreateMemoResponse {
-  Memo memo = 1;
-}
-
 message ListMemosRequest {
   int32 page = 1;
 
@@ -78,8 +44,6 @@ message ListMemosRequest {
 
   // Filter is used to filter memos returned in the list.
   string filter = 3;
-
-  optional int32 creator_id = 4;
 }
 
 message ListMemosResponse {
@@ -94,21 +58,12 @@ message GetMemoResponse {
   Memo memo = 1;
 }
 
-message CreateMemoCommentRequest {
-  // id is the memo id to create comment for.
-  int32 id = 1;
+enum Visibility {
+  VISIBILITY_UNSPECIFIED = 0;
 
-  CreateMemoRequest create = 2;
-}
+  PRIVATE = 1;
 
-message CreateMemoCommentResponse {
-  Memo memo = 1;
-}
+  PROTECTED = 2;
 
-message ListMemoCommentsRequest {
-  int32 id = 1;
-}
-
-message ListMemoCommentsResponse {
-  repeated Memo memos = 1;
+  PUBLIC = 3;
 }

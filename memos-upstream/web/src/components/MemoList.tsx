@@ -9,6 +9,7 @@ import { useFilterStore, useMemoStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import Empty from "./Empty";
 import Memo from "./Memo";
+import "@/less/memo-list.less";
 
 const MemoList: React.FC = () => {
   const t = useTranslate();
@@ -62,7 +63,7 @@ const MemoList: React.FC = () => {
           return shouldShow;
         })
       : memos
-  ).filter((memo) => memo.creatorUsername === username && memo.rowStatus === "NORMAL" && !memo.parent);
+  ).filter((memo) => memo.creatorUsername === username && memo.rowStatus === "NORMAL");
 
   const pinnedMemos = shownMemos.filter((m) => m.pinned);
   const unpinnedMemos = shownMemos.filter((m) => !m.pinned);
@@ -130,17 +131,17 @@ const MemoList: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col justify-start items-start w-full max-w-full overflow-y-scroll pb-28 hide-scrollbar">
+    <div className="memo-list-container">
       {sortedMemos.map((memo) => (
-        <Memo key={`${memo.id}-${memo.displayTs}`} memo={memo} lazyRendering showVisibility showPinnedStyle />
+        <Memo key={`${memo.id}-${memo.displayTs}`} memo={memo} lazyRendering showVisibility />
       ))}
       {isFetching ? (
-        <div className="flex flex-col justify-start items-center w-full mt-2 mb-1">
-          <p className="text-sm text-gray-400 italic">{t("memo.fetching-data")}</p>
+        <div className="status-text-container fetching-tip">
+          <p className="status-text">{t("memo.fetching-data")}</p>
         </div>
       ) : (
-        <div className="flex flex-col justify-start items-center w-full my-6">
-          <div className="text-sm text-gray-400 italic">
+        <div className="status-text-container">
+          <div className="status-text">
             {isComplete ? (
               sortedMemos.length === 0 && (
                 <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">

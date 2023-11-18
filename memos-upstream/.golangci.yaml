@@ -1,5 +1,3 @@
-run:
-  timeout: 10m
 linters:
   enable:
     - errcheck

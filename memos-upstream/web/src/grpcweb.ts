@@ -1,14 +1,14 @@
 import { createChannel, createClientFactory, FetchTransport } from "nice-grpc-web";
-import { ActivityServiceDefinition } from "./types/proto/api/v2/activity_service";
-import { InboxServiceDefinition } from "./types/proto/api/v2/inbox_service";
 import { MemoServiceDefinition } from "./types/proto/api/v2/memo_service";
 import { ResourceServiceDefinition } from "./types/proto/api/v2/resource_service";
 import { SystemServiceDefinition } from "./types/proto/api/v2/system_service";
 import { TagServiceDefinition } from "./types/proto/api/v2/tag_service";
 import { UserServiceDefinition } from "./types/proto/api/v2/user_service";
 
+const address = import.meta.env.MODE === "development" ? "http://localhost:8081" : window.location.origin;
+
 const channel = createChannel(
-  window.location.origin,
+  address,
   FetchTransport({
     credentials: "include",
   })
@@ -25,7 +25,3 @@ export const resourceServiceClient = clientFactory.create(ResourceServiceDefinit
 export const systemServiceClient = clientFactory.create(SystemServiceDefinition, channel);
 
 export const tagServiceClient = clientFactory.create(TagServiceDefinition, channel);
-
-export const inboxServiceClient = clientFactory.create(InboxServiceDefinition, channel);
-
-export const activityServiceClient = clientFactory.create(ActivityServiceDefinition, channel);
