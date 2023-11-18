@@ -1,6 +1,6 @@
 import { camelCase } from "lodash-es";
 import * as api from "@/helpers/api";
-import * as storage from "@/helpers/storage";
+import storage from "@/helpers/storage";
 import { UNKNOWN_ID } from "@/helpers/consts";
 import { getSystemColorScheme } from "@/helpers/utils";
 import store, { useAppSelector } from "..";
@@ -11,16 +11,25 @@ const defaultSetting: Setting = {
   locale: "en",
   appearance: getSystemColorScheme(),
   memoVisibility: "PRIVATE",
+  telegramUserId: "",
 };
 
 const defaultLocalSetting: LocalSetting = {
   enableDoubleClickEditing: true,
   dailyReviewTimeOffset: 0,
+  enableAutoCollapse: true,
 };
 
 export const convertResponseModelUser = (user: User): User => {
+  // user default 'Basic Setting' should follow server's setting
+  // 'Basic Setting' fields: locale, appearance
+  const { systemStatus } = store.getState().global;
+  const { locale, appearance } = systemStatus.customizedProfile;
+  const systemSetting = { locale, appearance };
+
   const setting: Setting = {
     ...defaultSetting,
+    ...systemSetting,
   };
   const { localSetting: storageLocalSetting } = storage.get(["localSetting"]);
   const localSetting: LocalSetting = {

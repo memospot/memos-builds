@@ -46,7 +46,8 @@ export const getElementBounding = (element: HTMLElement, relativeEl?: HTMLElemen
       return false;
     }
 
-    if (window.getComputedStyle(element).getPropertyValue("position") === "fixed") {
+    const position = window.getComputedStyle(element).getPropertyValue("position");
+    if (position === "fixed" || position === "static") {
       return true;
     }
 
@@ -104,4 +105,19 @@ export const formatBytes = (bytes: number) => {
     sizes = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"],
     i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+};
+
+export const getContentQueryParam = (): string | undefined => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get("content") ?? undefined;
+};
+
+export const clearContentQueryParam = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  urlParams.delete("content");
+  let url = window.location.pathname;
+  if (urlParams.toString()) {
+    url += `?${urlParams.toString()}`;
+  }
+  window.history.replaceState({}, "", url);
 };

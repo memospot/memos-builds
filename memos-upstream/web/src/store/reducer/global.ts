@@ -19,10 +19,10 @@ const globalSlice = createSlice({
       },
       dbSize: 0,
       allowSignUp: false,
-      ignoreUpgrade: false,
       disablePublicMemos: false,
       additionalStyle: "",
       additionalScript: "",
+      memoDisplayWithUpdatedTs: false,
       customizedProfile: {
         name: "memos",
         logoUrl: "/logo.webp",

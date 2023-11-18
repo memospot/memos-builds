@@ -1,5 +1,5 @@
 import * as api from "@/helpers/api";
-import * as storage from "@/helpers/storage";
+import storage from "@/helpers/storage";
 import i18n from "@/i18n";
 import { findNearestLanguageMatch } from "@/utils/i18n";
 import store, { useAppSelector } from "../";
@@ -11,10 +11,11 @@ export const initialGlobalState = async () => {
     appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
-      ignoreUpgrade: false,
       disablePublicMemos: false,
+      maxUploadSizeMiB: 0,
       additionalStyle: "",
       additionalScript: "",
+      memoDisplayWithUpdatedTs: false,
       customizedProfile: {
         name: "memos",
         logoUrl: "/logo.webp",
@@ -48,8 +49,9 @@ export const initialGlobalState = async () => {
         externalUrl: "",
       },
     };
-    defaultGlobalState.locale = storageLocale || findNearestLanguageMatch(i18n.language);
-    defaultGlobalState.appearance = customizedProfile.appearance;
+    defaultGlobalState.locale =
+      storageLocale || defaultGlobalState.systemStatus.customizedProfile.locale || findNearestLanguageMatch(i18n.language);
+    defaultGlobalState.appearance = defaultGlobalState.systemStatus.customizedProfile.appearance;
   }
   store.dispatch(setGlobalState(defaultGlobalState));
 };

@@ -10,17 +10,20 @@ interface Memo {
   updatedTs: TimeStamp;
   rowStatus: RowStatus;
 
+  displayTs: TimeStamp;
   content: string;
   visibility: Visibility;
   pinned: boolean;
 
   creatorName: string;
   resourceList: Resource[];
+  relationList: MemoRelation[];
 }
 
 interface MemoCreate {
   content: string;
   resourceIdList: ResourceId[];
+  relationList: MemoRelationUpsert[];
   visibility?: Visibility;
 }
 
@@ -30,6 +33,7 @@ interface MemoPatch {
   rowStatus?: RowStatus;
   content?: string;
   resourceIdList?: ResourceId[];
+  relationList?: MemoRelationUpsert[];
   visibility?: Visibility;
 }
 

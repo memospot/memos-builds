@@ -1,12 +1,99 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Button, Divider, Input, Radio, RadioGroup, Typography } from "@mui/joy";
+import { Button, Divider, Input, Option, Select, Typography } from "@mui/joy";
 import * as api from "@/helpers/api";
 import { UNKNOWN_ID } from "@/helpers/consts";
 import { absolutifyLink } from "@/helpers/utils";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
 import { useTranslation } from "react-i18next";
+
+const templateList: IdentityProvider[] = [
+  {
+    id: UNKNOWN_ID,
+    name: "GitHub",
+    type: "OAUTH2",
+    identifierFilter: "",
+    config: {
+      oauth2Config: {
+        clientId: "",
+        clientSecret: "",
+        authUrl: "https://github.com/login/oauth/authorize",
+        tokenUrl: "https://github.com/login/oauth/access_token",
+        userInfoUrl: "https://api.github.com/user",
+        scopes: ["user"],
+        fieldMapping: {
+          identifier: "login",
+          displayName: "name",
+          email: "email",
+        },
+      },
+    },
+  },
+  {
+    id: UNKNOWN_ID,
+    name: "GitLab",
+    type: "OAUTH2",
+    identifierFilter: "",
+    config: {
+      oauth2Config: {
+        clientId: "",
+        clientSecret: "",
+        authUrl: "https://gitlab.com/oauth/authorize",
+        tokenUrl: "https://gitlab.com/oauth/token",
+        userInfoUrl: "https://gitlab.com/oauth/userinfo",
+        scopes: ["openid"],
+        fieldMapping: {
+          identifier: "name",
+          displayName: "name",
+          email: "email",
+        },
+      },
+    },
+  },
+  {
+    id: UNKNOWN_ID,
+    name: "Google",
+    type: "OAUTH2",
+    identifierFilter: "",
+    config: {
+      oauth2Config: {
+        clientId: "",
+        clientSecret: "",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+        scopes: ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
+        fieldMapping: {
+          identifier: "email",
+          displayName: "name",
+          email: "email",
+        },
+      },
+    },
+  },
+  {
+    id: UNKNOWN_ID,
+    name: "Custom",
+    type: "OAUTH2",
+    identifierFilter: "",
+    config: {
+      oauth2Config: {
+        clientId: "",
+        clientSecret: "",
+        authUrl: "",
+        tokenUrl: "",
+        userInfoUrl: "",
+        scopes: [],
+        fieldMapping: {
+          identifier: "",
+          displayName: "",
+          email: "",
+        },
+      },
+    },
+  },
+];
 
 interface Props extends DialogProps {
   identityProvider?: IdentityProvider;
@@ -15,92 +102,7 @@ interface Props extends DialogProps {
 
 const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
   const { t } = useTranslation();
-  const templateList: IdentityProvider[] = [
-    {
-      id: UNKNOWN_ID,
-      name: "GitHub",
-      type: "OAUTH2",
-      identifierFilter: "",
-      config: {
-        oauth2Config: {
-          clientId: "",
-          clientSecret: "",
-          authUrl: "https://github.com/login/oauth/authorize",
-          tokenUrl: "https://github.com/login/oauth/access_token",
-          userInfoUrl: "https://api.github.com/user",
-          scopes: ["user"],
-          fieldMapping: {
-            identifier: t("setting.sso-section.identifier"),
-            displayName: "",
-            email: "",
-          },
-        },
-      },
-    },
-    {
-      id: UNKNOWN_ID,
-      name: "GitLab",
-      type: "OAUTH2",
-      identifierFilter: "",
-      config: {
-        oauth2Config: {
-          clientId: "",
-          clientSecret: "",
-          authUrl: "https://gitlab.com/oauth/authorize",
-          tokenUrl: "https://gitlab.com/oauth/token",
-          userInfoUrl: "https://gitlab.com/oauth/userinfo",
-          scopes: ["openid"],
-          fieldMapping: {
-            identifier: t("setting.sso-section.identifier"),
-            displayName: "",
-            email: "",
-          },
-        },
-      },
-    },
-    {
-      id: UNKNOWN_ID,
-      name: "Google",
-      type: "OAUTH2",
-      identifierFilter: "",
-      config: {
-        oauth2Config: {
-          clientId: "",
-          clientSecret: "",
-          authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-          tokenUrl: "https://oauth2.googleapis.com/token",
-          userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
-          scopes: ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
-          fieldMapping: {
-            identifier: t("setting.sso-section.identifier"),
-            displayName: "",
-            email: "",
-          },
-        },
-      },
-    },
-    {
-      id: UNKNOWN_ID,
-      name: t("setting.sso-section.custom"),
-      type: "OAUTH2",
-      identifierFilter: "",
-      config: {
-        oauth2Config: {
-          clientId: "",
-          clientSecret: "",
-          authUrl: "",
-          tokenUrl: "",
-          userInfoUrl: "",
-          scopes: [],
-          fieldMapping: {
-            identifier: "",
-            displayName: "",
-            email: "",
-          },
-        },
-      },
-    },
-  ];
+  const identityProviderTypes = [...new Set(templateList.map((t) => t.type))];
   const { confirmCallback, destroy, identityProvider } = props;
   const [basicInfo, setBasicInfo] = useState({
     name: "",
@@ -121,7 +123,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
     },
   });
   const [oauth2Scopes, setOAuth2Scopes] = useState<string>("");
-  const [seletedTemplate, setSelectedTemplate] = useState<string>("GitHub");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("GitHub");
   const isCreating = identityProvider === undefined;
 
   useEffect(() => {
@@ -143,7 +145,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
       return;
     }
 
-    const template = templateList.find((t) => t.name === seletedTemplate);
+    const template = templateList.find((t) => t.name === selectedTemplate);
     if (template) {
       setBasicInfo({
         name: template.name,
@@ -155,7 +157,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
         setOAuth2Scopes(template.config.oauth2Config.scopes.join(" "));
       }
     }
-  }, [seletedTemplate]);
+  }, [selectedTemplate]);
 
   const handleCloseBtnClick = () => {
     destroy();
@@ -229,37 +231,34 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
   return (
     <>
       <div className="dialog-header-container">
-        <p className="title-text">{t("setting.sso-section." + (isCreating ? "create" : "update") + "-sso")}</p>
-        <button className="btn close-btn" onClick={handleCloseBtnClick}>
+        <p className="title-text ml-auto">{t("setting.sso-section." + (isCreating ? "create" : "update") + "-sso")}</p>
+        <button className="btn close-btn ml-auto" onClick={handleCloseBtnClick}>
           <Icon.X />
         </button>
       </div>
-      <div className="dialog-content-container w-full max-w-[24rem] min-w-[25rem]">
+      <div className="dialog-content-container min-w-[19rem]">
         {isCreating && (
           <>
             <Typography className="!mb-1" level="body2">
               {t("common.type")}
             </Typography>
-            <RadioGroup className="mb-2" value={type}>
-              <div className="mt-2 w-full flex flex-row space-x-4">
-                <Radio value="OAUTH2" label="OAuth 2.0" />
-              </div>
-            </RadioGroup>
+            <Select className="w-full mb-4" value={type} onChange={(_, e) => setType(e ?? type)}>
+              {identityProviderTypes.map((kind) => (
+                <Option key={kind} value={kind}>
+                  {kind}
+                </Option>
+              ))}
+            </Select>
             <Typography className="mb-2" level="body2">
               {t("setting.sso-section.template")}
             </Typography>
-            <RadioGroup className="mb-2" value={seletedTemplate}>
-              <div className="mt-2 w-full flex flex-row space-x-4">
-                {templateList.map((template) => (
-                  <Radio
-                    key={template.name}
-                    value={template.name}
-                    label={template.name}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                  />
-                ))}
-              </div>
-            </RadioGroup>
+            <Select className="mb-1 h-auto w-full" value={selectedTemplate} onChange={(_, e) => setSelectedTemplate(e ?? selectedTemplate)}>
+              {templateList.map((template) => (
+                <Option key={template.name} value={template.name}>
+                  {template.name}
+                </Option>
+              ))}
+            </Select>
             <Divider className="!my-2" />
           </>
         )}

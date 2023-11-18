@@ -23,14 +23,14 @@ export function vacuumDatabase() {
 }
 
 export function signin(username: string, password: string) {
-  return axios.post<ResponseObject<User>>("/api/auth/signin", {
+  return axios.post("/api/v1/auth/signin", {
     username,
     password,
   });
 }
 
 export function signinWithSSO(identityProviderId: IdentityProviderId, code: string, redirectUri: string) {
-  return axios.post<ResponseObject<User>>("/api/auth/signin/sso", {
+  return axios.post("/api/v1/auth/signin/sso", {
     identityProviderId,
     code,
     redirectUri,
@@ -38,14 +38,14 @@ export function signinWithSSO(identityProviderId: IdentityProviderId, code: stri
 }
 
 export function signup(username: string, password: string) {
-  return axios.post<ResponseObject<User>>("/api/auth/signup", {
+  return axios.post("/api/v1/auth/signup", {
     username,
     password,
   });
 }
 
 export function signout() {
-  return axios.post("/api/auth/signout");
+  return axios.post("/api/v1/auth/signout");
 }
 
 export function createUser(userCreate: UserCreate) {
@@ -246,27 +246,19 @@ export function deleteStorage(storageId: StorageId) {
 }
 
 export function getIdentityProviderList() {
-  return axios.get<ResponseObject<IdentityProvider[]>>(`/api/idp`);
+  return axios.get<IdentityProvider[]>(`/api/v1/idp`);
 }
 
 export function createIdentityProvider(identityProviderCreate: IdentityProviderCreate) {
-  return axios.post<ResponseObject<IdentityProvider>>(`/api/idp`, identityProviderCreate);
+  return axios.post<IdentityProvider>(`/api/v1/idp`, identityProviderCreate);
 }
 
 export function patchIdentityProvider(identityProviderPatch: IdentityProviderPatch) {
-  return axios.patch<ResponseObject<IdentityProvider>>(`/api/idp/${identityProviderPatch.id}`, identityProviderPatch);
+  return axios.patch<IdentityProvider>(`/api/v1/idp/${identityProviderPatch.id}`, identityProviderPatch);
 }
 
 export function deleteIdentityProvider(id: IdentityProviderId) {
-  return axios.delete(`/api/idp/${id}`);
-}
-
-export function postChatCompletion(messages: any[]) {
-  return axios.post<ResponseObject<string>>(`/api/openai/chat-completion`, messages);
-}
-
-export function checkOpenAIEnabled() {
-  return axios.get<ResponseObject<boolean>>(`/api/openai/enabled`);
+  return axios.delete(`/api/v1/idp/${id}`);
 }
 
 export async function getRepoStarCount() {

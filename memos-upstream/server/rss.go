@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -12,68 +13,62 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/usememos/memos/api"
 	"github.com/usememos/memos/common"
+	"github.com/usememos/memos/store"
+	"github.com/yuin/goldmark"
 )
 
 func (s *Server) registerRSSRoutes(g *echo.Group) {
 	g.GET("/explore/rss.xml", func(c echo.Context) error {
 		ctx := c.Request().Context()
-
-		systemCustomizedProfile, err := getSystemCustomizedProfile(ctx, s)
+		systemCustomizedProfile, err := s.getSystemCustomizedProfile(ctx)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get system customized profile").SetInternal(err)
 		}
 
-		normalStatus := api.Normal
-		memoFind := api.MemoFind{
-			RowStatus: &normalStatus,
-			VisibilityList: []api.Visibility{
-				api.Public,
-			},
+		normalStatus := store.Normal
+		memoFind := store.FindMemoMessage{
+			RowStatus:      &normalStatus,
+			VisibilityList: []store.Visibility{store.Public},
 		}
-		memoList, err := s.Store.FindMemoList(ctx, &memoFind)
+		memoList, err := s.Store.ListMemos(ctx, &memoFind)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find memo list").SetInternal(err)
 		}
 
 		baseURL := c.Scheme() + "://" + c.Request().Host
-		rss, err := generateRSSFromMemoList(memoList, baseURL, systemCustomizedProfile)
+		rss, err := s.generateRSSFromMemoList(ctx, memoList, baseURL, systemCustomizedProfile)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate rss").SetInternal(err)
 		}
-
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationXMLCharsetUTF8)
 		return c.String(http.StatusOK, rss)
 	})
 
 	g.GET("/u/:id/rss.xml", func(c echo.Context) error {
 		ctx := c.Request().Context()
-
-		systemCustomizedProfile, err := getSystemCustomizedProfile(ctx, s)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get system customized profile").SetInternal(err)
-		}
-
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "User id is not a number").SetInternal(err)
 		}
 
-		normalStatus := api.Normal
-		memoFind := api.MemoFind{
-			CreatorID: &id,
-			RowStatus: &normalStatus,
-			VisibilityList: []api.Visibility{
-				api.Public,
-			},
+		systemCustomizedProfile, err := s.getSystemCustomizedProfile(ctx)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get system customized profile").SetInternal(err)
 		}
-		memoList, err := s.Store.FindMemoList(ctx, &memoFind)
+
+		normalStatus := store.Normal
+		memoFind := store.FindMemoMessage{
+			CreatorID:      &id,
+			RowStatus:      &normalStatus,
+			VisibilityList: []store.Visibility{store.Public},
+		}
+		memoList, err := s.Store.ListMemos(ctx, &memoFind)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find memo list").SetInternal(err)
 		}
 
 		baseURL := c.Scheme() + "://" + c.Request().Host
-
-		rss, err := generateRSSFromMemoList(memoList, baseURL, systemCustomizedProfile)
+		rss, err := s.generateRSSFromMemoList(ctx, memoList, baseURL, systemCustomizedProfile)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate rss").SetInternal(err)
 		}
@@ -85,7 +80,7 @@ func (s *Server) registerRSSRoutes(g *echo.Group) {
 const MaxRSSItemCount = 100
 const MaxRSSItemTitleLength = 100
 
-func generateRSSFromMemoList(memoList []*api.Memo, baseURL string, profile *api.CustomizedProfile) (string, error) {
+func (s *Server) generateRSSFromMemoList(ctx context.Context, memoList []*store.MemoMessage, baseURL string, profile *api.CustomizedProfile) (string, error) {
 	feed := &feeds.Feed{
 		Title:       profile.Name,
 		Link:        &feeds.Link{Href: baseURL},
@@ -102,6 +97,25 @@ func generateRSSFromMemoList(memoList []*api.Memo, baseURL string, profile *api.
 			Link:        &feeds.Link{Href: baseURL + "/m/" + strconv.Itoa(memo.ID)},
 			Description: getRSSItemDescription(memo.Content),
 			Created:     time.Unix(memo.CreatedTs, 0),
+			Enclosure:   &feeds.Enclosure{Url: baseURL + "/m/" + strconv.Itoa(memo.ID) + "/image"},
+		}
+		if len(memo.ResourceIDList) > 0 {
+			resourceID := memo.ResourceIDList[0]
+			resource, err := s.Store.FindResource(ctx, &api.ResourceFind{
+				ID: &resourceID,
+			})
+			if err != nil {
+				return "", err
+			}
+			enclosure := feeds.Enclosure{}
+			if resource.ExternalLink != "" {
+				enclosure.Url = resource.ExternalLink
+			} else {
+				enclosure.Url = baseURL + "/o/r/" + strconv.Itoa(resource.ID) + "/" + resource.PublicID + "/" + resource.Filename
+			}
+			enclosure.Length = strconv.Itoa(int(resource.Size))
+			enclosure.Type = resource.Type
+			feed.Items[i].Enclosure = &enclosure
 		}
 	}
 
@@ -112,7 +126,7 @@ func generateRSSFromMemoList(memoList []*api.Memo, baseURL string, profile *api.
 	return rss, nil
 }
 
-func getSystemCustomizedProfile(ctx context.Context, s *Server) (*api.CustomizedProfile, error) {
+func (s *Server) getSystemCustomizedProfile(ctx context.Context) (*api.CustomizedProfile, error) {
 	systemSetting, err := s.Store.FindSystemSetting(ctx, &api.SystemSettingFind{
 		Name: api.SystemSettingCustomizedProfileName,
 	})
@@ -158,7 +172,13 @@ func getRSSItemDescription(content string) string {
 	} else {
 		description = content
 	}
-	return description
+
+	// TODO: use our `./plugin/gomark` parser to handle markdown-like content.
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(description), &buf); err != nil {
+		panic(err)
+	}
+	return buf.String()
 }
 
 func isTitleDefined(content string) bool {

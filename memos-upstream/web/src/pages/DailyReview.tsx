@@ -28,23 +28,25 @@ const DailyReview = () => {
   const currentDate = new Date(currentDateStamp);
   const dailyMemos = memos
     .filter((m) => {
-      const createdTimestamp = getTimeStampByDate(m.createdTs);
+      const displayTimestamp = getTimeStampByDate(m.displayTs);
       const currentDateStampWithOffset = currentDateStamp + convertToMillis(localSetting);
       return (
         m.rowStatus === "NORMAL" &&
-        createdTimestamp >= currentDateStampWithOffset &&
-        createdTimestamp < currentDateStampWithOffset + DAILY_TIMESTAMP
+        displayTimestamp >= currentDateStampWithOffset &&
+        displayTimestamp < currentDateStampWithOffset + DAILY_TIMESTAMP
       );
     })
-    .sort((a, b) => getTimeStampByDate(a.createdTs) - getTimeStampByDate(b.createdTs));
+    .sort((a, b) => getTimeStampByDate(a.displayTs) - getTimeStampByDate(b.displayTs));
 
   useEffect(() => {
+    let offset = 0;
     const fetchMoreMemos = async () => {
       try {
-        const fetchedMemos = await memoStore.fetchMemos();
+        const fetchedMemos = await memoStore.fetchMemos(DEFAULT_MEMO_LIMIT, offset);
+        offset += fetchedMemos.length;
         if (fetchedMemos.length === DEFAULT_MEMO_LIMIT) {
           const lastMemo = last(fetchedMemos);
-          if (lastMemo && lastMemo.createdTs > currentDateStamp) {
+          if (lastMemo && lastMemo.displayTs > currentDateStamp) {
             await fetchMoreMemos();
           }
         }
@@ -84,7 +86,7 @@ const DailyReview = () => {
   const currentDayOfWeek = currentDate.toLocaleDateString(locale, { weekday: "short" });
 
   return (
-    <section className="w-full max-w-2xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+    <section className="w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
       <MobileHeader showSearch={false} />
       <div className="w-full flex flex-col justify-start items-start px-4 py-3 rounded-xl bg-white dark:bg-zinc-700 text-black dark:text-gray-300">
         <div className="relative w-full flex flex-row justify-between items-center">
@@ -115,7 +117,7 @@ const DailyReview = () => {
             </button>
           </div>
           <DatePicker
-            className={`absolute top-8 mt-2 z-20 mx-auto border bg-white dark:border-zinc-800 rounded-lg mb-6 ${
+            className={`absolute top-8 mt-2 z-20 mx-auto border bg-white dark:bg-zinc-800 dark:border-zinc-800 rounded-lg mb-6 ${
               showDatePicker ? "" : "!hidden"
             }`}
             datestamp={currentDateStamp}
