@@ -70,7 +70,7 @@ const Header = () => {
     title: t("common.settings"),
     icon: <Icon.Settings className="mr-3 w-6 h-auto opacity-70" />,
   };
-  const authNavLink: NavLinkItem = {
+  const signInNavLink: NavLinkItem = {
     id: "header-auth",
     path: "/auth",
     title: t("common.sign-in"),
@@ -79,22 +79,22 @@ const Header = () => {
 
   const navLinks: NavLinkItem[] = user
     ? [homeNavLink, dailyReviewNavLink, resourcesNavLink, exploreNavLink, archivedNavLink, settingNavLink]
-    : [exploreNavLink, authNavLink];
+    : [exploreNavLink, signInNavLink];
 
   return (
     <div
-      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full shrink-0 pointer-events-none sm:pointer-events-auto z-10 ${
+      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-screen shrink-0 pointer-events-none sm:pointer-events-auto z-10 ${
         showHeader && "pointer-events-auto"
       }`}
     >
       <div
-        className={`fixed top-0 left-0 w-full h-full bg-black opacity-0 pointer-events-none transition-opacity duration-300 sm:!hidden ${
+        className={`fixed top-0 left-0 w-full h-full max-h-screen opacity-0 pointer-events-none transition-opacity duration-300 sm:!hidden ${
           showHeader && "opacity-60 pointer-events-auto"
         }`}
         onClick={() => layoutStore.setHeaderStatus(false)}
       ></div>
       <header
-        className={`relative w-56 sm:w-full h-full max-h-screen overflow-auto hide-scrollbar flex flex-col justify-start items-start py-4 z-30 bg-zinc-100 dark:bg-zinc-800 sm:bg-transparent sm:shadow-none transition-all duration-300 -translate-x-full sm:translate-x-0 ${
+        className={`relative w-56 sm:w-full h-full max-h-screen border-r sm:border-none dark:border-r-zinc-700 overflow-auto hide-scrollbar flex flex-col justify-start items-start py-4 z-30 bg-zinc-100 dark:bg-zinc-800 sm:bg-transparent sm:shadow-none transition-all duration-300 -translate-x-full sm:translate-x-0 ${
           showHeader && "translate-x-0 shadow-2xl"
         }`}
       >
@@ -107,8 +107,8 @@ const Header = () => {
               id={navLink.id}
               className={({ isActive }) =>
                 classNames(
-                  "px-4 pr-5 py-2 rounded-full border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
-                  isActive ? "bg-white dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
+                  "px-4 pr-5 py-2 rounded-2xl border flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:border-gray-200 dark:hover:border-zinc-600 dark:hover:bg-zinc-700",
+                  isActive ? "bg-white drop-shadow-sm dark:bg-zinc-700 border-gray-200 dark:border-zinc-600" : "border-transparent"
                 )
               }
             >

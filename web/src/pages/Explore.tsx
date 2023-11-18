@@ -54,7 +54,7 @@ const Explore = () => {
     : memos;
 
   const sortedMemos = fetchedMemos
-    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE")
+    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE" && !m.parent)
     .sort((mi, mj) => mj.displayTs - mi.displayTs);
 
   useEffect(() => {
@@ -87,7 +87,7 @@ const Explore = () => {
   };
 
   return (
-    <section className="w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+    <section className="@container w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
       <MobileHeader showSearch={false} />
       {!loadingState.isLoading && (
         <div className="relative w-full h-auto flex flex-col justify-start items-start">
