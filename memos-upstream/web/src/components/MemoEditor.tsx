@@ -2,18 +2,18 @@ import { isNumber, last, toLower, uniq } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { getMatchedNodes } from "@/labs/marked";
-import { deleteMemoResource, upsertMemoResource } from "@/helpers/api";
-import { TAB_SPACE_WIDTH, UNKNOWN_ID, VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
-import { useEditorStore, useGlobalStore, useFilterStore, useMemoStore, useResourceStore, useTagStore, useUserStore } from "@/store/module";
-import * as storage from "@/helpers/storage";
+import { getMatchedNodes } from "../labs/marked";
+import { deleteMemoResource, upsertMemoResource } from "../helpers/api";
+import { TAB_SPACE_WIDTH, UNKNOWN_ID, VISIBILITY_SELECTOR_ITEMS } from "../helpers/consts";
+import { useEditorStore, useGlobalStore, useFilterStore, useMemoStore, useResourceStore, useTagStore, useUserStore } from "../store/module";
+import * as storage from "../helpers/storage";
 import Icon from "./Icon";
-import Selector from "./kit/Selector";
+import Selector from "./base/Selector";
 import Editor, { EditorRefActions } from "./Editor/Editor";
 import ResourceIcon from "./ResourceIcon";
 import showResourcesSelectorDialog from "./ResourcesSelectorDialog";
 import showCreateResourceDialog from "./CreateResourceDialog";
-import "@/less/memo-editor.less";
+import "../less/memo-editor.less";
 
 const listItemSymbolList = ["- [ ] ", "- [x] ", "- [X] ", "* ", "- "];
 const emptyOlReg = /^(\d+)\. $/;
@@ -52,7 +52,6 @@ const MemoEditor = () => {
     isRequesting: false,
   });
   const [allowSave, setAllowSave] = useState<boolean>(false);
-  const [isInIME, setIsInIME] = useState(false);
   const editorState = editorStore.state;
   const prevEditorStateRef = useRef(editorState);
   const editorRef = useRef<EditorRefActions>(null);
@@ -114,7 +113,7 @@ const MemoEditor = () => {
         return;
       }
     }
-    if (event.key === "Enter" && !isInIME) {
+    if (event.key === "Enter") {
       const cursorPosition = editorRef.current.getCursorPosition();
       const contentBeforeCursor = editorRef.current.getContent().slice(0, cursorPosition);
       const rowValue = last(contentBeforeCursor.split("\n"));
@@ -182,7 +181,7 @@ const MemoEditor = () => {
       resource = await resourceStore.createResourceWithBlob(file);
     } catch (error: any) {
       console.error(error);
-      toast.error(typeof error === "string" ? error : error.response.data.message);
+      toast.error(error.response.data.message);
     }
 
     setState((state) => {
@@ -395,8 +394,6 @@ const MemoEditor = () => {
       onDrop={handleDropEvent}
       onFocus={handleEditorFocus}
       onBlur={handleEditorBlur}
-      onCompositionStart={() => setIsInIME(true)}
-      onCompositionEnd={() => setIsInIME(false)}
     >
       <Editor ref={editorRef} {...editorConfig} />
       <div className="common-tools-wrapper">
@@ -475,6 +472,7 @@ const MemoEditor = () => {
             onClick={handleSaveBtnClick}
           >
             {t("editor.save")}
+            <img className="icon-img w-4 h-auto" src="/logo.png" />
           </button>
         </div>
       </div>

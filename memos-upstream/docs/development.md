@@ -8,14 +8,14 @@ Memos is built with a curated tech stack. It is optimized for developer experien
 
 ## Tech Stack
 
-![tech-stack](https://raw.githubusercontent.com/usememos/memos/main/assets/tech-stack.png)
+![tech-stack](https://raw.githubusercontent.com/usememos/memos/main/resources/tech-stack.png)
 
 ## Prerequisites
 
 - [Go](https://golang.org/doc/install)
 - [Air](https://github.com/cosmtrek/air#installation) for backend live reload
 - [Node.js](https://nodejs.org/)
-- [pnpm](https://pnpm.io/installation)
+- [yarn](https://yarnpkg.com/getting-started/install)
 
 ## Steps
 
@@ -34,7 +34,7 @@ Memos is built with a curated tech stack. It is optimized for developer experien
 3. start frontend dev server
 
    ```bash
-   cd web && pnpm i && pnpm dev
+   cd web && yarn && yarn dev
    ```
 
 Memos should now be running at [http://localhost:3001](http://localhost:3001) and change either frontend or backend code would trigger live reload.

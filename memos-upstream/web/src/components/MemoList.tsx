@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useFilterStore, useMemoStore, useShortcutStore, useUserStore } from "@/store/module";
-import { TAG_REG, LINK_REG } from "@/labs/marked/parser";
-import { getTimeStampByDate } from "@/helpers/datetime";
-import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
-import { checkShouldShowMemoWithFilters } from "@/helpers/filter";
+import { useFilterStore, useMemoStore, useShortcutStore, useUserStore } from "../store/module";
+import { TAG_REG, LINK_REG } from "../labs/marked/parser";
+import * as utils from "../helpers/utils";
+import { DEFAULT_MEMO_LIMIT } from "../helpers/consts";
+import { checkShouldShowMemoWithFilters } from "../helpers/filter";
 import Memo from "./Memo";
-import "@/less/memo-list.less";
+import "../less/memo-list.less";
 
 const MemoList = () => {
   const { t } = useTranslation();
@@ -54,7 +54,7 @@ const MemoList = () => {
           if (
             duration &&
             duration.from < duration.to &&
-            (getTimeStampByDate(memo.createdTs) < duration.from || getTimeStampByDate(memo.createdTs) > duration.to)
+            (utils.getTimeStampByDate(memo.createdTs) < duration.from || utils.getTimeStampByDate(memo.createdTs) > duration.to)
           ) {
             shouldShow = false;
           }
@@ -139,7 +139,7 @@ const MemoList = () => {
       ))}
       {isFetching ? (
         <div className="status-text-container fetching-tip">
-          <p className="status-text">{t("memo.fetching-data")}</p>
+          <p className="status-text">{t("memo-list.fetching-data")}</p>
         </div>
       ) : (
         <div className="status-text-container">
@@ -153,7 +153,7 @@ const MemoList = () => {
             ) : (
               <>
                 <span className="cursor-pointer hover:text-green-600" onClick={handleFetchMoreClick}>
-                  {t("memo.fetch-more")}
+                  {t("memo-list.fetch-more")}
                 </span>
               </>
             )}

@@ -10,7 +10,6 @@ interface Resource {
   externalLink: string;
   type: string;
   size: string;
-  publicId: string;
 
   linkedMemoAmount: number;
 }
@@ -24,10 +23,4 @@ interface ResourceCreate {
 interface ResourcePatch {
   id: ResourceId;
   filename?: string;
-  resetPublicId?: boolean;
-}
-
-interface ResourceFind {
-  offset?: number;
-  limit?: number;
 }

@@ -10,8 +10,6 @@ type SystemStatus struct {
 	// System settings
 	// Allow sign up.
 	AllowSignUp bool `json:"allowSignUp"`
-	// Ignore upgrade
-	IgnoreUpgrade bool `json:"ignoreUpgrade"`
 	// Disable public memos.
 	DisablePublicMemos bool `json:"disablePublicMemos"`
 	// Additional style.
@@ -20,8 +18,5 @@ type SystemStatus struct {
 	AdditionalScript string `json:"additionalScript"`
 	// Customized server profile, including server name and external url.
 	CustomizedProfile CustomizedProfile `json:"customizedProfile"`
-	// Storage service ID.
-	StorageServiceID int `json:"storageServiceId"`
-	// Local storage path
-	LocalStoragePath string `json:"localStoragePath"`
+	StorageServiceID  int               `json:"storageServiceId"`
 }

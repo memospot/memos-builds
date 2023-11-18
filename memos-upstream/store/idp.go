@@ -157,7 +157,7 @@ func (s *Store) UpdateIdentityProvider(ctx context.Context, update *UpdateIdenti
 	}
 	defer tx.Rollback()
 
-	set, args := []string{}, []any{}
+	set, args := []string{}, []interface{}{}
 	if v := update.Name; v != nil {
 		set, args = append(set, "name = ?"), append(args, *v)
 	}
@@ -220,7 +220,7 @@ func (s *Store) DeleteIdentityProvider(ctx context.Context, delete *DeleteIdenti
 	}
 	defer tx.Rollback()
 
-	where, args := []string{"id = ?"}, []any{delete.ID}
+	where, args := []string{"id = ?"}, []interface{}{delete.ID}
 	stmt := `DELETE FROM idp WHERE ` + strings.Join(where, " AND ")
 	result, err := tx.ExecContext(ctx, stmt, args...)
 	if err != nil {
@@ -242,7 +242,7 @@ func (s *Store) DeleteIdentityProvider(ctx context.Context, delete *DeleteIdenti
 }
 
 func listIdentityProviders(ctx context.Context, tx *sql.Tx, find *FindIdentityProviderMessage) ([]*IdentityProviderMessage, error) {
-	where, args := []string{"TRUE"}, []any{}
+	where, args := []string{"TRUE"}, []interface{}{}
 	if v := find.ID; v != nil {
 		where, args = append(where, fmt.Sprintf("id = $%d", len(args)+1)), append(args, *v)
 	}
@@ -288,10 +288,6 @@ func listIdentityProviders(ctx context.Context, tx *sql.Tx, find *FindIdentityPr
 			return nil, fmt.Errorf("unsupported idp type %s", string(identityProviderMessage.Type))
 		}
 		identityProviderMessages = append(identityProviderMessages, &identityProviderMessage)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, FormatError(err)
 	}
 
 	return identityProviderMessages, nil

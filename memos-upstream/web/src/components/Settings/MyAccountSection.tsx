@@ -1,11 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { useUserStore } from "@/store/module";
+import { useUserStore } from "../../store/module";
 import { showCommonDialog } from "../Dialog/CommonDialog";
 import showChangePasswordDialog from "../ChangePasswordDialog";
-import Icon from "../Icon";
 import showUpdateAccountDialog from "../UpdateAccountDialog";
 import UserAvatar from "../UserAvatar";
-import "@/less/settings/my-account-section.less";
+import "../../less/settings/my-account-section.less";
 
 const MyAccountSection = () => {
   const { t } = useTranslation();
@@ -15,8 +14,8 @@ const MyAccountSection = () => {
 
   const handleResetOpenIdBtnClick = async () => {
     showCommonDialog({
-      title: t("setting.account-section.openapi-reset"),
-      content: t("setting.account-section.openapi-reset-warning"),
+      title: "Reset Open API",
+      content: "❗️The existing API will be invalidated and a new one will be generated, are you sure you want to reset?",
       style: "warning",
       dialogName: "reset-openid-dialog",
       onConfirm: async () => {
@@ -48,16 +47,13 @@ const MyAccountSection = () => {
         </div>
       </div>
       <div className="section-container openapi-section-container">
-        <p className="title-text">{t("setting.account-section.openapi-title")}</p>
+        <p className="title-text">Open API</p>
         <p className="value-text">{openAPIRoute}</p>
         <span className="btn-danger mt-2" onClick={handleResetOpenIdBtnClick}>
-          {t("setting.account-section.reset-api")} <Icon.RefreshCw className="ml-2 h-4 w-4" />
+          {t("common.reset")} API
         </span>
         <div className="usage-guide-container">
-          <pre>{`POST ${openAPIRoute}\nContent-type: application/json\n{\n  "content": "${t("setting.account-section.openapi-sample-post", {
-            url: window.location.origin,
-            interpolation: { escapeValue: false },
-          })}"\n}`}</pre>
+          <pre>{`POST ${openAPIRoute}\nContent-type: application/json\n{\n  "content": "Hello #memos from ${window.location.origin}"\n}`}</pre>
         </div>
       </div>
     </>

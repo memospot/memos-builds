@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useLayoutStore, useUserStore } from "@/store/module";
-import { resolution } from "@/utils/layout";
+import { useLayoutStore, useUserStore } from "../store/module";
+import { resolution } from "../utils/layout";
 import Icon from "./Icon";
+import showResourcesDialog from "./ResourcesDialog";
 import showSettingDialog from "./SettingDialog";
 import showAskAIDialog from "./AskAIDialog";
 import showArchivedMemoDialog from "./ArchivedMemoDialog";
@@ -32,7 +33,7 @@ const Header = () => {
 
   return (
     <div
-      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full flex-shrink-0 pointer-events-none sm:pointer-events-auto z-20 ${
+      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full flex-shrink-0 pointer-events-none sm:pointer-events-auto z-10 ${
         showHeader && "pointer-events-auto"
       }`}
     >
@@ -53,80 +54,67 @@ const Header = () => {
             <>
               <NavLink
                 to="/"
-                id="header-home"
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
-                  <Icon.Home className="mr-3 w-6 h-auto opacity-70" /> {t("common.home")}
+                  <Icon.Home className="mr-4 w-6 h-auto opacity-80" /> {t("common.home")}
                 </>
               </NavLink>
               <NavLink
                 to="/review"
-                id="header-review"
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
-                  <Icon.Calendar className="mr-3 w-6 h-auto opacity-70" /> {t("daily-review.title")}
-                </>
-              </NavLink>
-              <NavLink
-                to="/resources"
-                id="header-resources"
-                className={({ isActive }) =>
-                  `${
-                    isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
-                }
-              >
-                <>
-                  <Icon.Paperclip className="mr-3 w-6 h-auto opacity-70" /> {t("common.resources")}
+                  <Icon.Calendar className="mr-4 w-6 h-auto opacity-80" /> {t("common.daily-review")}
                 </>
               </NavLink>
             </>
           )}
           <NavLink
             to="/explore"
-            id="header-explore"
             className={({ isActive }) =>
               `${
                 isActive && "bg-white dark:bg-zinc-700 shadow"
-              } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+              } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
             }
           >
             <>
-              <Icon.Hash className="mr-3 w-6 h-auto opacity-70" /> {t("common.explore")}
+              <Icon.Hash className="mr-4 w-6 h-auto opacity-80" /> {t("common.explore")}
             </>
           </NavLink>
           {!isVisitorMode && (
             <>
               <button
-                id="header-ask-ai"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
+                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
                 onClick={() => showAskAIDialog()}
               >
-                <Icon.Bot className="mr-3 w-6 h-auto opacity-70" /> {t("ask-ai.title")}
+                <Icon.Bot className="mr-4 w-6 h-auto opacity-80" /> Ask AI
               </button>
               <button
-                id="header-archived-memo"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
+                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
+                onClick={() => showResourcesDialog()}
+              >
+                <Icon.Paperclip className="mr-4 w-6 h-auto opacity-80" /> {t("common.resources")}
+              </button>
+              <button
+                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
                 onClick={() => showArchivedMemoDialog()}
               >
-                <Icon.Archive className="mr-3 w-6 h-auto opacity-70" /> {t("common.archived")}
+                <Icon.Archive className="mr-4 w-6 h-auto opacity-80" /> {t("common.archived")}
               </button>
               <button
-                id="header-settings"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
+                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
                 onClick={() => showSettingDialog()}
               >
-                <Icon.Settings className="mr-3 w-6 h-auto opacity-70" /> {t("common.settings")}
+                <Icon.Settings className="mr-4 w-6 h-auto opacity-80" /> {t("common.settings")}
               </button>
             </>
           )}
@@ -134,23 +122,21 @@ const Header = () => {
             <>
               <NavLink
                 to="/auth"
-                id="header-auth"
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
-                  <Icon.LogIn className="mr-3 w-6 h-auto opacity-70" /> {t("common.sign-in")}
+                  <Icon.LogIn className="mr-4 w-6 h-auto opacity-80" /> {t("common.sign-in")}
                 </>
               </NavLink>
               <button
-                id="header-about"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
+                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg dark:text-gray-200 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
                 onClick={() => showAboutSiteDialog()}
               >
-                <Icon.CupSoda className="mr-3 w-6 h-auto opacity-70" /> {t("common.about")}
+                <Icon.CupSoda className="mr-4 w-6 h-auto opacity-80" /> {t("common.about")}
               </button>
             </>
           )}

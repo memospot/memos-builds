@@ -1,9 +1,9 @@
-import * as api from "@/helpers/api";
-import * as storage from "@/helpers/storage";
-import i18n from "@/i18n";
-import { findNearestLanguageMatch } from "@/utils/i18n";
+import * as api from "../../helpers/api";
+import * as storage from "../../helpers/storage";
 import store, { useAppSelector } from "../";
 import { setAppearance, setGlobalState, setLocale } from "../reducer/global";
+import i18n from "../../i18n";
+import { convertLanguageCodeToLocale } from "../../utils/convertLanguageCodeToLocale";
 
 export const initialGlobalState = async () => {
   const defaultGlobalState = {
@@ -11,13 +11,12 @@ export const initialGlobalState = async () => {
     appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
-      ignoreUpgrade: false,
       disablePublicMemos: false,
       additionalStyle: "",
       additionalScript: "",
       customizedProfile: {
         name: "memos",
-        logoUrl: "/logo.webp",
+        logoUrl: "/logo.png",
         description: "",
         locale: "en",
         appearance: "system",
@@ -34,23 +33,28 @@ export const initialGlobalState = async () => {
     defaultGlobalState.appearance = storageAppearance;
   }
 
-  const { data } = (await api.getSystemStatus()).data;
-  if (data) {
-    const customizedProfile = data.customizedProfile;
-    defaultGlobalState.systemStatus = {
-      ...data,
-      customizedProfile: {
-        name: customizedProfile.name || "memos",
-        logoUrl: customizedProfile.logoUrl || "/logo.webp",
-        description: customizedProfile.description,
-        locale: customizedProfile.locale || "en",
-        appearance: customizedProfile.appearance || "system",
-        externalUrl: "",
-      },
-    };
-    defaultGlobalState.locale = storageLocale || findNearestLanguageMatch(i18n.language);
-    defaultGlobalState.appearance = customizedProfile.appearance;
+  try {
+    const { data } = (await api.getSystemStatus()).data;
+    if (data) {
+      const customizedProfile = data.customizedProfile;
+      defaultGlobalState.systemStatus = {
+        ...data,
+        customizedProfile: {
+          name: customizedProfile.name || "memos",
+          logoUrl: customizedProfile.logoUrl || "/logo.png",
+          description: customizedProfile.description,
+          locale: customizedProfile.locale || "en",
+          appearance: customizedProfile.appearance || "system",
+          externalUrl: "",
+        },
+      };
+      defaultGlobalState.locale = storageLocale || convertLanguageCodeToLocale(i18n.language);
+      defaultGlobalState.appearance = customizedProfile.appearance;
+    }
+  } catch (error) {
+    // do nth
   }
+
   store.dispatch(setGlobalState(defaultGlobalState));
 };
 

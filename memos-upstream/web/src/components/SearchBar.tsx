@@ -1,19 +1,49 @@
 import { useEffect, useState, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import useDebounce from "@/hooks/useDebounce";
-import { useFilterStore } from "@/store/module";
+import useDebounce from "../hooks/useDebounce";
+import { useFilterStore, useDialogStore, useLayoutStore } from "../store/module";
+import { resolution } from "../utils/layout";
 import Icon from "./Icon";
 
 const SearchBar = () => {
-  const { t } = useTranslation();
   const filterStore = useFilterStore();
+  const dialogStore = useDialogStore();
+  const layoutStore = useLayoutStore();
   const [queryText, setQueryText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!inputRef.current) {
+        return;
+      }
+      if (dialogStore.getState().dialogStack.length) {
+        return;
+      }
+      const isMetaKey = event.ctrlKey || event.metaKey;
+      if (isMetaKey && event.key === "f") {
+        event.preventDefault();
+        inputRef.current.focus();
+        return;
+      }
+    };
+    document.body.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     const text = filterStore.getState().text;
     setQueryText(text === undefined ? "" : text);
   }, [filterStore.state.text]);
+
+  useEffect(() => {
+    if (layoutStore.state.showHomeSidebar) {
+      if (window.innerWidth < resolution.sm) {
+        inputRef.current?.focus();
+      }
+    }
+  }, [layoutStore.state.showHomeSidebar]);
 
   useDebounce(
     () => {
@@ -34,7 +64,7 @@ const SearchBar = () => {
       <input
         className="flex ml-2 w-24 grow text-sm outline-none bg-transparent dark:text-gray-200"
         type="text"
-        placeholder={t("memo.search-placeholder")}
+        placeholder="Search memos"
         ref={inputRef}
         value={queryText}
         onChange={handleTextQueryInput}

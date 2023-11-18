@@ -1,7 +1,7 @@
-import { getTimeString } from "@/helpers/datetime";
+import * as utils from "../helpers/utils";
 import MemoContent from "./MemoContent";
 import MemoResources from "./MemoResources";
-import "@/less/daily-memo.less";
+import "../less/daily-memo.less";
 
 interface Props {
   memo: Memo;
@@ -9,7 +9,7 @@ interface Props {
 
 const DailyMemo: React.FC<Props> = (props: Props) => {
   const { memo } = props;
-  const createdTimeStr = getTimeString(memo.createdTs);
+  const createdTimeStr = utils.getTimeString(memo.createdTs);
 
   return (
     <div className="daily-memo-wrapper">

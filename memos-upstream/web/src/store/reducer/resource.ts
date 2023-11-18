@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { uniqBy } from "lodash-es";
 
 interface State {
   resources: Resource[];
@@ -15,12 +14,6 @@ const resourceSlice = createSlice({
       return {
         ...state,
         resources: action.payload,
-      };
-    },
-    upsertResources: (state, action: PayloadAction<Resource[]>) => {
-      return {
-        ...state,
-        resources: uniqBy([...state.resources, ...action.payload], "id"),
       };
     },
     patchResource: (state, action: PayloadAction<Partial<Resource>>) => {
@@ -49,6 +42,6 @@ const resourceSlice = createSlice({
   },
 });
 
-export const { setResources, upsertResources, patchResource, deleteResource } = resourceSlice.actions;
+export const { setResources, patchResource, deleteResource } = resourceSlice.actions;
 
 export default resourceSlice.reducer;

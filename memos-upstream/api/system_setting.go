@@ -11,28 +11,24 @@ import (
 type SystemSettingName string
 
 const (
-	// SystemSettingServerIDName is the name of server id.
-	SystemSettingServerIDName SystemSettingName = "server-id"
-	// SystemSettingSecretSessionName is the name of secret session.
-	SystemSettingSecretSessionName SystemSettingName = "secret-session"
-	// SystemSettingAllowSignUpName is the name of allow signup setting.
-	SystemSettingAllowSignUpName SystemSettingName = "allow-signup"
-	// SystemSettingIgnoreUpgradeName is the name of ignore upgrade.
-	SystemSettingIgnoreUpgradeName SystemSettingName = "ignore-upgrade"
-	// SystemSettingDisablePublicMemosName is the name of disable public memos setting.
-	SystemSettingDisablePublicMemosName SystemSettingName = "disable-public-memos"
-	// SystemSettingAdditionalStyleName is the name of additional style.
-	SystemSettingAdditionalStyleName SystemSettingName = "additional-style"
-	// SystemSettingAdditionalScriptName is the name of additional script.
-	SystemSettingAdditionalScriptName SystemSettingName = "additional-script"
-	// SystemSettingCustomizedProfileName is the name of customized server profile.
-	SystemSettingCustomizedProfileName SystemSettingName = "customized-profile"
-	// SystemSettingStorageServiceIDName is the name of storage service ID.
-	SystemSettingStorageServiceIDName SystemSettingName = "storage-service-id"
-	// SystemSettingLocalStoragePathName is the name of local storage path.
-	SystemSettingLocalStoragePathName SystemSettingName = "local-storage-path"
-	// SystemSettingOpenAIConfigName is the name of OpenAI config.
-	SystemSettingOpenAIConfigName SystemSettingName = "openai-config"
+	// SystemSettingServerID is the key type of server id.
+	SystemSettingServerID SystemSettingName = "serverId"
+	// SystemSettingSecretSessionName is the key type of secret session name.
+	SystemSettingSecretSessionName SystemSettingName = "secretSessionName"
+	// SystemSettingAllowSignUpName is the key type of allow signup setting.
+	SystemSettingAllowSignUpName SystemSettingName = "allowSignUp"
+	// SystemSettingDisablePublicMemosName is the key type of disable public memos setting.
+	SystemSettingDisablePublicMemosName SystemSettingName = "disablePublicMemos"
+	// SystemSettingAdditionalStyleName is the key type of additional style.
+	SystemSettingAdditionalStyleName SystemSettingName = "additionalStyle"
+	// SystemSettingAdditionalScriptName is the key type of additional script.
+	SystemSettingAdditionalScriptName SystemSettingName = "additionalScript"
+	// SystemSettingCustomizedProfileName is the key type of customized server profile.
+	SystemSettingCustomizedProfileName SystemSettingName = "customizedProfile"
+	// SystemSettingStorageServiceIDName is the key type of storage service ID.
+	SystemSettingStorageServiceIDName SystemSettingName = "storageServiceId"
+	// SystemSettingOpenAIConfigName is the key type of OpenAI config.
+	SystemSettingOpenAIConfigName SystemSettingName = "openAIConfig"
 )
 
 // CustomizedProfile is the struct definition for SystemSettingCustomizedProfileName system setting item.
@@ -58,28 +54,24 @@ type OpenAIConfig struct {
 
 func (key SystemSettingName) String() string {
 	switch key {
-	case SystemSettingServerIDName:
-		return "server-id"
+	case SystemSettingServerID:
+		return "serverId"
 	case SystemSettingSecretSessionName:
-		return "secret-session"
+		return "secretSessionName"
 	case SystemSettingAllowSignUpName:
-		return "allow-signup"
-	case SystemSettingIgnoreUpgradeName:
-		return "ignore-upgrade"
+		return "allowSignUp"
 	case SystemSettingDisablePublicMemosName:
-		return "disable-public-memos"
+		return "disablePublicMemos"
 	case SystemSettingAdditionalStyleName:
-		return "additional-style"
+		return "additionalStyle"
 	case SystemSettingAdditionalScriptName:
-		return "additional-script"
+		return "additionalScript"
 	case SystemSettingCustomizedProfileName:
-		return "customized-profile"
+		return "customizedProfile"
 	case SystemSettingStorageServiceIDName:
-		return "storage-service-id"
-	case SystemSettingLocalStoragePathName:
-		return "local-storage-path"
+		return "storageServiceId"
 	case SystemSettingOpenAIConfigName:
-		return "openai-config"
+		return "openAIConfig"
 	}
 	return ""
 }
@@ -98,19 +90,13 @@ type SystemSettingUpsert struct {
 }
 
 func (upsert SystemSettingUpsert) Validate() error {
-	if upsert.Name == SystemSettingServerIDName {
+	if upsert.Name == SystemSettingServerID {
 		return errors.New("update server id is not allowed")
 	} else if upsert.Name == SystemSettingAllowSignUpName {
 		value := false
 		err := json.Unmarshal([]byte(upsert.Value), &value)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal system setting allow signup value")
-		}
-	} else if upsert.Name == SystemSettingIgnoreUpgradeName {
-		value := false
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting ignore upgrade value")
 		}
 	} else if upsert.Name == SystemSettingDisablePublicMemosName {
 		value := false
@@ -150,18 +136,12 @@ func (upsert SystemSettingUpsert) Validate() error {
 			return fmt.Errorf("invalid appearance value")
 		}
 	} else if upsert.Name == SystemSettingStorageServiceIDName {
-		value := DatabaseStorage
+		value := 0
 		err := json.Unmarshal([]byte(upsert.Value), &value)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal system setting storage service id value")
 		}
 		return nil
-	} else if upsert.Name == SystemSettingLocalStoragePathName {
-		value := ""
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting local storage path value")
-		}
 	} else if upsert.Name == SystemSettingOpenAIConfigName {
 		value := OpenAIConfig{}
 		err := json.Unmarshal([]byte(upsert.Value), &value)

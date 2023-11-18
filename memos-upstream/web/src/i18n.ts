@@ -1,56 +1,75 @@
-import i18n, { FallbackLng, FallbackLngObjList } from "i18next";
+import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import toast from "react-hot-toast";
+import enLocale from "./locales/en.json";
+import zhLocale from "./locales/zh.json";
+import viLocale from "./locales/vi.json";
+import frLocale from "./locales/fr.json";
+import nlLocale from "./locales/nl.json";
+import svLocale from "./locales/sv.json";
+import deLocale from "./locales/de.json";
+import esLocale from "./locales/es.json";
+import ukLocale from "./locales/uk.json";
+import ruLocale from "./locales/ru.json";
+import itLocale from "./locales/it.json";
+import hantLocale from "./locales/zh-Hant.json";
+import trLocale from "./locales/tr.json";
+import koLocale from "./locales/ko.json";
 
-export const availableLocales = [
-  "de",
-  "en",
-  "es",
-  "fr",
-  "it",
-  "ko",
-  "nl",
-  "pl",
-  "pt-BR",
-  "ru",
-  "sl",
-  "sv",
-  "tr",
-  "uk",
-  "vi",
-  "zh-Hans",
-  "zh-Hant",
-] as const;
-
-const fallbacks = {
-  "zh-HK": ["zh-Hant", "en"],
-  "zh-TW": ["zh-Hant", "en"],
-  zh: ["zh-Hans", "en"],
-} as FallbackLngObjList;
+const DETECTION_OPTIONS = {
+  order: ["navigator"],
+};
 
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    detection: {
-      order: ["navigator"],
+    detection: DETECTION_OPTIONS,
+    resources: {
+      en: {
+        translation: enLocale,
+      },
+      zh: {
+        translation: zhLocale,
+      },
+      vi: {
+        translation: viLocale,
+      },
+      fr: {
+        translation: frLocale,
+      },
+      nl: {
+        translation: nlLocale,
+      },
+      sv: {
+        translation: svLocale,
+      },
+      de: {
+        translation: deLocale,
+      },
+      es: {
+        translation: esLocale,
+      },
+      uk: {
+        translation: ukLocale,
+      },
+      ru: {
+        translation: ruLocale,
+      },
+      it: {
+        translation: itLocale,
+      },
+      hant: {
+        translation: hantLocale,
+      },
+      tr: {
+        translation: trLocale,
+      },
+      ko: {
+        translation: koLocale,
+      },
     },
-    fallbackLng: {
-      ...fallbacks,
-      ...{ default: ["en"] },
-    } as FallbackLng,
+    fallbackLng: "en",
   });
 
-for (const locale of availableLocales) {
-  import(`./locales/${locale}.json`)
-    .then((translation) => {
-      i18n.addResourceBundle(locale, "translation", translation.default, true, true);
-    })
-    .catch((err) => {
-      toast.error(`Failed to load locale "${locale}".\n${err}`, { duration: 5000 });
-    });
-}
-
 export default i18n;
-export type TLocale = typeof availableLocales[number];

@@ -108,7 +108,7 @@ func (s *Store) DeleteMemoResource(ctx context.Context, delete *api.MemoResource
 }
 
 func findMemoResourceList(ctx context.Context, tx *sql.Tx, find *api.MemoResourceFind) ([]*memoResourceRaw, error) {
-	where, args := []string{"1 = 1"}, []any{}
+	where, args := []string{"1 = 1"}, []interface{}{}
 
 	if v := find.MemoID; v != nil {
 		where, args = append(where, "memo_id = ?"), append(args, *v)
@@ -157,7 +157,7 @@ func findMemoResourceList(ctx context.Context, tx *sql.Tx, find *api.MemoResourc
 
 func upsertMemoResource(ctx context.Context, tx *sql.Tx, upsert *api.MemoResourceUpsert) (*memoResourceRaw, error) {
 	set := []string{"memo_id", "resource_id"}
-	args := []any{upsert.MemoID, upsert.ResourceID}
+	args := []interface{}{upsert.MemoID, upsert.ResourceID}
 	placeholder := []string{"?", "?"}
 
 	if v := upsert.UpdatedTs; v != nil {
@@ -188,7 +188,7 @@ func upsertMemoResource(ctx context.Context, tx *sql.Tx, upsert *api.MemoResourc
 }
 
 func deleteMemoResource(ctx context.Context, tx *sql.Tx, delete *api.MemoResourceDelete) error {
-	where, args := []string{}, []any{}
+	where, args := []string{}, []interface{}{}
 
 	if v := delete.MemoID; v != nil {
 		where, args = append(where, "memo_id = ?"), append(args, *v)
