@@ -77,7 +77,9 @@ CREATE TABLE resource (
   external_link TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT '',
   size INTEGER NOT NULL DEFAULT 0,
-  visibility TEXT NOT NULL CHECK (visibility IN ('PUBLIC', 'PROTECTED', 'PRIVATE')) DEFAULT 'PRIVATE'
+  internal_path TEXT NOT NULL DEFAULT '',
+  public_id TEXT NOT NULL DEFAULT '',
+  UNIQUE(id, public_id)
 );
 
 -- memo_resource

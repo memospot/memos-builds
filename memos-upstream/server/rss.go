@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/feeds"
 	"github.com/labstack/echo/v4"
 	"github.com/usememos/memos/api"
+	"github.com/usememos/memos/common"
 )
 
 func (s *Server) registerRSSRoutes(g *echo.Group) {
@@ -35,7 +36,7 @@ func (s *Server) registerRSSRoutes(g *echo.Group) {
 		}
 
 		baseURL := c.Scheme() + "://" + c.Request().Host
-		rss, err := generateRSSFromMemoList(memoList, baseURL, &systemCustomizedProfile)
+		rss, err := generateRSSFromMemoList(memoList, baseURL, systemCustomizedProfile)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate rss").SetInternal(err)
 		}
@@ -72,7 +73,7 @@ func (s *Server) registerRSSRoutes(g *echo.Group) {
 
 		baseURL := c.Scheme() + "://" + c.Request().Host
 
-		rss, err := generateRSSFromMemoList(memoList, baseURL, &systemCustomizedProfile)
+		rss, err := generateRSSFromMemoList(memoList, baseURL, systemCustomizedProfile)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate rss").SetInternal(err)
 		}
@@ -92,13 +93,10 @@ func generateRSSFromMemoList(memoList []*api.Memo, baseURL string, profile *api.
 		Created:     time.Now(),
 	}
 
-	var itemCountLimit = min(len(memoList), MaxRSSItemCount)
-
+	var itemCountLimit = common.Min(len(memoList), MaxRSSItemCount)
 	feed.Items = make([]*feeds.Item, itemCountLimit)
-
 	for i := 0; i < itemCountLimit; i++ {
 		memo := memoList[i]
-
 		feed.Items[i] = &feeds.Item{
 			Title:       getRSSItemTitle(memo.Content),
 			Link:        &feeds.Link{Href: baseURL + "/m/" + strconv.Itoa(memo.ID)},
@@ -114,64 +112,28 @@ func generateRSSFromMemoList(memoList []*api.Memo, baseURL string, profile *api.
 	return rss, nil
 }
 
-func getSystemCustomizedProfile(ctx context.Context, s *Server) (api.CustomizedProfile, error) {
-	systemStatus := api.SystemStatus{
-		CustomizedProfile: api.CustomizedProfile{
-			Name:        "memos",
-			LogoURL:     "",
-			Description: "",
-			Locale:      "en",
-			Appearance:  "system",
-			ExternalURL: "",
-		},
+func getSystemCustomizedProfile(ctx context.Context, s *Server) (*api.CustomizedProfile, error) {
+	systemSetting, err := s.Store.FindSystemSetting(ctx, &api.SystemSettingFind{
+		Name: api.SystemSettingCustomizedProfileName,
+	})
+	if err != nil && common.ErrorCode(err) != common.NotFound {
+		return nil, err
 	}
 
-	systemSettingList, err := s.Store.FindSystemSettingList(ctx, &api.SystemSettingFind{})
-	if err != nil {
-		return api.CustomizedProfile{}, err
+	customizedProfile := &api.CustomizedProfile{
+		Name:        "memos",
+		LogoURL:     "",
+		Description: "",
+		Locale:      "en",
+		Appearance:  "system",
+		ExternalURL: "",
 	}
-	for _, systemSetting := range systemSettingList {
-		if systemSetting.Name == api.SystemSettingServerID || systemSetting.Name == api.SystemSettingSecretSessionName {
-			continue
-		}
-
-		var value interface{}
-		err := json.Unmarshal([]byte(systemSetting.Value), &value)
-		if err != nil {
-			return api.CustomizedProfile{}, err
-		}
-
-		if systemSetting.Name == api.SystemSettingCustomizedProfileName {
-			valueMap := value.(map[string]interface{})
-			systemStatus.CustomizedProfile = api.CustomizedProfile{}
-			if v := valueMap["name"]; v != nil {
-				systemStatus.CustomizedProfile.Name = v.(string)
-			}
-			if v := valueMap["logoUrl"]; v != nil {
-				systemStatus.CustomizedProfile.LogoURL = v.(string)
-			}
-			if v := valueMap["description"]; v != nil {
-				systemStatus.CustomizedProfile.Description = v.(string)
-			}
-			if v := valueMap["locale"]; v != nil {
-				systemStatus.CustomizedProfile.Locale = v.(string)
-			}
-			if v := valueMap["appearance"]; v != nil {
-				systemStatus.CustomizedProfile.Appearance = v.(string)
-			}
-			if v := valueMap["externalUrl"]; v != nil {
-				systemStatus.CustomizedProfile.ExternalURL = v.(string)
-			}
+	if systemSetting != nil {
+		if err := json.Unmarshal([]byte(systemSetting.Value), customizedProfile); err != nil {
+			return nil, err
 		}
 	}
-	return systemStatus.CustomizedProfile, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	return customizedProfile, nil
 }
 
 func getRSSItemTitle(content string) string {
@@ -180,7 +142,7 @@ func getRSSItemTitle(content string) string {
 		title = strings.Split(content, "\n")[0][2:]
 	} else {
 		title = strings.Split(content, "\n")[0]
-		var titleLengthLimit = min(len(title), MaxRSSItemTitleLength)
+		var titleLengthLimit = common.Min(len(title), MaxRSSItemTitleLength)
 		if titleLengthLimit < len(title) {
 			title = title[:titleLengthLimit] + "..."
 		}

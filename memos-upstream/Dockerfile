@@ -2,9 +2,13 @@
 FROM node:18.12.1-alpine3.16 AS frontend
 WORKDIR /frontend-build
 
+COPY ./web/package.json ./web/pnpm-lock.yaml ./
+
+RUN npm install -g pnpm && pnpm i --frozen-lockfile
+
 COPY ./web/ .
 
-RUN yarn && yarn build
+RUN pnpm build
 
 # Build backend exec file.
 FROM golang:1.19.3-alpine3.16 AS backend
@@ -20,6 +24,9 @@ RUN go build -o memos ./main.go
 # Make workspace with above generated files.
 FROM alpine:3.16 AS monolithic
 WORKDIR /usr/local/memos
+
+RUN apk add --no-cache tzdata
+ENV TZ="UTC"
 
 COPY --from=backend /backend-build/memos /usr/local/memos/
 

@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useFilterStore, useMemoStore } from "../store/module";
-import { TAG_REG } from "../labs/marked/parser";
-import { DEFAULT_MEMO_LIMIT } from "../helpers/consts";
-import useLoading from "../hooks/useLoading";
-import MemoFilter from "../components/MemoFilter";
-import Memo from "../components/Memo";
-import MobileHeader from "../components/MobileHeader";
 import { useLocation } from "react-router-dom";
+import { useFilterStore, useMemoStore } from "@/store/module";
+import { TAG_REG } from "@/labs/marked/parser";
+import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
+import useLoading from "@/hooks/useLoading";
+import MemoFilter from "@/components/MemoFilter";
+import Memo from "@/components/Memo";
+import MobileHeader from "@/components/MobileHeader";
 
 interface State {
   memos: Memo[];
@@ -98,7 +98,7 @@ const Explore = () => {
             ) : null
           ) : (
             <p className="m-auto text-center mt-4 italic cursor-pointer text-gray-500 hover:text-green-600" onClick={handleFetchMoreClick}>
-              {t("memo-list.fetch-more")}
+              {t("memo.fetch-more")}
             </p>
           )}
         </main>

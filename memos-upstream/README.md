@@ -1,15 +1,15 @@
-<p align="center"><a href="https://usememos.com"><img height="64px" src="https://raw.githubusercontent.com/usememos/memos/main/resources/logo-full.webp" alt="✍️ memos" /></a></p>
+# memos
 
-<p align="center">
+<img height="72px" src="https://usememos.com/logo.webp" alt="✍️ memos" align="right" />
+
+A lightweight, self-hosted memo hub. Open Source and Free forever.
+
+<a href="https://demo.usememos.com/">Live Demo</a> •
+Discuss in <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a> / <a href="https://discord.gg/tfPJa4UmAv">Discord</a>
+
+<p>
   <a href="https://github.com/usememos/memos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/usememos/memos" /></a>
-  <a href="https://hub.docker.com/r/neosmemo/memos"><img alt="Docker pull" src="https://img.shields.io/docker/pulls/neosmemo/memos.svg" /></a>
-  <a href="https://hosted.weblate.org/engage/memos/"><img src="https://hosted.weblate.org/widgets/memos/-/svg-badge.svg" alt="Translation status" /></a>
   <a href="https://discord.gg/tfPJa4UmAv"><img alt="Discord" src="https://img.shields.io/badge/discord-chat-5865f2?logo=discord&logoColor=f5f5f5" /></a>
-</p>
-
-<p align="center">
-  <a href="https://demo.usememos.com/">Live Demo</a> •
-  Discuss in <a href="https://t.me/+-_tNF1k70UU4ZTc9">Telegram</a> / <a href="https://discord.gg/tfPJa4UmAv">Discord</a>
 </p>
 
 ![demo](https://usememos.com/demo.webp)
@@ -25,7 +25,7 @@
 ## Deploy with Docker in seconds
 
 ```bash
-docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos neosmemo/memos:latest
+docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos ghcr.io/usememos/memos:latest
 ```
 
 > The `~/.memos/` directory will be used as the data directory on your local machine, while `/var/opt/memos` is the directory of the volume in Docker and should not be modified.
@@ -40,7 +40,7 @@ Contributions are what make the open-source community such an amazing place to l
   <img src="https://contrib.rocks/image?repo=usememos/memos" />
 </a>
 
-Here are some products made by our community:
+---
 
 - [Moe Memos](https://memos.moe/) - Third party client for iOS and Android
 - [lmm214/memos-bber](https://github.com/lmm214/memos-bber) - Chrome extension
