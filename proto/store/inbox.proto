@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package memos.store;
+
+option go_package = "gen/store";
+
+message InboxMessage {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_MEMO_COMMENT = 1;
+  }
+  Type type = 1;
+  optional int32 activity_id = 2;
+}

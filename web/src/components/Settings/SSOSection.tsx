@@ -1,6 +1,7 @@
-import { Divider } from "@mui/joy";
+import { Divider, List, ListItem } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 import * as api from "@/helpers/api";
 import { useGlobalStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
@@ -59,7 +60,7 @@ const SSOSection = () => {
     <div className="section-container">
       <div className="mb-2 w-full flex flex-row justify-start items-center gap-1">
         <span className="font-mono text-sm text-gray-400">{t("setting.sso-section.sso-list")}</span>
-        <LearnMore url="https://usememos.com/docs/keycloak" />
+        <LearnMore url="https://usememos.com/docs/advanced-settings/keycloak" />
         <button
           className="btn-normal px-2 py-0 ml-1"
           onClick={() => showCreateIdentityProviderDialog(undefined, fetchIdentityProviderList)}
@@ -104,6 +105,17 @@ const SSOSection = () => {
           </div>
         </div>
       ))}
+
+      <div className="w-full mt-8">
+        <p className="text-sm">{t("common.learn-more")}</p>
+        <List component="ul" marker="disc" size="sm">
+          <ListItem>
+            <Link className="text-sm hover:underline hover:text-blue-600" to="https://www.usememos.com/docs/advanced-settings/keycloak">
+              Configuring Keycloak for Authentication
+            </Link>
+          </ListItem>
+        </List>
+      </div>
     </div>
   );
 };
