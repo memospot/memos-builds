@@ -15,6 +15,7 @@ import (
 	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/server"
 	_profile "github.com/usememos/memos/server/profile"
+	"github.com/usememos/memos/server/service/metric"
 	"github.com/usememos/memos/store"
 	"github.com/usememos/memos/store/db"
 )
@@ -36,31 +37,36 @@ var (
 	addr    string
 	port    int
 	data    string
+	driver  string
+	dsn     string
 
 	rootCmd = &cobra.Command{
 		Use:   "memos",
 		Short: `An open-source, self-hosted memo hub with knowledge management and social networking.`,
 		Run: func(_cmd *cobra.Command, _args []string) {
 			ctx, cancel := context.WithCancel(context.Background())
-			db := db.NewDB(profile)
-			if err := db.Open(); err != nil {
+			dbDriver, err := db.NewDBDriver(profile)
+			if err != nil {
 				cancel()
-				log.Error("failed to open db", zap.Error(err))
+				log.Error("failed to create db driver", zap.Error(err))
 				return
 			}
-			if err := db.Migrate(ctx); err != nil {
+			if err := dbDriver.Migrate(ctx); err != nil {
 				cancel()
 				log.Error("failed to migrate db", zap.Error(err))
 				return
 			}
 
-			store := store.New(db.DBInstance, profile)
+			store := store.New(dbDriver, profile)
 			s, err := server.NewServer(ctx, profile, store)
 			if err != nil {
 				cancel()
 				log.Error("failed to create server", zap.Error(err))
 				return
 			}
+
+			// nolint
+			metric.NewMetricClient(s.ID, *profile)
 
 			c := make(chan os.Signal, 1)
 			// Trigger graceful shutdown on SIGINT or SIGTERM.
@@ -101,6 +107,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&addr, "addr", "a", "", "address of server")
 	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 8081, "port of server")
 	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "", "data directory")
+	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "", "", "database driver")
+	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "database source name(aka. DSN)")
 
 	err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
 	if err != nil {
@@ -118,8 +126,17 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	err = viper.BindPFlag("driver", rootCmd.PersistentFlags().Lookup("driver"))
+	if err != nil {
+		panic(err)
+	}
+	err = viper.BindPFlag("dsn", rootCmd.PersistentFlags().Lookup("dsn"))
+	if err != nil {
+		panic(err)
+	}
 
 	viper.SetDefault("mode", "demo")
+	viper.SetDefault("driver", "sqlite")
 	viper.SetDefault("addr", "")
 	viper.SetDefault("port", 8081)
 	viper.SetEnvPrefix("memos")
@@ -136,10 +153,12 @@ func initConfig() {
 
 	println("---")
 	println("Server profile")
+	println("data:", profile.Data)
 	println("dsn:", profile.DSN)
 	println("addr:", profile.Addr)
 	println("port:", profile.Port)
 	println("mode:", profile.Mode)
+	println("driver:", profile.Driver)
 	println("version:", profile.Version)
 	println("---")
 }
