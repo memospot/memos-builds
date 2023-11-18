@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import useToggle from "react-use/lib/useToggle";
+import { useTranslation } from "react-i18next";
 import { useFilterStore, useTagStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import showCreateTagDialog from "./CreateTagDialog";
+import useToggle from "@/hooks/useToggle";
 import Icon from "./Icon";
+import showCreateTagDialog from "./CreateTagDialog";
 
 interface Tag {
   key: string;
@@ -12,7 +12,7 @@ interface Tag {
 }
 
 const TagList = () => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const filterStore = useFilterStore();
   const tagStore = useTagStore();
   const tagsText = tagStore.state.tags;
@@ -132,14 +132,14 @@ const TagItemContainer: React.FC<TagItemContainerProps> = (props: TagItemContain
               className={`flex flex-row justify-center items-center w-6 h-6 shrink-0 transition-all rotate-0 ${showSubTags && "rotate-90"}`}
               onClick={handleToggleBtnClick}
             >
-              <Icon.ChevronRight className="w-5 h-5 opacity-40 dark:text-gray-400" />
+              <Icon.ChevronRight className="w-5 h-5 opacity-80 dark:text-gray-400" />
             </span>
           ) : null}
         </div>
       </div>
       {hasSubTags ? (
         <div
-          className={`w-[calc(100%-1rem)] flex flex-col justify-start items-start h-auto ml-4 pl-1 border-l-2 border-l-gray-200 dark:border-l-gray-400 ${
+          className={`w-full flex flex-col justify-start items-start h-auto ml-5 pl-1 border-l-2 border-l-gray-200 dark:border-l-gray-400 ${
             !showSubTags && "!hidden"
           }`}
         >

@@ -1,14 +1,14 @@
-import { Button } from "@mui/joy";
-import { DefaultColorPalette } from "@mui/joy/styles/types";
-import { useTranslate } from "@/utils/i18n";
+import { useTranslation } from "react-i18next";
 import Icon from "../Icon";
 import { generateDialog } from "./BaseDialog";
 import "@/less/common-dialog.less";
 
+type DialogStyle = "info" | "warning";
+
 interface Props extends DialogProps {
   title: string;
   content: string;
-  style?: DefaultColorPalette;
+  style?: DialogStyle;
   closeBtnText?: string;
   confirmBtnText?: string;
   onClose?: () => void;
@@ -18,15 +18,15 @@ interface Props extends DialogProps {
 const defaultProps = {
   title: "",
   content: "",
-  style: "neutral",
+  style: "info",
   closeBtnText: "common.close",
   confirmBtnText: "common.confirm",
   onClose: () => null,
   onConfirm: () => null,
-} as const;
+};
 
 const CommonDialog: React.FC<Props> = (props: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const { title, content, destroy, closeBtnText, confirmBtnText, onClose, onConfirm, style } = {
     ...defaultProps,
     closeBtnText: t(defaultProps.closeBtnText),
@@ -54,13 +54,13 @@ const CommonDialog: React.FC<Props> = (props: Props) => {
       </div>
       <div className="dialog-content-container">
         <p className="content-text">{content}</p>
-        <div className="mt-4 w-full flex flex-row justify-end items-center gap-2">
-          <Button color="neutral" variant="plain" onClick={handleCloseBtnClick}>
+        <div className="btns-container">
+          <span className="btn cancel-btn" onClick={handleCloseBtnClick}>
             {closeBtnText}
-          </Button>
-          <Button color={style} onClick={handleConfirmBtnClick}>
+          </span>
+          <span className={`btn confirm-btn ${style}`} onClick={handleConfirmBtnClick}>
             {confirmBtnText}
-          </Button>
+          </span>
         </div>
       </div>
     </>
@@ -71,7 +71,7 @@ interface CommonDialogProps {
   title: string;
   content: string;
   className?: string;
-  style?: DefaultColorPalette;
+  style?: DialogStyle;
   dialogName: string;
   closeBtnText?: string;
   confirmBtnText?: string;

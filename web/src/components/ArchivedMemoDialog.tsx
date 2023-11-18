@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import useLoading from "@/hooks/useLoading";
+import { useTranslation } from "react-i18next";
 import { useMemoStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import ArchivedMemo from "./ArchivedMemo";
-import { generateDialog } from "./Dialog";
+import useLoading from "@/hooks/useLoading";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
+import ArchivedMemo from "./ArchivedMemo";
 import "@/less/archived-memo-dialog.less";
 
 type Props = DialogProps;
 
 const ArchivedMemoDialog: React.FC<Props> = (props: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const { destroy } = props;
   const memoStore = useMemoStore();
   const memos = memoStore.state.memos;

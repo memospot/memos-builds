@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useUserV1Store, UserNamePrefix } from "@/store/v1";
-import { useTranslate } from "@/utils/i18n";
-import { generateDialog } from "./Dialog";
+import { useTranslation } from "react-i18next";
+import { useUserStore } from "@/store/module";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 
 interface Props extends DialogProps {
   user: User;
 }
 
 const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
-  const { user, destroy } = props;
-  const t = useTranslate();
-  const userStore = useUserV1Store();
+  const { user: propsUser, destroy } = props;
+  const { t } = useTranslation();
+  const userStore = useUserStore();
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordAgain, setNewPasswordAgain] = useState("");
 
@@ -47,13 +47,10 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
     }
 
     try {
-      await userStore.updateUser(
-        {
-          name: `${UserNamePrefix}${user.username}`,
-          password: newPassword,
-        },
-        ["password"]
-      );
+      await userStore.patchUser({
+        id: propsUser.id,
+        password: newPassword,
+      });
       toast(t("message.password-changed"));
       handleCloseBtnClick();
     } catch (error: any) {
@@ -66,7 +63,7 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
     <>
       <div className="dialog-header-container !w-64">
         <p className="title-text">
-          {t("setting.account-section.change-password")} ({user.username})
+          {t("setting.account-section.change-password")} ({propsUser.username})
         </p>
         <button className="btn close-btn" onClick={handleCloseBtnClick}>
           <Icon.X />

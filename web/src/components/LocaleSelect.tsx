@@ -1,12 +1,12 @@
 import { Option, Select } from "@mui/joy";
-import { FC } from "react";
 import { availableLocales } from "@/i18n";
+import { FC } from "react";
 import Icon from "./Icon";
 
 interface Props {
   value: Locale;
-  className?: string;
   onChange: (locale: Locale) => void;
+  className?: string;
 }
 
 const LocaleSelect: FC<Props> = (props: Props) => {
@@ -18,28 +18,23 @@ const LocaleSelect: FC<Props> = (props: Props) => {
 
   return (
     <Select
-      className={`!min-w-[10rem] w-auto whitespace-nowrap ${className ?? ""}`}
+      className={`!min-w-[12rem] w-auto whitespace-nowrap ${className ?? ""}`}
       startDecorator={<Icon.Globe className="w-4 h-auto" />}
       value={value}
       onChange={(_, value) => handleSelectChange(value as Locale)}
     >
       {availableLocales.map((locale) => {
-        try {
-          const languageName = new Intl.DisplayNames([locale], { type: "language" }).of(locale);
-          if (languageName) {
-            return (
-              <Option key={locale} value={locale}>
-                {languageName.charAt(0).toUpperCase() + languageName.slice(1)}
-              </Option>
-            );
-          }
-        } catch (error) {
-          // do nth
+        const languageName = new Intl.DisplayNames([locale], { type: "language" }).of(locale);
+        if (languageName === undefined) {
+          return (
+            <Option key={locale} value={locale}>
+              {locale}
+            </Option>
+          );
         }
-
         return (
           <Option key={locale} value={locale}>
-            {locale}
+            {languageName.charAt(0).toUpperCase() + languageName.slice(1)}
           </Option>
         );
       })}

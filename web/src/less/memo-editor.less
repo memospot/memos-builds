@@ -1,0 +1,144 @@
+.memo-editor-container {
+  @apply relative w-full flex flex-col justify-start items-start bg-white dark:bg-zinc-700 px-4 rounded-lg border-2 border-gray-200 dark:border-zinc-600;
+
+  &.fullscreen {
+    @apply transition-all fixed w-full h-full top-0 left-0 z-1000 border-none rounded-none sm:p-8 dark:bg-zinc-800;
+
+    > .memo-editor {
+      @apply p-4 mb-4 rounded-lg border shadow-lg flex flex-col flex-grow justify-start items-start relative w-full h-full bg-white dark:bg-zinc-700 dark:border-zinc-600;
+
+      > .common-editor-inputer {
+        @apply flex-grow w-full !h-full max-h-full;
+      }
+    }
+
+    .tag-action > .tag-list {
+      @apply bottom-7;
+      top: unset !important;
+    }
+
+    .items-wrapper {
+      @apply mb-1 bottom-full top-auto;
+    }
+  }
+
+  &.edit-ing {
+    @apply border-blue-500;
+  }
+
+  > .memo-editor {
+    @apply mt-4 flex flex-col justify-start items-start relative w-full h-auto bg-inherit dark:text-gray-200;
+  }
+
+  > .common-tools-wrapper {
+    @apply relative w-full flex flex-row justify-between items-center pt-2 z-1;
+
+    > .common-tools-container {
+      @apply flex flex-row justify-start items-center;
+
+      > .action-btn {
+        @apply flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow;
+
+        &.tag-action {
+          @apply relative;
+
+          &:hover {
+            > .tag-list {
+              @apply flex;
+            }
+          }
+
+          > .tag-list {
+            @apply hidden flex-row justify-start items-start flex-wrap absolute top-6 left-0 mt-1 p-1 z-1 rounded w-52 h-auto max-h-48 overflow-y-auto font-mono shadow bg-zinc-200 dark:bg-zinc-600;
+
+            > .item-container {
+              @apply w-auto max-w-full truncate text-black dark:text-gray-300 cursor-pointer rounded text-sm leading-6 px-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 shrink-0;
+            }
+
+            > .tip-text {
+              @apply w-auto text-sm text-gray-200 leading-6 px-2 cursor-default;
+            }
+          }
+        }
+
+        &.resource-btn {
+          @apply relative;
+
+          &:hover {
+            > .resource-action-list {
+              @apply flex;
+            }
+          }
+
+          > .resource-action-list {
+            @apply hidden flex-col justify-start items-start absolute top-6 left-0 mt-1 p-1 z-1 rounded w-auto overflow-auto font-mono shadow bg-zinc-200 dark:bg-zinc-600;
+
+            > .resource-action-item {
+              @apply w-full flex text-black dark:text-gray-300 cursor-pointer rounded text-sm leading-6 px-2 truncate hover:bg-zinc-300 dark:hover:bg-zinc-700 shrink-0;
+
+              > .icon-img {
+                @apply w-4 mr-1;
+              }
+            }
+          }
+        }
+
+        > .icon-img {
+          @apply w-5 h-5 mx-auto flex flex-row justify-center items-center;
+        }
+
+        > .tip-text {
+          @apply hidden ml-1 text-xs leading-5 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-zinc-500 rounded-xl px-2;
+        }
+      }
+    }
+  }
+
+  > .resource-list-wrapper {
+    @apply w-full flex flex-row justify-start flex-wrap;
+
+    > .resource-container {
+      @apply max-w-full mt-1 mr-1 flex flex-row justify-start items-center flex-nowrap bg-gray-100 px-2 py-1 rounded cursor-pointer hover:bg-gray-200;
+
+      > .icon-img {
+        @apply w-4 h-auto mr-1 text-gray-500;
+      }
+
+      > .name-text {
+        @apply text-gray-500 text-sm max-w-xs truncate font-mono;
+      }
+
+      > .close-icon {
+        @apply w-4 h-auto ml-1 text-gray-500 hover:text-gray-800;
+      }
+    }
+  }
+
+  > .editor-footer-container {
+    @apply w-full flex flex-row justify-between items-center border-t border-t-gray-100 dark:border-t-zinc-500 py-3 mt-2;
+
+    > .visibility-selector {
+      @apply h-8;
+
+      > .current-value-container {
+        @apply rounded-full px-3;
+
+        > .value-text {
+          @apply text-sm w-full mr-1;
+        }
+      }
+    }
+
+    > .buttons-container {
+      @apply grow-0 shrink-0 flex flex-row justify-end items-center;
+
+      > .cancel-btn {
+        @apply mr-4 text-sm text-gray-500 hover:opacity-80 dark:text-gray-300;
+      }
+
+      > .confirm-btn {
+        @apply border-none select-none rounded flex flex-row justify-center items-center shadow cursor-pointer px-3 py-0 leading-8 bg-green-600 text-white text-sm hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60;
+      }
+    }
+  }
+}
