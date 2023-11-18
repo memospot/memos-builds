@@ -1,29 +1,34 @@
 version: "3"
 
 tasks:
+  postbuild:restoreplaceholder:
+    desc: Restore front-end placeholder
+    cmds:
+      - rm -rf ./memos-upstream/server/dist
+      - mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist
   build:
     desc: Build binaries for current OS/Arch
     cmds:
       - goreleaser build --clean --single-target
-      - task: clean
+      - task: postbuild:restoreplaceholder
 
   build:all:
     desc: Build binaries for all OS/Arch
     cmds:
       - goreleaser build --clean
-      - task: clean
+      - task: postbuild:restoreplaceholder
 
   build:snapshot:
     desc: Build binaries for current OS/Arch, ignores git status
     cmds:
       - goreleaser build --snapshot --clean --single-target
-      - task: clean
+      - task: postbuild:restoreplaceholder
 
   build:snapshot:all:
     desc: Build binaries for all OS/Arch, ignores git status
     cmds:
       - goreleaser build --snapshot --clean
-      - task: clean
+      - task: postbuild:restoreplaceholder
 
   clean:
     desc: Cleanup build artifacts
