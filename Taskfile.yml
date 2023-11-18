@@ -4,8 +4,8 @@ tasks:
   postbuild:restoreplaceholder:
     desc: Restore front-end placeholder
     cmds:
-      - rm -rf ./memos-upstream/server/dist
-      - mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist
+      - sh -c "rm -rf ./memos-upstream/server/dist"
+      - sh -c "mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist"
   build:
     desc: Build binaries for current OS/Arch
     cmds:
