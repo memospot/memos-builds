@@ -47,6 +47,16 @@ tasks:
       - powershell -Command "Remove-Item -Path .\\memos-upstream\\server\\dist -Recurse -Force -ErrorAction Ignore"
       - powershell -Command "Move-Item -Path .\\memos-upstream\\server\\dist.bak -Destination .\\memos-upstream\\server\\dist -Force -ErrorAction Ignore"
 
+  resetsubtree:
+    desc: >-
+      Setup subtree to tag and push tag to origin.
+      Usage: `task setup-subtree -- v0.0.0` to setup a specific tag.
+    deps:
+      - resetsubtree:posix
+      - resetsubtree:windows
+    cmds:
+      - git rm -fr memos-upstream --ignore-unmatch
+      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
   resetsubtree:posix:
     desc: Use just `resetsubtree`
     platforms: [linux, darwin]
@@ -59,16 +69,6 @@ tasks:
     ignore_error: true
     cmds:
       - powershell -Command "Remove-Item -Path .\\memos-upstream -Recurse -Force -ErrorAction Ignore"
-  resetsubtree:
-    desc: |
-      Setup subtree to tag and push tag to origin.
-      Usage: `task setup-subtree -- v0.0.0` to setup a specific tag.
-    deps:
-      - resetsubtree:posix
-      - resetsubtree:windows
-    cmds:
-      - git rm -fr memos-upstream --ignore-unmatch
-      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
 
   pushbuild:
     desc: |
