@@ -1,11 +1,11 @@
 import { isEqual } from "lodash-es";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { convertFileToBase64 } from "@/helpers/utils";
+import { useTranslation } from "react-i18next";
 import { useUserStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
-import { generateDialog } from "./Dialog";
+import { convertFileToBase64 } from "@/helpers/utils";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 import UserAvatar from "./UserAvatar";
 
 type Props = DialogProps;
@@ -18,7 +18,7 @@ interface State {
 }
 
 const UpdateAccountDialog: React.FC<Props> = ({ destroy }: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const userStore = useUserStore();
   const user = userStore.state.user as User;
   const [state, setState] = useState<State>({

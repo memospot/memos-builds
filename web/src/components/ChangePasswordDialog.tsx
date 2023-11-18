@@ -1,27 +1,20 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useGlobalStore, useUserStore } from "@/store/module";
-import { useUserV1Store } from "@/store/v1";
-import { useTranslate } from "@/utils/i18n";
-import { generateDialog } from "./Dialog";
+import { useTranslation } from "react-i18next";
+import { useUserStore } from "@/store/module";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 
 type Props = DialogProps;
 
 const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const userStore = useUserStore();
-  const userV1Store = useUserV1Store();
-  const globalStore = useGlobalStore();
-  const profile = globalStore.state.systemStatus.profile;
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordAgain, setNewPasswordAgain] = useState("");
 
   useEffect(() => {
-    if (profile.mode === "demo" && userStore.state.user?.id === userStore.state.host?.id) {
-      toast.error("Demo mode does not support this operation.");
-      destroy();
-    }
+    // do nth
   }, []);
 
   const handleCloseBtnClick = () => {
@@ -52,13 +45,10 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
 
     try {
       const user = userStore.getState().user as User;
-      await userV1Store.updateUser(
-        {
-          username: user.username,
-          password: newPassword,
-        },
-        ["password"]
-      );
+      await userStore.patchUser({
+        id: user.id,
+        password: newPassword,
+      });
       toast.success(t("message.password-changed"));
       handleCloseBtnClick();
     } catch (error: any) {
