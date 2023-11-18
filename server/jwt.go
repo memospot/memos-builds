@@ -10,9 +10,9 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/usememos/memos/api"
 	"github.com/usememos/memos/common"
 	"github.com/usememos/memos/server/auth"
+	"github.com/usememos/memos/store"
 )
 
 const (
@@ -22,56 +22,15 @@ const (
 	userIDContextKey = "user-id"
 )
 
+func getUserIDContextKey() string {
+	return userIDContextKey
+}
+
 // Claims creates a struct that will be encoded to a JWT.
 // We add jwt.RegisteredClaims as an embedded type, to provide fields such as name.
 type Claims struct {
 	Name string `json:"name"`
 	jwt.RegisteredClaims
-}
-
-func getUserIDContextKey() string {
-	return userIDContextKey
-}
-
-// GenerateTokensAndSetCookies generates jwt token and saves it to the http-only cookie.
-func GenerateTokensAndSetCookies(c echo.Context, user *api.User, secret string) error {
-	accessToken, err := auth.GenerateAccessToken(user.Username, user.ID, secret)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate access token")
-	}
-
-	cookieExp := time.Now().Add(auth.CookieExpDuration)
-	setTokenCookie(c, auth.AccessTokenCookieName, accessToken, cookieExp)
-
-	// We generate here a new refresh token and saving it to the cookie.
-	refreshToken, err := auth.GenerateRefreshToken(user.Username, user.ID, secret)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate refresh token")
-	}
-	setTokenCookie(c, auth.RefreshTokenCookieName, refreshToken, cookieExp)
-
-	return nil
-}
-
-// RemoveTokensAndCookies removes the jwt token and refresh token from the cookies.
-func RemoveTokensAndCookies(c echo.Context) {
-	// We set the expiration time to the past, so that the cookie will be removed.
-	cookieExp := time.Now().Add(-1 * time.Hour)
-	setTokenCookie(c, auth.AccessTokenCookieName, "", cookieExp)
-	setTokenCookie(c, auth.RefreshTokenCookieName, "", cookieExp)
-}
-
-// Here we are creating a new cookie, which will store the valid JWT token.
-func setTokenCookie(c echo.Context, name, token string, expiration time.Time) {
-	cookie := new(http.Cookie)
-	cookie.Name = name
-	cookie.Value = token
-	cookie.Expires = expiration
-	cookie.Path = "/"
-	// Http-only helps mitigate the risk of client side script accessing the protected cookie.
-	cookie.HttpOnly = true
-	cookie.SameSite = http.SameSiteStrictMode
-	c.SetCookie(cookie)
 }
 
 func extractTokenFromHeader(c echo.Context) (string, error) {
@@ -101,6 +60,15 @@ func findAccessToken(c echo.Context) string {
 	return accessToken
 }
 
+func audienceContains(audience jwt.ClaimStrings, token string) bool {
+	for _, v := range audience {
+		if v == token {
+			return true
+		}
+	}
+	return false
+}
+
 // JWTMiddleware validates the access token.
 // If the access token is about to expire or has expired and the request has a valid refresh token, it
 // will try to generate new access token and refresh token.
@@ -114,7 +82,7 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 		}
 
 		// Skip validation for server status endpoints.
-		if common.HasPrefixes(path, "/api/ping", "/api/idp", "/api/user/:id") && method == http.MethodGet {
+		if common.HasPrefixes(path, "/api/ping", "/api/v1/idp", "/api/user/:id") && method == http.MethodGet {
 			return next(c)
 		}
 
@@ -144,14 +112,13 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 			return nil, errors.Errorf("unexpected access token kid=%v", t.Header["kid"])
 		})
 
-		if !audienceContains(claims.Audience, auth.AccessTokenAudienceName) {
-			return echo.NewHTTPError(http.StatusUnauthorized,
-				fmt.Sprintf("Invalid access token, audience mismatch, got %q, expected %q. you may send request to the wrong environment",
-					claims.Audience,
-					auth.AccessTokenAudienceName,
-				))
+		if !accessToken.Valid {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid access token.")
 		}
 
+		if !audienceContains(claims.Audience, auth.AccessTokenAudienceName) {
+			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("Invalid access token, audience mismatch, got %q, expected %q.", claims.Audience, auth.AccessTokenAudienceName))
+		}
 		generateToken := time.Until(claims.ExpiresAt.Time) < auth.RefreshThresholdDuration
 		if err != nil {
 			var ve *jwt.ValidationError
@@ -162,11 +129,7 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 					generateToken = true
 				}
 			} else {
-				return &echo.HTTPError{
-					Code:     http.StatusUnauthorized,
-					Message:  "Invalid or expired access token",
-					Internal: err,
-				}
+				return echo.NewHTTPError(http.StatusUnauthorized, errors.Wrap(err, "Invalid or expired access token"))
 			}
 		}
 
@@ -178,7 +141,7 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 		}
 
 		// Even if there is no error, we still need to make sure the user still exists.
-		user, err := server.Store.FindUser(ctx, &api.UserFind{
+		user, err := server.Store.GetUser(ctx, &store.FindUserMessage{
 			ID: &userID,
 		})
 		if err != nil {
@@ -191,7 +154,6 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 		if generateToken {
 			generateTokenFunc := func() error {
 				rc, err := c.Cookie(auth.RefreshTokenCookieName)
-
 				if err != nil {
 					return echo.NewHTTPError(http.StatusUnauthorized, "Failed to generate access token. Missing refresh token.")
 				}
@@ -227,7 +189,7 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 
 				// If we have a valid refresh token, we will generate new access token and refresh token
 				if refreshToken != nil && refreshToken.Valid {
-					if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
+					if err := auth.GenerateTokensAndSetCookies(c, user, secret); err != nil {
 						return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Server error to refresh expired token. User Id %d", userID)).SetInternal(err)
 					}
 				}
@@ -246,13 +208,4 @@ func JWTMiddleware(server *Server, next echo.HandlerFunc, secret string) echo.Ha
 		c.Set(getUserIDContextKey(), userID)
 		return next(c)
 	}
-}
-
-func audienceContains(audience jwt.ClaimStrings, token string) bool {
-	for _, v := range audience {
-		if v == token {
-			return true
-		}
-	}
-	return false
 }

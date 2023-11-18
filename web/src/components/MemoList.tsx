@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useFilterStore, useMemoStore, useShortcutStore, useUserStore } from "@/store/module";
@@ -8,6 +8,7 @@ import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
 import { checkShouldShowMemoWithFilters } from "@/helpers/filter";
 import Memo from "./Memo";
 import "@/less/memo-list.less";
+import { PLAIN_LINK_REG } from "@/labs/marked/parser";
 
 const MemoList = () => {
   const { t } = useTranslation();
@@ -54,14 +55,14 @@ const MemoList = () => {
           if (
             duration &&
             duration.from < duration.to &&
-            (getTimeStampByDate(memo.createdTs) < duration.from || getTimeStampByDate(memo.createdTs) > duration.to)
+            (getTimeStampByDate(memo.displayTs) < duration.from || getTimeStampByDate(memo.displayTs) > duration.to)
           ) {
             shouldShow = false;
           }
           if (memoType) {
             if (memoType === "NOT_TAGGED" && memo.content.match(TAG_REG) !== null) {
               shouldShow = false;
-            } else if (memoType === "LINKED" && memo.content.match(LINK_REG) === null) {
+            } else if (memoType === "LINKED" && (memo.content.match(LINK_REG) === null || memo.content.match(PLAIN_LINK_REG) === null)) {
               shouldShow = false;
             }
           }
@@ -80,11 +81,13 @@ const MemoList = () => {
   const pinnedMemos = shownMemos.filter((m) => m.pinned);
   const unpinnedMemos = shownMemos.filter((m) => !m.pinned);
   const memoSort = (mi: Memo, mj: Memo) => {
-    return mj.createdTs - mi.createdTs;
+    return mj.displayTs - mi.displayTs;
   };
   pinnedMemos.sort(memoSort);
   unpinnedMemos.sort(memoSort);
   const sortedMemos = pinnedMemos.concat(unpinnedMemos).filter((m) => m.rowStatus === "NORMAL");
+
+  const statusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     memoStore
@@ -115,8 +118,23 @@ const MemoList = () => {
     }
     if (sortedMemos.length < DEFAULT_MEMO_LIMIT) {
       handleFetchMoreClick();
+      return;
     }
-  }, [isFetching, isComplete, filter, sortedMemos.length]);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        handleFetchMoreClick();
+        observer.unobserve(entry.target);
+      }
+    });
+    if (statusRef?.current) {
+      observer.observe(statusRef.current);
+    }
+    return () => {
+      if (statusRef?.current) {
+        observer.unobserve(statusRef.current);
+      }
+    };
+  }, [isFetching, isComplete, filter, sortedMemos.length, statusRef]);
 
   const handleFetchMoreClick = async () => {
     try {
@@ -135,14 +153,14 @@ const MemoList = () => {
   return (
     <div className="memo-list-container">
       {sortedMemos.map((memo) => (
-        <Memo key={`${memo.id}-${memo.createdTs}`} memo={memo} />
+        <Memo key={`${memo.id}-${memo.displayTs}`} memo={memo} />
       ))}
       {isFetching ? (
         <div className="status-text-container fetching-tip">
           <p className="status-text">{t("memo.fetching-data")}</p>
         </div>
       ) : (
-        <div className="status-text-container">
+        <div ref={statusRef} className="status-text-container">
           <p className="status-text">
             {isComplete ? (
               sortedMemos.length === 0 ? (

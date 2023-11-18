@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/usememos/memos/api"
 	"github.com/usememos/memos/common"
+	"github.com/usememos/memos/store"
 	"golang.org/x/exp/slices"
 
 	"github.com/labstack/echo/v4"
@@ -70,15 +71,14 @@ func (s *Server) registerTagRoutes(g *echo.Group) {
 		if !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, "Missing user session")
 		}
-		contentSearch := "#"
-		normalRowStatus := api.Normal
-		memoFind := api.MemoFind{
+		normalRowStatus := store.Normal
+		memoFind := &store.FindMemoMessage{
 			CreatorID:     &userID,
-			ContentSearch: &contentSearch,
+			ContentSearch: []string{"#"},
 			RowStatus:     &normalRowStatus,
 		}
 
-		memoList, err := s.Store.FindMemoList(ctx, &memoFind)
+		memoMessageList, err := s.Store.ListMemos(ctx, memoFind)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find memo list").SetInternal(err)
 		}
@@ -96,7 +96,7 @@ func (s *Server) registerTagRoutes(g *echo.Group) {
 		}
 
 		tagMapSet := make(map[string]bool)
-		for _, memo := range memoList {
+		for _, memo := range memoMessageList {
 			for _, tag := range findTagListFromMemoContent(memo.Content) {
 				if !slices.Contains(tagNameList, tag) {
 					tagMapSet[tag] = true

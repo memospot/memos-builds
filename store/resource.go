@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/usememos/memos/api"
@@ -53,40 +52,6 @@ func (raw *resourceRaw) toResource() *api.Resource {
 	}
 }
 
-func (s *Store) ComposeMemoResourceList(ctx context.Context, memo *api.Memo) error {
-	resourceList, err := s.FindResourceList(ctx, &api.ResourceFind{
-		MemoID: &memo.ID,
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, resource := range resourceList {
-		memoResource, err := s.FindMemoResource(ctx, &api.MemoResourceFind{
-			MemoID:     &memo.ID,
-			ResourceID: &resource.ID,
-		})
-		if err != nil {
-			return err
-		}
-
-		resource.CreatedTs = memoResource.CreatedTs
-		resource.UpdatedTs = memoResource.UpdatedTs
-	}
-
-	sort.Slice(resourceList, func(i, j int) bool {
-		if resourceList[i].CreatedTs != resourceList[j].CreatedTs {
-			return resourceList[i].CreatedTs < resourceList[j].CreatedTs
-		}
-
-		return resourceList[i].ID < resourceList[j].ID
-	})
-
-	memo.ResourceList = resourceList
-
-	return nil
-}
-
 func (s *Store) CreateResource(ctx context.Context, create *api.ResourceCreate) (*api.Resource, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -108,69 +73,6 @@ func (s *Store) CreateResource(ctx context.Context, create *api.ResourceCreate) 
 	return resource, nil
 }
 
-func (s *Store) FindResourceList(ctx context.Context, find *api.ResourceFind) ([]*api.Resource, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	resourceRawList, err := findResourceListImpl(ctx, tx, find)
-	if err != nil {
-		return nil, err
-	}
-
-	resourceList := []*api.Resource{}
-	for _, raw := range resourceRawList {
-		resourceList = append(resourceList, raw.toResource())
-	}
-
-	return resourceList, nil
-}
-
-func (s *Store) FindResource(ctx context.Context, find *api.ResourceFind) (*api.Resource, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, FormatError(err)
-	}
-	defer tx.Rollback()
-
-	list, err := findResourceListImpl(ctx, tx, find)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(list) == 0 {
-		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("not found")}
-	}
-
-	resourceRaw := list[0]
-	resource := resourceRaw.toResource()
-
-	return resource, nil
-}
-
-func (s *Store) DeleteResource(ctx context.Context, delete *api.ResourceDelete) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return FormatError(err)
-	}
-	defer tx.Rollback()
-
-	if err := deleteResource(ctx, tx, delete); err != nil {
-		return err
-	}
-	if err := vacuum(ctx, tx); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return FormatError(err)
-	}
-
-	return nil
-}
-
 func (s *Store) PatchResource(ctx context.Context, patch *api.ResourcePatch) (*api.Resource, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -187,9 +89,85 @@ func (s *Store) PatchResource(ctx context.Context, patch *api.ResourcePatch) (*a
 		return nil, FormatError(err)
 	}
 
+	s.resourceCache.Store(resourceRaw.ID, resourceRaw)
 	resource := resourceRaw.toResource()
 
 	return resource, nil
+}
+
+func (s *Store) FindResourceList(ctx context.Context, find *api.ResourceFind) ([]*api.Resource, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer tx.Rollback()
+
+	resourceRawList, err := findResourceListImpl(ctx, tx, find)
+	if err != nil {
+		return nil, err
+	}
+
+	resourceList := []*api.Resource{}
+	for _, raw := range resourceRawList {
+		if !find.GetBlob {
+			s.resourceCache.Store(raw.ID, raw)
+		}
+		resourceList = append(resourceList, raw.toResource())
+	}
+
+	return resourceList, nil
+}
+
+func (s *Store) FindResource(ctx context.Context, find *api.ResourceFind) (*api.Resource, error) {
+	if !find.GetBlob && find.ID != nil {
+		if raw, ok := s.resourceCache.Load(find.ID); ok {
+			return raw.(*resourceRaw).toResource(), nil
+		}
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer tx.Rollback()
+
+	list, err := findResourceListImpl(ctx, tx, find)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list) == 0 {
+		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("not found")}
+	}
+
+	resourceRaw := list[0]
+	if !find.GetBlob {
+		s.resourceCache.Store(resourceRaw.ID, resourceRaw)
+	}
+	resource := resourceRaw.toResource()
+
+	return resource, nil
+}
+
+func (s *Store) DeleteResource(ctx context.Context, delete *api.ResourceDelete) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return FormatError(err)
+	}
+	defer tx.Rollback()
+
+	if err := deleteResource(ctx, tx, delete); err != nil {
+		return err
+	}
+	if err := s.vacuumImpl(ctx, tx); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return FormatError(err)
+	}
+	s.resourceCache.Delete(delete.ID)
+
+	return nil
 }
 
 func createResourceImpl(ctx context.Context, tx *sql.Tx, create *api.ResourceCreate) (*resourceRaw, error) {

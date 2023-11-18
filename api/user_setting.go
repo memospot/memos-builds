@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"golang.org/x/exp/slices"
 )
@@ -16,6 +17,8 @@ const (
 	UserSettingAppearanceKey UserSettingKey = "appearance"
 	// UserSettingMemoVisibilityKey is the key type for user preference memo default visibility.
 	UserSettingMemoVisibilityKey UserSettingKey = "memo-visibility"
+	// UserSettingTelegramUserID is the key type for telegram UserID of memos user.
+	UserSettingTelegramUserIDKey UserSettingKey = "telegram-user-id"
 )
 
 // String returns the string format of UserSettingKey type.
@@ -27,6 +30,8 @@ func (key UserSettingKey) String() string {
 		return "appearance"
 	case UserSettingMemoVisibilityKey:
 		return "memo-visibility"
+	case UserSettingTelegramUserIDKey:
+		return "telegram-user-id"
 	}
 	return ""
 }
@@ -37,7 +42,9 @@ var (
 		"en",
 		"es",
 		"fr",
+		"hr",
 		"it",
+		"ja",
 		"ko",
 		"nl",
 		"pl",
@@ -96,6 +103,19 @@ func (upsert UserSettingUpsert) Validate() error {
 		if !slices.Contains(UserSettingMemoVisibilityValue, memoVisibilityValue) {
 			return fmt.Errorf("invalid user setting memo visibility value")
 		}
+	} else if upsert.Key == UserSettingTelegramUserIDKey {
+		var s string
+		err := json.Unmarshal([]byte(upsert.Value), &s)
+		if err != nil {
+			return fmt.Errorf("invalid user setting telegram user id value")
+		}
+
+		if s == "" {
+			return nil
+		}
+		if _, err := strconv.Atoi(s); err != nil {
+			return fmt.Errorf("invalid user setting telegram user id value")
+		}
 	} else {
 		return fmt.Errorf("invalid user setting key")
 	}
@@ -104,7 +124,7 @@ func (upsert UserSettingUpsert) Validate() error {
 }
 
 type UserSettingFind struct {
-	UserID int
+	UserID *int
 
 	Key UserSettingKey `json:"key"`
 }

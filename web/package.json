@@ -6,6 +6,7 @@
     "lint": "eslint --ext .js,.ts,.tsx, src",
     "lint-fix": "eslint --ext .js,.ts,.tsx, src --fix"
   },
+  "packageManager": "pnpm@8.6.1",
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
@@ -34,7 +35,6 @@
     "zustand": "^4.3.6"
   },
   "devDependencies": {
-    "@playwright/test": "^1.32.2",
     "@types/lodash-es": "^4.17.5",
     "@types/node": "^18.0.3",
     "@types/qs": "^6.9.7",

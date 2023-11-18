@@ -11,7 +11,7 @@ type Resource struct {
 	// Domain specific fields
 	Filename     string `json:"filename"`
 	Blob         []byte `json:"-"`
-	InternalPath string `json:"internalPath"`
+	InternalPath string `json:"-"`
 	ExternalLink string `json:"externalLink"`
 	Type         string `json:"type"`
 	Size         int64  `json:"size"`
@@ -26,13 +26,14 @@ type ResourceCreate struct {
 	CreatorID int `json:"-"`
 
 	// Domain specific fields
-	Filename     string `json:"filename"`
-	Blob         []byte `json:"-"`
-	InternalPath string `json:"internalPath"`
-	ExternalLink string `json:"externalLink"`
-	Type         string `json:"type"`
-	Size         int64  `json:"-"`
-	PublicID     string `json:"publicId"`
+	Filename        string `json:"filename"`
+	Blob            []byte `json:"-"`
+	InternalPath    string `json:"internalPath"`
+	ExternalLink    string `json:"externalLink"`
+	Type            string `json:"type"`
+	Size            int64  `json:"-"`
+	PublicID        string `json:"publicId"`
+	DownloadToLocal bool   `json:"downloadToLocal"`
 }
 
 type ResourceFind struct {

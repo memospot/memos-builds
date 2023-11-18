@@ -1,6 +1,10 @@
+import { Badge, Button } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
+import { getMemoStats } from "@/helpers/api";
+import { getDateStampByDate } from "@/helpers/datetime";
+import { useUserStore } from "@/store/module";
 import Icon from "../Icon";
 import "@/less/common/date-picker.less";
 
@@ -14,10 +18,23 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
   const { t } = useTranslation();
   const { className, datestamp, handleDateStampChange } = props;
   const [currentDateStamp, setCurrentDateStamp] = useState<DateStamp>(getMonthFirstDayDateStamp(datestamp));
+  const [countByDate, setCountByDate] = useState(new Map());
+  const currentUserId = useUserStore().getCurrentUserId();
 
   useEffect(() => {
     setCurrentDateStamp(getMonthFirstDayDateStamp(datestamp));
   }, [datestamp]);
+
+  useEffect(() => {
+    getMemoStats(currentUserId).then(({ data: { data } }) => {
+      const m = new Map();
+      for (const record of data) {
+        const date = getDateStampByDate(record * 1000);
+        m.set(date, true);
+      }
+      setCountByDate(m);
+    });
+  }, [currentUserId]);
 
   const firstDate = new Date(currentDateStamp);
   const firstDateDay = firstDate.getDay() === 0 ? 7 : firstDate.getDay();
@@ -57,15 +74,15 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
   return (
     <div className={`date-picker-wrapper ${className}`}>
       <div className="date-picker-header">
-        <span className="btn-text" onClick={() => handleChangeMonthBtnClick(-1)}>
+        <Button variant="plain" color="neutral" onClick={() => handleChangeMonthBtnClick(-1)}>
           <Icon.ChevronLeft className="icon-img" />
-        </span>
+        </Button>
         <span className="normal-text">
           {firstDate.getFullYear()}/{firstDate.getMonth() + 1}
         </span>
-        <span className="btn-text" onClick={() => handleChangeMonthBtnClick(1)}>
+        <Button variant="plain" color="neutral" onClick={() => handleChangeMonthBtnClick(1)}>
           <Icon.ChevronRight className="icon-img" />
-        </span>
+        </Button>
       </div>
       <div className="date-picker-day-container">
         <div className="date-picker-day-header">
@@ -89,10 +106,10 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
             return (
               <span
                 key={d.datestamp}
-                className={`day-item ${d.datestamp === datestamp ? "current" : ""}`}
+                className={`day-item relative ${d.datestamp === datestamp ? "current" : ""}`}
                 onClick={() => handleDateItemClick(d.datestamp)}
               >
-                {d.date}
+                {countByDate.has(d.datestamp) ? <Badge size="sm">{d.date}</Badge> : d.date}
               </span>
             );
           }

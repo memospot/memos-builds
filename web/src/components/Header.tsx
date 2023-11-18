@@ -4,11 +4,10 @@ import { useTranslation } from "react-i18next";
 import { useLayoutStore, useUserStore } from "@/store/module";
 import { resolution } from "@/utils/layout";
 import Icon from "./Icon";
-import showSettingDialog from "./SettingDialog";
-import showAskAIDialog from "./AskAIDialog";
-import showArchivedMemoDialog from "./ArchivedMemoDialog";
-import showAboutSiteDialog from "./AboutSiteDialog";
 import UserBanner from "./UserBanner";
+import showAboutSiteDialog from "./AboutSiteDialog";
+import showMemoEditorDialog from "./MemoEditor/MemoEditorDialog";
+import UpgradeVersionView from "./UpgradeVersionBanner";
 
 const Header = () => {
   const { t } = useTranslation();
@@ -32,7 +31,7 @@ const Header = () => {
 
   return (
     <div
-      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full flex-shrink-0 pointer-events-none sm:pointer-events-auto z-20 ${
+      className={`fixed sm:sticky top-0 left-0 w-full sm:w-56 h-full shrink-0 pointer-events-none sm:pointer-events-auto z-10 ${
         showHeader && "pointer-events-auto"
       }`}
     >
@@ -57,7 +56,7 @@ const Header = () => {
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
@@ -70,7 +69,7 @@ const Header = () => {
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
@@ -83,7 +82,7 @@ const Header = () => {
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
@@ -98,7 +97,7 @@ const Header = () => {
             className={({ isActive }) =>
               `${
                 isActive && "bg-white dark:bg-zinc-700 shadow"
-              } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+              } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
             }
           >
             <>
@@ -107,27 +106,42 @@ const Header = () => {
           </NavLink>
           {!isVisitorMode && (
             <>
-              <button
-                id="header-ask-ai"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showAskAIDialog()}
+              <NavLink
+                to="/archived"
+                id="header-setting"
+                className={({ isActive }) =>
+                  `${
+                    isActive && "bg-white dark:bg-zinc-700 shadow"
+                  } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                }
               >
-                <Icon.Bot className="mr-3 w-6 h-auto opacity-70" /> {t("ask-ai.title")}
-              </button>
-              <button
-                id="header-archived-memo"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showArchivedMemoDialog()}
+                <>
+                  <Icon.Archive className="mr-3 w-6 h-auto opacity-70" /> {t("common.archived")}
+                </>
+              </NavLink>
+              <NavLink
+                to="/setting"
+                id="header-setting"
+                className={({ isActive }) =>
+                  `${
+                    isActive && "bg-white dark:bg-zinc-700 shadow"
+                  } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                }
               >
-                <Icon.Archive className="mr-3 w-6 h-auto opacity-70" /> {t("common.archived")}
-              </button>
-              <button
-                id="header-settings"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
-                onClick={() => showSettingDialog()}
-              >
-                <Icon.Settings className="mr-3 w-6 h-auto opacity-70" /> {t("common.settings")}
-              </button>
+                <>
+                  <Icon.Settings className="mr-3 w-6 h-auto opacity-70" /> {t("common.settings")}
+                </>
+              </NavLink>
+              <div className="pr-3 pl-1 w-full">
+                <button
+                  className="mt-2 w-full py-3 rounded-full flex flex-row justify-center items-center bg-green-600 text-white hover:shadow hover:opacity-80"
+                  onClick={() => showMemoEditorDialog()}
+                >
+                  <Icon.Edit3 className="w-4 h-auto mr-1" />
+                  {t("common.new")}
+                </button>
+              </div>
+              <UpgradeVersionView />
             </>
           )}
           {isVisitorMode && (
@@ -138,7 +152,7 @@ const Header = () => {
                 className={({ isActive }) =>
                   `${
                     isActive && "bg-white dark:bg-zinc-700 shadow"
-                  } px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
+                  } px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700`
                 }
               >
                 <>
@@ -147,7 +161,7 @@ const Header = () => {
               </NavLink>
               <button
                 id="header-about"
-                className="px-4 pr-5 py-2 rounded-lg flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
+                className="px-4 pr-5 py-2 rounded-full flex flex-row items-center text-lg text-gray-800 dark:text-gray-300 hover:bg-white hover:shadow dark:hover:bg-zinc-700"
                 onClick={() => showAboutSiteDialog()}
               >
                 <Icon.CupSoda className="mr-3 w-6 h-auto opacity-70" /> {t("common.about")}

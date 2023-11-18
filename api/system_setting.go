@@ -2,8 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/slices"
 )
@@ -17,10 +17,10 @@ const (
 	SystemSettingSecretSessionName SystemSettingName = "secret-session"
 	// SystemSettingAllowSignUpName is the name of allow signup setting.
 	SystemSettingAllowSignUpName SystemSettingName = "allow-signup"
-	// SystemSettingIgnoreUpgradeName is the name of ignore upgrade.
-	SystemSettingIgnoreUpgradeName SystemSettingName = "ignore-upgrade"
 	// SystemSettingDisablePublicMemosName is the name of disable public memos setting.
 	SystemSettingDisablePublicMemosName SystemSettingName = "disable-public-memos"
+	// SystemSettingMaxUploadSizeMiBName is the name of max upload size setting.
+	SystemSettingMaxUploadSizeMiBName SystemSettingName = "max-upload-size-mib"
 	// SystemSettingAdditionalStyleName is the name of additional style.
 	SystemSettingAdditionalStyleName SystemSettingName = "additional-style"
 	// SystemSettingAdditionalScriptName is the name of additional script.
@@ -33,6 +33,9 @@ const (
 	SystemSettingLocalStoragePathName SystemSettingName = "local-storage-path"
 	// SystemSettingOpenAIConfigName is the name of OpenAI config.
 	SystemSettingOpenAIConfigName SystemSettingName = "openai-config"
+	// SystemSettingTelegramBotToken is the name of Telegram Bot Token.
+	SystemSettingTelegramBotTokenName         SystemSettingName = "telegram-bot-token"
+	SystemSettingMemoDisplayWithUpdatedTsName SystemSettingName = "memo-display-with-updated-ts"
 )
 
 // CustomizedProfile is the struct definition for SystemSettingCustomizedProfileName system setting item.
@@ -64,10 +67,10 @@ func (key SystemSettingName) String() string {
 		return "secret-session"
 	case SystemSettingAllowSignUpName:
 		return "allow-signup"
-	case SystemSettingIgnoreUpgradeName:
-		return "ignore-upgrade"
 	case SystemSettingDisablePublicMemosName:
 		return "disable-public-memos"
+	case SystemSettingMaxUploadSizeMiBName:
+		return "max-upload-size-mib"
 	case SystemSettingAdditionalStyleName:
 		return "additional-style"
 	case SystemSettingAdditionalScriptName:
@@ -80,6 +83,10 @@ func (key SystemSettingName) String() string {
 		return "local-storage-path"
 	case SystemSettingOpenAIConfigName:
 		return "openai-config"
+	case SystemSettingTelegramBotTokenName:
+		return "telegram-bot-token"
+	case SystemSettingMemoDisplayWithUpdatedTsName:
+		return "memo-display-with-updated-ts"
 	}
 	return ""
 }
@@ -97,40 +104,38 @@ type SystemSettingUpsert struct {
 	Description string            `json:"description"`
 }
 
+const systemSettingUnmarshalError = `failed to unmarshal value from system setting "%v"`
+
 func (upsert SystemSettingUpsert) Validate() error {
-	if upsert.Name == SystemSettingServerIDName {
-		return errors.New("update server id is not allowed")
-	} else if upsert.Name == SystemSettingAllowSignUpName {
-		value := false
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting allow signup value")
+	switch settingName := upsert.Name; settingName {
+	case SystemSettingServerIDName:
+		return fmt.Errorf("updating %v is not allowed", settingName)
+	case SystemSettingAllowSignUpName:
+		var value bool
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else if upsert.Name == SystemSettingIgnoreUpgradeName {
-		value := false
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting ignore upgrade value")
+	case SystemSettingDisablePublicMemosName:
+		var value bool
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else if upsert.Name == SystemSettingDisablePublicMemosName {
-		value := false
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting disable public memos value")
+	case SystemSettingMaxUploadSizeMiBName:
+		var value int
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else if upsert.Name == SystemSettingAdditionalStyleName {
-		value := ""
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting additional style value")
+	case SystemSettingAdditionalStyleName:
+		var value string
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else if upsert.Name == SystemSettingAdditionalScriptName {
-		value := ""
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting additional script value")
+	case SystemSettingAdditionalScriptName:
+		var value string
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else if upsert.Name == SystemSettingCustomizedProfileName {
+	case SystemSettingCustomizedProfileName:
 		customizedProfile := CustomizedProfile{
 			Name:        "memos",
 			LogoURL:     "",
@@ -139,39 +144,55 @@ func (upsert SystemSettingUpsert) Validate() error {
 			Appearance:  "system",
 			ExternalURL: "",
 		}
-		err := json.Unmarshal([]byte(upsert.Value), &customizedProfile)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting customized profile value")
+		if err := json.Unmarshal([]byte(upsert.Value), &customizedProfile); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
 		if !slices.Contains(UserSettingLocaleValue, customizedProfile.Locale) {
-			return fmt.Errorf("invalid locale value")
+			return fmt.Errorf(`invalid locale value for system setting "%v"`, settingName)
 		}
 		if !slices.Contains(UserSettingAppearanceValue, customizedProfile.Appearance) {
-			return fmt.Errorf("invalid appearance value")
+			return fmt.Errorf(`invalid appearance value for system setting "%v"`, settingName)
 		}
-	} else if upsert.Name == SystemSettingStorageServiceIDName {
+	case SystemSettingStorageServiceIDName:
 		value := DatabaseStorage
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting storage service id value")
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
 		return nil
-	} else if upsert.Name == SystemSettingLocalStoragePathName {
+	case SystemSettingLocalStoragePathName:
 		value := ""
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting local storage path value")
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else if upsert.Name == SystemSettingOpenAIConfigName {
+	case SystemSettingOpenAIConfigName:
 		value := OpenAIConfig{}
-		err := json.Unmarshal([]byte(upsert.Value), &value)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal system setting openai api config value")
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	} else {
+	case SystemSettingTelegramBotTokenName:
+		if upsert.Value == "" {
+			return nil
+		}
+		// Bot Token with Reverse Proxy shoule like `http.../bot<token>`
+		if strings.HasPrefix(upsert.Value, "http") {
+			slashIndex := strings.LastIndexAny(upsert.Value, "/")
+			if strings.HasPrefix(upsert.Value[slashIndex:], "/bot") {
+				return nil
+			}
+			return fmt.Errorf("token start with `http` must end with `/bot<token>`")
+		}
+		fragments := strings.Split(upsert.Value, ":")
+		if len(fragments) != 2 {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+		}
+	case SystemSettingMemoDisplayWithUpdatedTsName:
+		var value bool
+		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
+			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+		}
+	default:
 		return fmt.Errorf("invalid system setting name")
 	}
-
 	return nil
 }
 

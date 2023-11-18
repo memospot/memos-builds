@@ -3,12 +3,10 @@ import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { UNKNOWN_ID } from "@/helpers/consts";
-import { useGlobalStore, useMemoStore, useUserStore } from "@/store/module";
+import { useGlobalStore, useMemoStore } from "@/store/module";
 import useLoading from "@/hooks/useLoading";
-import MemoContent from "@/components/MemoContent";
-import MemoResources from "@/components/MemoResources";
-import { getDateTimeString } from "@/helpers/datetime";
-import "@/less/memo-detail.less";
+import Icon from "@/components/Icon";
+import Memo from "@/components/Memo";
 
 interface State {
   memo: Memo;
@@ -20,7 +18,6 @@ const MemoDetail = () => {
   const location = useLocation();
   const globalStore = useGlobalStore();
   const memoStore = useMemoStore();
-  const userStore = useUserStore();
   const [state, setState] = useState<State>({
     memo: {
       id: UNKNOWN_ID,
@@ -28,7 +25,6 @@ const MemoDetail = () => {
   });
   const loadingState = useLoading();
   const customizedProfile = globalStore.state.systemStatus.customizedProfile;
-  const user = userStore.state.user;
 
   useEffect(() => {
     const memoId = Number(params.memoId);
@@ -49,44 +45,28 @@ const MemoDetail = () => {
   }, [location]);
 
   return (
-    <section className="page-wrapper memo-detail">
-      <div className="page-container">
-        <div className="page-header">
-          <div className="title-container">
-            <img className="h-10 w-auto rounded-lg mr-2" src={customizedProfile.logoUrl} alt="" />
-            <p className="logo-text">{customizedProfile.name}</p>
-          </div>
-          <div className="action-button-container">
-            {!loadingState.isLoading && (
-              <>
-                {user ? (
-                  <Link to="/" className="btn">
-                    <span className="icon">🏠</span> {t("router.back-to-home")}
-                  </Link>
-                ) : (
-                  <Link to="/auth" className="btn">
-                    <span className="icon">👉</span> {t("common.sign-in")}
-                  </Link>
-                )}
-              </>
-            )}
+    <section className="relative top-0 w-full h-full overflow-y-auto overflow-x-hidden bg-zinc-100 dark:bg-zinc-800">
+      <div className="relative w-full min-h-full mx-auto flex flex-col justify-start items-center pb-6">
+        <div className="max-w-2xl w-full flex flex-row justify-center items-center px-4 py-2 mt-2 bg-zinc-100 dark:bg-zinc-800">
+          <div className="detail-header flex flex-row justify-start items-center">
+            <img className="detail-logo h-10 w-auto rounded-lg mr-2" src={customizedProfile.logoUrl} alt="" />
+            <p className="detail-name text-4xl tracking-wide text-black dark:text-white">{customizedProfile.name}</p>
           </div>
         </div>
         {!loadingState.isLoading && (
-          <main className="memos-wrapper">
-            <div className="memo-container">
-              <div className="memo-header">
-                <div className="status-container">
-                  <span className="time-text">{getDateTimeString(state.memo.createdTs)}</span>
-                  <a className="name-text" href={`/u/${state.memo.creatorId}`}>
-                    @{state.memo.creatorName}
-                  </a>
-                </div>
-              </div>
-              <MemoContent className="memo-content" content={state.memo.content} showFull={true} onMemoContentClick={() => undefined} />
-              <MemoResources resourceList={state.memo.resourceList} />
+          <>
+            <main className="relative flex-grow max-w-2xl w-full min-h-full flex flex-col justify-start items-start px-4">
+              <Memo memo={state.memo} readonly showRelatedMemos />
+            </main>
+            <div className="mt-4 w-full flex flex-row justify-center items-center gap-2">
+              <Link
+                to="/"
+                className="flex flex-row justify-center items-center text-gray-600 dark:text-gray-300 text-sm px-3 hover:opacity-80 hover:underline"
+              >
+                <Icon.Home className="w-4 h-auto mr-1 -mt-0.5" /> {t("router.back-to-home")}
+              </Link>
             </div>
-          </main>
+          </>
         )}
       </div>
     </section>
