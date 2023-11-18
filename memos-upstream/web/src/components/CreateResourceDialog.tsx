@@ -1,11 +1,10 @@
-import { Autocomplete, Button, Input, List, ListItem, Option, Select, Typography } from "@mui/joy";
+import { Button, Input, Select, Option, Typography, List, ListItem, Autocomplete, Tooltip } from "@mui/joy";
 import React, { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Resource } from "@/types/proto/api/v2/resource_service";
-import { useTranslate } from "@/utils/i18n";
+import { useTranslation } from "react-i18next";
 import { useResourceStore } from "../store/module";
-import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 
 const fileTypeAutocompleteOptions = ["image/*", "text/*", "audio/*", "video/*", "application/*"];
 
@@ -22,7 +21,7 @@ interface State {
 }
 
 const CreateResourceDialog: React.FC<Props> = (props: Props) => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const { destroy, onCancel, onConfirm } = props;
   const resourceStore = useResourceStore();
   const [state, setState] = useState<State>({
@@ -36,33 +35,6 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
   });
   const [fileList, setFileList] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleReorderFileList = (fileName: string, direction: "up" | "down") => {
-    const fileIndex = fileList.findIndex((file) => file.name === fileName);
-    if (fileIndex === -1) {
-      return;
-    }
-
-    const newFileList = [...fileList];
-
-    if (direction === "up") {
-      if (fileIndex === 0) {
-        return;
-      }
-      const temp = newFileList[fileIndex - 1];
-      newFileList[fileIndex - 1] = newFileList[fileIndex];
-      newFileList[fileIndex] = temp;
-    } else if (direction === "down") {
-      if (fileIndex === fileList.length - 1) {
-        return;
-      }
-      const temp = newFileList[fileIndex + 1];
-      newFileList[fileIndex + 1] = newFileList[fileIndex];
-      newFileList[fileIndex] = temp;
-    }
-
-    setFileList(newFileList);
-  };
 
   const handleCloseDialog = () => {
     if (onCancel) {
@@ -152,12 +124,7 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
         if (!fileInputRef.current || !fileInputRef.current.files) {
           return;
         }
-        const filesOnInput = Array.from(fileInputRef.current.files);
-        for (const file of fileList) {
-          const fileOnInput = filesOnInput.find((fileOnInput) => fileOnInput.name === file.name);
-          if (!fileOnInput) {
-            continue;
-          }
+        for (const file of fileInputRef.current.files) {
           const resource = await resourceStore.createResourceWithBlob(file);
           createdResourceList.push(resource);
         }
@@ -185,7 +152,7 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
         </button>
       </div>
       <div className="dialog-content-container !w-80">
-        <Typography className="!mb-1" level="body-md">
+        <Typography className="!mb-1" level="body2">
           {t("resource.create-dialog.upload-method")}
         </Typography>
         <Select
@@ -215,30 +182,12 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
               />
             </div>
             <List size="sm" sx={{ width: "100%" }}>
-              {fileList.map((file, index) => (
-                <ListItem key={file.name} className="flex justify-between">
-                  <Typography noWrap>{file.name}</Typography>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => {
-                        handleReorderFileList(file.name, "up");
-                      }}
-                      disabled={index === 0}
-                      className="disabled:opacity-50"
-                    >
-                      <Icon.ArrowUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleReorderFileList(file.name, "down");
-                      }}
-                      disabled={index === fileList.length - 1}
-                      className="disabled:opacity-50"
-                    >
-                      <Icon.ArrowDown className="w-4 h-4" />
-                    </button>
-                  </div>
-                </ListItem>
+              {fileList.map((file) => (
+                <Tooltip title={file.name} key={file.name} placement="top">
+                  <ListItem>
+                    <Typography noWrap>{file.name}</Typography>
+                  </ListItem>
+                </Tooltip>
               ))}
             </List>
           </>
@@ -246,7 +195,7 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
 
         {state.selectedMode === "external-link" && (
           <>
-            <Typography className="!mb-1" level="body-md">
+            <Typography className="!mb-1" level="body2">
               {t("resource.create-dialog.external-link.link")}
             </Typography>
             <Input
@@ -256,7 +205,7 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
               onChange={handleExternalLinkChanged}
               fullWidth
             />
-            <Typography className="!mb-1" level="body-md">
+            <Typography className="!mb-1" level="body2">
               {t("resource.create-dialog.external-link.file-name")}
             </Typography>
             <Input
@@ -266,7 +215,7 @@ const CreateResourceDialog: React.FC<Props> = (props: Props) => {
               onChange={handleFileNameChanged}
               fullWidth
             />
-            <Typography className="!mb-1" level="body-md">
+            <Typography className="!mb-1" level="body2">
               {t("resource.create-dialog.external-link.type")}
             </Typography>
             <Autocomplete

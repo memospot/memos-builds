@@ -6,34 +6,30 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	apiv1 "github.com/usememos/memos/api/v1"
-	"github.com/usememos/memos/store"
+	"github.com/usememos/memos/api"
 )
 
 func TestSystemSettingStore(t *testing.T) {
 	ctx := context.Background()
-	ts := NewTestingStore(ctx, t)
-	_, err := ts.UpsertSystemSetting(ctx, &store.SystemSetting{
-		Name:  apiv1.SystemSettingServerIDName.String(),
+	store := NewTestingStore(ctx, t)
+	_, err := store.UpsertSystemSetting(ctx, &api.SystemSettingUpsert{
+		Name:  api.SystemSettingServerIDName,
 		Value: "test_server_id",
 	})
 	require.NoError(t, err)
-	_, err = ts.UpsertSystemSetting(ctx, &store.SystemSetting{
-		Name:  apiv1.SystemSettingSecretSessionName.String(),
+	_, err = store.UpsertSystemSetting(ctx, &api.SystemSettingUpsert{
+		Name:  api.SystemSettingSecretSessionName,
 		Value: "test_secret_session_name",
 	})
 	require.NoError(t, err)
-	_, err = ts.UpsertSystemSetting(ctx, &store.SystemSetting{
-		Name:  apiv1.SystemSettingAllowSignUpName.String(),
+	_, err = store.UpsertSystemSetting(ctx, &api.SystemSettingUpsert{
+		Name:  api.SystemSettingAllowSignUpName,
 		Value: "true",
 	})
 	require.NoError(t, err)
-	_, err = ts.UpsertSystemSetting(ctx, &store.SystemSetting{
-		Name:  apiv1.SystemSettingLocalStoragePathName.String(),
+	_, err = store.UpsertSystemSetting(ctx, &api.SystemSettingUpsert{
+		Name:  api.SystemSettingLocalStoragePathName,
 		Value: "/tmp/memos",
 	})
 	require.NoError(t, err)
-	list, err := ts.ListSystemSettings(ctx, &store.FindSystemSetting{})
-	require.NoError(t, err)
-	require.Equal(t, 4, len(list))
 }

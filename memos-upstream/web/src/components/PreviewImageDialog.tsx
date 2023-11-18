@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { getDateTimeString } from "@/helpers/datetime";
-import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
+import { generateDialog } from "./Dialog";
 import "@/less/preview-image-dialog.less";
 
 const MIN_SCALE = 0.5;

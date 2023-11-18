@@ -25,7 +25,7 @@ const renderer = (rawStr: string) => {
 
   const handleCopyButtonClick = () => {
     copy(matchResult[2]);
-    toast.success("Copied to clipboard!");
+    toast.success("Copy succeed");
   };
 
   return (

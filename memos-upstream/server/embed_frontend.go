@@ -7,8 +7,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-
-	"github.com/usememos/memos/internal/util"
 )
 
 //go:embed dist
@@ -44,9 +42,4 @@ func embedFrontend(e *echo.Echo) {
 		HTML5:      true,
 		Filesystem: getFileSystem("dist/assets"),
 	}))
-}
-
-func defaultAPIRequestSkipper(c echo.Context) bool {
-	path := c.Request().URL.Path
-	return util.HasPrefixes(path, "/api", "/memos.api.v2")
 }

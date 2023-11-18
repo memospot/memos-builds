@@ -2,124 +2,179 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"strings"
 
-	storepb "github.com/usememos/memos/proto/gen/store"
+	"github.com/usememos/memos/api"
 )
 
-type UserSetting struct {
-	UserID int32
-	Key    string
+type userSettingRaw struct {
+	UserID int
+	Key    api.UserSettingKey
 	Value  string
 }
 
-type FindUserSetting struct {
-	UserID *int32
-	Key    string
+func (raw *userSettingRaw) toUserSetting() *api.UserSetting {
+	return &api.UserSetting{
+		UserID: raw.UserID,
+		Key:    raw.Key,
+		Value:  raw.Value,
+	}
 }
 
-func (s *Store) UpsertUserSetting(ctx context.Context, upsert *UserSetting) (*UserSetting, error) {
-	userSetting, err := s.driver.UpsertUserSetting(ctx, upsert)
+func (s *Store) UpsertUserSetting(ctx context.Context, upsert *api.UserSettingUpsert) (*api.UserSetting, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer tx.Rollback()
+
+	userSettingRaw, err := upsertUserSetting(ctx, tx, upsert)
 	if err != nil {
 		return nil, err
 	}
 
-	s.userSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key), userSetting)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	s.userSettingCache.Store(getUserSettingCacheKey(*userSettingRaw), userSettingRaw)
+	userSetting := userSettingRaw.toUserSetting()
+
 	return userSetting, nil
 }
 
-func (s *Store) ListUserSettings(ctx context.Context, find *FindUserSetting) ([]*UserSetting, error) {
-	userSettingList, err := s.driver.ListUserSettings(ctx, find)
+func (s *Store) FindUserSettingList(ctx context.Context, find *api.UserSettingFind) ([]*api.UserSetting, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer tx.Rollback()
+
+	userSettingRawList, err := findUserSettingList(ctx, tx, find)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, userSetting := range userSettingList {
-		s.userSettingCache.Store(getUserSettingCacheKey(userSetting.UserID, userSetting.Key), userSetting)
+	list := []*api.UserSetting{}
+	for _, raw := range userSettingRawList {
+		s.userSettingCache.Store(getUserSettingCacheKey(*raw), raw)
+		list = append(list, raw.toUserSetting())
 	}
-	return userSettingList, nil
+
+	return list, nil
 }
 
-func (s *Store) GetUserSetting(ctx context.Context, find *FindUserSetting) (*UserSetting, error) {
-	if find.UserID != nil {
-		if cache, ok := s.userSettingCache.Load(getUserSettingCacheKey(*find.UserID, find.Key)); ok {
-			return cache.(*UserSetting), nil
+func (s *Store) FindUserSetting(ctx context.Context, find *api.UserSettingFind) (*api.UserSetting, error) {
+	if userSetting, ok := s.userSettingCache.Load(getUserSettingFindCacheKey(find)); ok {
+		if userSetting == nil {
+			return nil, nil
 		}
+		return userSetting.(*userSettingRaw).toUserSetting(), nil
 	}
 
-	list, err := s.ListUserSettings(ctx, find)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer tx.Rollback()
+
+	list, err := findUserSettingList(ctx, tx, find)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(list) == 0 {
+		s.userSettingCache.Store(getUserSettingFindCacheKey(find), nil)
 		return nil, nil
 	}
 
-	userSetting := list[0]
-	return userSetting, nil
+	userSettingRaw := list[0]
+	s.userSettingCache.Store(getUserSettingCacheKey(*userSettingRaw), userSettingRaw)
+	return userSettingRaw.toUserSetting(), nil
 }
 
-type FindUserSettingV1 struct {
-	UserID *int32
-	Key    storepb.UserSettingKey
+func upsertUserSetting(ctx context.Context, tx *sql.Tx, upsert *api.UserSettingUpsert) (*userSettingRaw, error) {
+	query := `
+		INSERT INTO user_setting (
+			user_id, key, value
+		)
+		VALUES (?, ?, ?)
+		ON CONFLICT(user_id, key) DO UPDATE 
+		SET
+			value = EXCLUDED.value
+		RETURNING user_id, key, value
+	`
+	var userSettingRaw userSettingRaw
+	if err := tx.QueryRowContext(ctx, query, upsert.UserID, upsert.Key, upsert.Value).Scan(
+		&userSettingRaw.UserID,
+		&userSettingRaw.Key,
+		&userSettingRaw.Value,
+	); err != nil {
+		return nil, FormatError(err)
+	}
+
+	return &userSettingRaw, nil
 }
 
-func (s *Store) UpsertUserSettingV1(ctx context.Context, upsert *storepb.UserSetting) (*storepb.UserSetting, error) {
-	userSettingMessage, err := s.driver.UpsertUserSettingV1(ctx, upsert)
+func findUserSettingList(ctx context.Context, tx *sql.Tx, find *api.UserSettingFind) ([]*userSettingRaw, error) {
+	where, args := []string{"1 = 1"}, []any{}
+
+	if v := find.Key.String(); v != "" {
+		where, args = append(where, "key = ?"), append(args, v)
+	}
+
+	where, args = append(where, "user_id = ?"), append(args, find.UserID)
+
+	query := `
+		SELECT
+			user_id,
+		  key,
+			value
+		FROM user_setting
+		WHERE ` + strings.Join(where, " AND ")
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, FormatError(err)
 	}
+	defer rows.Close()
 
-	s.userSettingCache.Store(getUserSettingV1CacheKey(userSettingMessage.UserId, userSettingMessage.Key.String()), userSettingMessage)
-	return userSettingMessage, nil
-}
-
-func (s *Store) ListUserSettingsV1(ctx context.Context, find *FindUserSettingV1) ([]*storepb.UserSetting, error) {
-	userSettingList, err := s.driver.ListUserSettingsV1(ctx, find)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, userSetting := range userSettingList {
-		s.userSettingCache.Store(getUserSettingV1CacheKey(userSetting.UserId, userSetting.Key.String()), userSetting)
-	}
-	return userSettingList, nil
-}
-
-func (s *Store) GetUserSettingV1(ctx context.Context, find *FindUserSettingV1) (*storepb.UserSetting, error) {
-	if find.UserID != nil {
-		if cache, ok := s.userSettingCache.Load(getUserSettingV1CacheKey(*find.UserID, find.Key.String())); ok {
-			return cache.(*storepb.UserSetting), nil
+	userSettingRawList := make([]*userSettingRaw, 0)
+	for rows.Next() {
+		var userSettingRaw userSettingRaw
+		if err := rows.Scan(
+			&userSettingRaw.UserID,
+			&userSettingRaw.Key,
+			&userSettingRaw.Value,
+		); err != nil {
+			return nil, FormatError(err)
 		}
+
+		userSettingRawList = append(userSettingRawList, &userSettingRaw)
 	}
 
-	list, err := s.ListUserSettingsV1(ctx, find)
-	if err != nil {
-		return nil, err
+	if err := rows.Err(); err != nil {
+		return nil, FormatError(err)
 	}
 
-	if len(list) == 0 {
-		return nil, nil
-	}
-
-	userSetting := list[0]
-	s.userSettingCache.Store(getUserSettingV1CacheKey(userSetting.UserId, userSetting.Key.String()), userSetting)
-	return userSetting, nil
+	return userSettingRawList, nil
 }
 
-// GetUserAccessTokens returns the access tokens of the user.
-func (s *Store) GetUserAccessTokens(ctx context.Context, userID int32) ([]*storepb.AccessTokensUserSetting_AccessToken, error) {
-	userSetting, err := s.GetUserSettingV1(ctx, &FindUserSettingV1{
-		UserID: &userID,
-		Key:    storepb.UserSettingKey_USER_SETTING_ACCESS_TOKENS,
-	})
+func vacuumUserSetting(ctx context.Context, tx *sql.Tx) error {
+	stmt := `
+	DELETE FROM 
+		user_setting 
+	WHERE 
+		user_id NOT IN (
+			SELECT 
+				id 
+			FROM 
+				user
+		)`
+	_, err := tx.ExecContext(ctx, stmt)
 	if err != nil {
-		return nil, err
-	}
-	if userSetting == nil {
-		return []*storepb.AccessTokensUserSetting_AccessToken{}, nil
+		return FormatError(err)
 	}
 
-	accessTokensUserSetting := userSetting.GetAccessTokens()
-	return accessTokensUserSetting.AccessTokens, nil
+	return nil
 }

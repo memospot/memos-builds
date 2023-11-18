@@ -1,8 +1,7 @@
 package main
 
 import (
-	_ "github.com/go-sql-driver/mysql"
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/usememos/memos/cmd"
 )
