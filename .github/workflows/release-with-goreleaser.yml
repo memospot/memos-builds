@@ -54,7 +54,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: release --clean --timeout 60m
         env:
           # GORELEASER_CURRENT_TAG: ${{ github.env.latest_tag }}
           # GORELEASER_PREVIOUS_TAG: ${{ github.env.previous_tag }}
