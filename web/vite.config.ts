@@ -1,6 +1,6 @@
+import react from "@vitejs/plugin-react-swc";
 import { resolve } from "path";
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
 
 let devProxyServer = "http://localhost:8081/";
 if (process.env.DEV_PROXY_SERVER && process.env.DEV_PROXY_SERVER.length > 0) {
@@ -17,19 +17,19 @@ export default defineConfig({
     proxy: {
       "^/api": {
         target: devProxyServer,
-        changeOrigin: true,
+        xfwd: true,
       },
       "^/o/": {
         target: devProxyServer,
-        changeOrigin: true,
+        xfwd: true,
       },
       "^/u/.+/rss.xml": {
         target: devProxyServer,
-        changeOrigin: true,
+        xfwd: true,
       },
-      "/explore/rss.xml": {
+      "^/explore/rss.xml": {
         target: devProxyServer,
-        changeOrigin: true,
+        xfwd: true,
       },
     },
   },

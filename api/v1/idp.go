@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/usememos/memos/api/auth"
+
 	"github.com/usememos/memos/common/util"
 	"github.com/usememos/memos/store"
 )
@@ -88,7 +88,7 @@ func (s *APIV1Service) GetIdentityProviderList(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find identity provider list").SetInternal(err)
 	}
 
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	isHostUser := false
 	if ok {
 		user, err := s.Store.GetUser(ctx, &store.FindUser{
@@ -125,11 +125,10 @@ func (s *APIV1Service) GetIdentityProviderList(c echo.Context) error {
 //	@Failure	401		{object}	nil								"Missing user in session | Unauthorized"
 //	@Failure	400		{object}	nil								"Malformatted post identity provider request"
 //	@Failure	500		{object}	nil								"Failed to find user | Failed to create identity provider"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/idp [POST]
 func (s *APIV1Service) CreateIdentityProvider(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -173,11 +172,10 @@ func (s *APIV1Service) CreateIdentityProvider(c echo.Context) error {
 //	@Failure	401		{object}	nil						"Missing user in session | Unauthorized"
 //	@Failure	404		{object}	nil						"Identity provider not found"
 //	@Failure	500		{object}	nil						"Failed to find identity provider list | Failed to find user"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/idp/{idpId} [GET]
 func (s *APIV1Service) GetIdentityProvider(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -220,11 +218,10 @@ func (s *APIV1Service) GetIdentityProvider(c echo.Context) error {
 //	@Failure	400		{object}	nil		"ID is not a number: %s | Malformatted patch identity provider request"
 //	@Failure	401		{object}	nil		"Missing user in session | Unauthorized"
 //	@Failure	500		{object}	nil		"Failed to find user | Failed to patch identity provider"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/idp/{idpId} [DELETE]
 func (s *APIV1Service) DeleteIdentityProvider(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -262,11 +259,10 @@ func (s *APIV1Service) DeleteIdentityProvider(c echo.Context) error {
 //	@Failure	400		{object}	nil								"ID is not a number: %s | Malformatted patch identity provider request"
 //	@Failure	401		{object}	nil								"Missing user in session | Unauthorized
 //	@Failure	500		{object}	nil								"Failed to find user | Failed to patch identity provider"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/idp/{idpId} [PATCH]
 func (s *APIV1Service) UpdateIdentityProvider(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
