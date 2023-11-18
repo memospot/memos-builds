@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/usememos/memos/common/util"
 )
 
@@ -57,8 +59,10 @@ type FindMemo struct {
 	ID *int32
 
 	// Standard fields
-	RowStatus *RowStatus
-	CreatorID *int32
+	RowStatus       *RowStatus
+	CreatorID       *int32
+	CreatedTsAfter  *int64
+	CreatedTsBefore *int64
 
 	// Domain specific fields
 	Pinned         *bool
@@ -130,6 +134,12 @@ func (s *Store) ListMemos(ctx context.Context, find *FindMemo) ([]*Memo, error) 
 	}
 	if v := find.RowStatus; v != nil {
 		where, args = append(where, "memo.row_status = ?"), append(args, *v)
+	}
+	if v := find.CreatedTsBefore; v != nil {
+		where, args = append(where, "memo.created_ts < ?"), append(args, *v)
+	}
+	if v := find.CreatedTsAfter; v != nil {
+		where, args = append(where, "memo.created_ts > ?"), append(args, *v)
 	}
 	if v := find.Pinned; v != nil {
 		where = append(where, "memo_organizer.pinned = 1")
@@ -236,7 +246,7 @@ func (s *Store) ListMemos(ctx context.Context, find *FindMemo) ([]*Memo, error) 
 			for _, relatedMemoType := range relatedMemoTypeList {
 				relatedMemoTypeList := strings.Split(relatedMemoType, ":")
 				if len(relatedMemoTypeList) != 2 {
-					return nil, fmt.Errorf("invalid relation format")
+					return nil, errors.Errorf("invalid relation format")
 				}
 				relatedMemoID, err := util.ConvertStringToInt32(relatedMemoTypeList[0])
 				if err != nil {

@@ -7,7 +7,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+
 	"github.com/usememos/memos/server/version"
 )
 
@@ -15,6 +17,8 @@ import (
 type Profile struct {
 	// Mode can be "prod" or "dev" or "demo"
 	Mode string `json:"mode"`
+	// Addr is the binding address for server
+	Addr string `json:"-"`
 	// Port is the binding port for server
 	Port int `json:"-"`
 	// Data is the data directory
@@ -44,7 +48,7 @@ func checkDSN(dataDir string) (string, error) {
 	dataDir = strings.TrimRight(dataDir, "\\/")
 
 	if _, err := os.Stat(dataDir); err != nil {
-		return "", fmt.Errorf("unable to access data folder %s, err %w", dataDir, err)
+		return "", errors.Wrapf(err, "unable to access data folder %s", dataDir)
 	}
 
 	return dataDir, nil
