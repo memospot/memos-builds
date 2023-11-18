@@ -101,7 +101,7 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}l{{ end -}}
-      {{- if .Amd64 }}{{- if neq .Amd64 "v1" }}_{{ .Amd64 }}{{ end -}}{{ end -}}
+      {{- if .Amd64 }}{{- if ne .Amd64  "v1" }}_{{ .Amd64 }}{{ end -}}{{ end -}}
     format_overrides:
       - goos: windows
         format: zip
