@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,15 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
-	"github.com/disintegration/imaging"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -47,7 +43,6 @@ type Resource struct {
 
 type CreateResourceRequest struct {
 	Filename     string `json:"filename"`
-	InternalPath string `json:"internalPath"`
 	ExternalLink string `json:"externalLink"`
 	Type         string `json:"type"`
 }
@@ -81,11 +76,6 @@ func (s *APIV1Service) registerResourceRoutes(g *echo.Group) {
 	g.POST("/resource/blob", s.UploadResource)
 	g.PATCH("/resource/:resourceId", s.UpdateResource)
 	g.DELETE("/resource/:resourceId", s.DeleteResource)
-}
-
-func (s *APIV1Service) registerResourcePublicRoutes(g *echo.Group) {
-	g.GET("/r/:resourceId", s.streamResource)
-	g.GET("/r/:resourceId/*", s.streamResource)
 }
 
 // GetResourceList godoc
@@ -363,92 +353,6 @@ func (s *APIV1Service) UpdateResource(c echo.Context) error {
 	return c.JSON(http.StatusOK, convertResourceFromStore(resource))
 }
 
-// streamResource godoc
-//
-//	@Summary		Stream a resource
-//	@Description	*Swagger UI may have problems displaying other file types than images
-//	@Tags			resource
-//	@Produce		octet-stream
-//	@Param			resourceId	path		int	true	"Resource ID"
-//	@Param			thumbnail	query		int	false	"Thumbnail"
-//	@Success		200			{object}	nil	"Requested resource"
-//	@Failure		400			{object}	nil	"ID is not a number: %s | Failed to get resource visibility"
-//	@Failure		401			{object}	nil	"Resource visibility not match"
-//	@Failure		404			{object}	nil	"Resource not found: %d"
-//	@Failure		500			{object}	nil	"Failed to find resource by ID: %v | Failed to open the local resource: %s | Failed to read the local resource: %s"
-//	@Router			/o/r/{resourceId} [GET]
-func (s *APIV1Service) streamResource(c echo.Context) error {
-	ctx := c.Request().Context()
-	resourceID, err := util.ConvertStringToInt32(c.Param("resourceId"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("ID is not a number: %s", c.Param("resourceId"))).SetInternal(err)
-	}
-
-	resourceVisibility, err := checkResourceVisibility(ctx, s.Store, resourceID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Failed to get resource visibility").SetInternal(err)
-	}
-
-	// Protected resource require a logined user
-	userID, ok := c.Get(userIDContextKey).(int32)
-	if resourceVisibility == store.Protected && (!ok || userID <= 0) {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Resource visibility not match").SetInternal(err)
-	}
-
-	resource, err := s.Store.GetResource(ctx, &store.FindResource{
-		ID:      &resourceID,
-		GetBlob: true,
-	})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to find resource by ID: %v", resourceID)).SetInternal(err)
-	}
-	if resource == nil {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("Resource not found: %d", resourceID))
-	}
-
-	// Private resource require logined user is the creator
-	if resourceVisibility == store.Private && (!ok || userID != resource.CreatorID) {
-		return echo.NewHTTPError(http.StatusUnauthorized, "Resource visibility not match").SetInternal(err)
-	}
-
-	blob := resource.Blob
-	if resource.InternalPath != "" {
-		resourcePath := resource.InternalPath
-		src, err := os.Open(resourcePath)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to open the local resource: %s", resourcePath)).SetInternal(err)
-		}
-		defer src.Close()
-		blob, err = io.ReadAll(src)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read the local resource: %s", resourcePath)).SetInternal(err)
-		}
-	}
-
-	if c.QueryParam("thumbnail") == "1" && util.HasPrefixes(resource.Type, "image/png", "image/jpeg") {
-		ext := filepath.Ext(resource.Filename)
-		thumbnailPath := filepath.Join(s.Profile.Data, thumbnailImagePath, fmt.Sprintf("%d%s", resource.ID, ext))
-		thumbnailBlob, err := getOrGenerateThumbnailImage(blob, thumbnailPath)
-		if err != nil {
-			log.Warn(fmt.Sprintf("failed to get or generate local thumbnail with path %s", thumbnailPath), zap.Error(err))
-		} else {
-			blob = thumbnailBlob
-		}
-	}
-
-	c.Response().Writer.Header().Set(echo.HeaderCacheControl, "max-age=31536000, immutable")
-	c.Response().Writer.Header().Set(echo.HeaderContentSecurityPolicy, "default-src 'self'")
-	resourceType := strings.ToLower(resource.Type)
-	if strings.HasPrefix(resourceType, "text") {
-		resourceType = echo.MIMETextPlainCharsetUTF8
-	} else if strings.HasPrefix(resourceType, "video") || strings.HasPrefix(resourceType, "audio") {
-		http.ServeContent(c.Response(), c.Request(), resource.Filename, time.Unix(resource.UpdatedTs, 0), bytes.NewReader(blob))
-		return nil
-	}
-	c.Response().Writer.Header().Set("Content-Disposition", fmt.Sprintf(`filename="%s"`, resource.Filename))
-	return c.Stream(http.StatusOK, resourceType, bytes.NewReader(blob))
-}
-
 func (s *APIV1Service) createResourceCreateActivity(ctx context.Context, resource *store.Resource) error {
 	payload := ActivityResourceCreatePayload{
 		Filename: resource.Filename,
@@ -497,92 +401,6 @@ func replacePathTemplate(path, filename string) string {
 	return path
 }
 
-var availableGeneratorAmount int32 = 32
-
-func getOrGenerateThumbnailImage(srcBlob []byte, dstPath string) ([]byte, error) {
-	if _, err := os.Stat(dstPath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, errors.Wrap(err, "failed to check thumbnail image stat")
-		}
-
-		if atomic.LoadInt32(&availableGeneratorAmount) <= 0 {
-			return nil, errors.New("not enough available generator amount")
-		}
-		atomic.AddInt32(&availableGeneratorAmount, -1)
-		defer func() {
-			atomic.AddInt32(&availableGeneratorAmount, 1)
-		}()
-
-		reader := bytes.NewReader(srcBlob)
-		src, err := imaging.Decode(reader, imaging.AutoOrientation(true))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode thumbnail image")
-		}
-		thumbnailImage := imaging.Resize(src, 512, 0, imaging.Lanczos)
-
-		dstDir := path.Dir(dstPath)
-		if err := os.MkdirAll(dstDir, os.ModePerm); err != nil {
-			return nil, errors.Wrap(err, "failed to create thumbnail dir")
-		}
-
-		if err := imaging.Save(thumbnailImage, dstPath); err != nil {
-			return nil, errors.Wrap(err, "failed to resize thumbnail image")
-		}
-	}
-
-	dstFile, err := os.Open(dstPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open the local resource")
-	}
-	defer dstFile.Close()
-	dstBlob, err := io.ReadAll(dstFile)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read the local resource")
-	}
-	return dstBlob, nil
-}
-
-func checkResourceVisibility(ctx context.Context, s *store.Store, resourceID int32) (store.Visibility, error) {
-	memoResources, err := s.ListMemoResources(ctx, &store.FindMemoResource{
-		ResourceID: &resourceID,
-	})
-	if err != nil {
-		return store.Private, err
-	}
-
-	// If resource is belongs to no memo, it'll always PRIVATE.
-	if len(memoResources) == 0 {
-		return store.Private, nil
-	}
-
-	memoIDs := make([]int32, 0, len(memoResources))
-	for _, memoResource := range memoResources {
-		memoIDs = append(memoIDs, memoResource.MemoID)
-	}
-	visibilityList, err := s.FindMemosVisibilityList(ctx, memoIDs)
-	if err != nil {
-		return store.Private, err
-	}
-
-	var isProtected bool
-	for _, visibility := range visibilityList {
-		// If any memo is PUBLIC, resource should be PUBLIC too.
-		if visibility == store.Public {
-			return store.Public, nil
-		}
-
-		if visibility == store.Protected {
-			isProtected = true
-		}
-	}
-
-	if isProtected {
-		return store.Protected, nil
-	}
-
-	return store.Private, nil
-}
-
 func convertResourceFromStore(resource *store.Resource) *Resource {
 	return &Resource{
 		ID:           resource.ID,
@@ -607,14 +425,14 @@ func convertResourceFromStore(resource *store.Resource) *Resource {
 func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resource, r io.Reader) error {
 	systemSettingStorageServiceID, err := s.GetSystemSetting(ctx, &store.FindSystemSetting{Name: SystemSettingStorageServiceIDName.String()})
 	if err != nil {
-		return errors.Errorf("Failed to find SystemSettingStorageServiceIDName: %s", err)
+		return errors.Wrap(err, "Failed to find SystemSettingStorageServiceIDName")
 	}
 
-	storageServiceID := LocalStorage
+	storageServiceID := DefaultStorage
 	if systemSettingStorageServiceID != nil {
 		err = json.Unmarshal([]byte(systemSettingStorageServiceID.Value), &storageServiceID)
 		if err != nil {
-			return errors.Errorf("Failed to unmarshal storage service id: %s", err)
+			return errors.Wrap(err, "Failed to unmarshal storage service id")
 		}
 	}
 
@@ -622,7 +440,7 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 	if storageServiceID == DatabaseStorage {
 		fileBytes, err := io.ReadAll(r)
 		if err != nil {
-			return errors.Errorf("Failed to read file: %s", err)
+			return errors.Wrap(err, "Failed to read file")
 		}
 		create.Blob = fileBytes
 		return nil
@@ -630,13 +448,13 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 		// `LocalStorage` means save blob into local disk
 		systemSettingLocalStoragePath, err := s.GetSystemSetting(ctx, &store.FindSystemSetting{Name: SystemSettingLocalStoragePathName.String()})
 		if err != nil {
-			return errors.Errorf("Failed to find SystemSettingLocalStoragePathName: %s", err)
+			return errors.Wrap(err, "Failed to find SystemSettingLocalStoragePathName")
 		}
 		localStoragePath := "assets/{timestamp}_{filename}"
 		if systemSettingLocalStoragePath != nil && systemSettingLocalStoragePath.Value != "" {
 			err = json.Unmarshal([]byte(systemSettingLocalStoragePath.Value), &localStoragePath)
 			if err != nil {
-				return errors.Errorf("Failed to unmarshal SystemSettingLocalStoragePathName: %s", err)
+				return errors.Wrap(err, "Failed to unmarshal SystemSettingLocalStoragePathName")
 			}
 		}
 		filePath := filepath.FromSlash(localStoragePath)
@@ -647,16 +465,16 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 
 		dir := filepath.Dir(filePath)
 		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
-			return errors.Errorf("Failed to create directory: %s", err)
+			return errors.Wrap(err, "Failed to create directory")
 		}
 		dst, err := os.Create(filePath)
 		if err != nil {
-			return errors.Errorf("Failed to create file: %s", err)
+			return errors.Wrap(err, "Failed to create file")
 		}
 		defer dst.Close()
 		_, err = io.Copy(dst, r)
 		if err != nil {
-			return errors.Errorf("Failed to copy file: %s", err)
+			return errors.Wrap(err, "Failed to copy file")
 		}
 
 		create.InternalPath = filePath
@@ -666,14 +484,14 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 	// Others: store blob into external service, such as S3
 	storage, err := s.GetStorage(ctx, &store.FindStorage{ID: &storageServiceID})
 	if err != nil {
-		return errors.Errorf("Failed to find StorageServiceID: %s", err)
+		return errors.Wrap(err, "Failed to find StorageServiceID")
 	}
 	if storage == nil {
 		return errors.Errorf("Storage %d not found", storageServiceID)
 	}
 	storageMessage, err := ConvertStorageFromStore(storage)
 	if err != nil {
-		return errors.Errorf("Failed to ConvertStorageFromStore: %s", err)
+		return errors.Wrap(err, "Failed to ConvertStorageFromStore")
 	}
 
 	if storageMessage.Type != StorageS3 {
@@ -691,7 +509,7 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 		URLSuffix: s3Config.URLSuffix,
 	})
 	if err != nil {
-		return errors.Errorf("Failed to create s3 client: %s", err)
+		return errors.Wrap(err, "Failed to create s3 client")
 	}
 
 	filePath := s3Config.Path
@@ -702,7 +520,7 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 
 	link, err := s3Client.UploadFile(ctx, filePath, create.Type, r)
 	if err != nil {
-		return errors.Errorf("Failed to upload via s3 client: %s", err)
+		return errors.Wrap(err, "Failed to upload via s3 client")
 	}
 
 	create.ExternalLink = link
