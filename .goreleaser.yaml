@@ -21,6 +21,7 @@
 before:
   hooks: 
     - sh -c "cd ./memos-upstream ; cd ./web && pnpm i --frozen-lockfile"
+    # generate typescript types from protobuf files using type-gen script; falls back to buf generate
     - sh -c "cd ./memos-upstream ; $(cd ./web && pnpm type-gen) || $(cd ./proto && buf generate) || true" 
     - sh -c "cd ./memos-upstream ; cd ./web && pnpm build"
     # backup front-end placeholder only once
@@ -44,7 +45,6 @@ builds:
     # Notes on build targets:
     # - modernc.org/libc doesn't support Windows i386 and any sort of MIPS architecture:
     #   https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures
-    # - multiple GOAMD64 (v1-v4) SIMD targets currently aren't supported by goreleaser
     goos:
       - darwin
       - freebsd
@@ -59,7 +59,7 @@ builds:
       - riscv64
       - s390x
     goarm:
-      # - '5' # use software floating point; for CPUs without a VFP co-processor
+      - '5' # use software floating point; for CPUs without a VFP co-processor
       - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
       - "7" # use VFPv3; Cortex-A cores
     goamd64:
@@ -101,6 +101,7 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}l{{ end -}}
+      {{- if .Amd64 }}v{{ .Amd64 }}l{{ end -}}
     format_overrides:
       - goos: windows
         format: zip
