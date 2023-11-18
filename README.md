@@ -4,7 +4,6 @@ This project hosts builds for [Memos](https://github.com/usememos/memos), a beau
 
 Some of these builds are consumed by [Memospot](https://github.com/lincolnthalles/memospot), a self-contained, single user desktop client for Memos.
 
-
 <div align="center" width="100%" style="display: flex; justify-content: center;">
   <p align="center" width="100%">
 
@@ -40,9 +39,29 @@ Some of these builds are consumed by [Memospot](https://github.com/lincolnthalle
   </p>
 </div>
 
-## Notes
+## Platform variants
 
-All `amd64` binaries are built with SSE4.2 support, requiring at least a CPU launched on 2009 for Intel (first gen. Core), and 2013 for AMD.
+`arm` and `amd64` platforms have multiple builds, with different hardware optimizations. Choose the one that best suits the host CPU.
+
+> Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` CPU, use the ARM64 build.
+
+### amd64
+
+| Suffix | Target CPUs                                       |
+| ------ | ------------------------------------------------- |
+|   v1   | Runs on all AMD64/Intel 64 CPUs                   |
+|   v2   | Intel Nehalem (1st geN) / AMD Jaguar and newer    |
+|   v3   | Intel Haswell (4th gen) / AMD Excavator and newer |
+
+### arm
+
+| Suffix | Target CPUs                       |
+| ------ | ----------------------------------|
+|   v5   | Older ARM without VFP             |
+|   v6   | VFPv1 only: ARM11 or better cores |
+|   v7   | VFPv3: Cortex-A cores             |
+
+## Notes
 
 Most binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
 
@@ -58,9 +77,11 @@ Please do not open issues on the official Memos repository regarding these build
 ## Running as a Service
 
 You should manually setup a system service to start Memos on boot.
-[Memos Windows Service Guide](https://github.com/usememos/memos/blob/main/docs/windows-service.md)
+
+[Memos Windows Service Guide](docs/windows-service.md)
 
 Sample service environment setup. Adjust to openrc or systemd as needed.
+
 ```sh
 MEMOS_MODE="prod" # dev, prod, demo
 MEMOS_PORT="5230"
@@ -73,7 +94,6 @@ MEMOS_DSN="" # database connection string
 # Alternatively:
 ./memos --mode=prod --port=5230 --addr=127.0.0.1 --data=/opt/memos
 ```
-
 
 ## Star History
 
