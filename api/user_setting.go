@@ -15,7 +15,9 @@ const (
 	// UserSettingAppearanceKey is the key type for user appearance.
 	UserSettingAppearanceKey UserSettingKey = "appearance"
 	// UserSettingMemoVisibilityKey is the key type for user preference memo default visibility.
-	UserSettingMemoVisibilityKey UserSettingKey = "memo-visibility"
+	UserSettingMemoVisibilityKey UserSettingKey = "memoVisibility"
+	// UserSettingResourceVisibilityKey is the key type for user preference resource default visibility.
+	UserSettingResourceVisibilityKey UserSettingKey = "resourceVisibility"
 )
 
 // String returns the string format of UserSettingKey type.
@@ -26,33 +28,18 @@ func (key UserSettingKey) String() string {
 	case UserSettingAppearanceKey:
 		return "appearance"
 	case UserSettingMemoVisibilityKey:
-		return "memo-visibility"
+		return "memoVisibility"
+	case UserSettingResourceVisibilityKey:
+		return "resourceVisibility"
 	}
 	return ""
 }
 
 var (
-	UserSettingLocaleValue = []string{
-		"de",
-		"en",
-		"es",
-		"fr",
-		"it",
-		"ko",
-		"nl",
-		"pl",
-		"pt-BR",
-		"ru",
-		"sl",
-		"sv",
-		"tr",
-		"uk",
-		"vi",
-		"zh-Hans",
-		"zh-Hant",
-	}
-	UserSettingAppearanceValue     = []string{"system", "light", "dark"}
-	UserSettingMemoVisibilityValue = []Visibility{Private, Protected, Public}
+	UserSettingLocaleValue             = []string{"en", "zh", "vi", "fr", "nl", "sv", "de", "es", "uk", "ru", "it", "hant", "tr", "ko"}
+	UserSettingAppearanceValue         = []string{"system", "light", "dark"}
+	UserSettingMemoVisibilityValue     = []Visibility{Private, Protected, Public}
+	UserSettingResourceVisibilityValue = []Visibility{Private, Protected, Public}
 )
 
 type UserSetting struct {
@@ -95,6 +82,15 @@ func (upsert UserSettingUpsert) Validate() error {
 		}
 		if !slices.Contains(UserSettingMemoVisibilityValue, memoVisibilityValue) {
 			return fmt.Errorf("invalid user setting memo visibility value")
+		}
+	} else if upsert.Key == UserSettingResourceVisibilityKey {
+		resourceVisibilityValue := Private
+		err := json.Unmarshal([]byte(upsert.Value), &resourceVisibilityValue)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal user setting resource visibility value")
+		}
+		if !slices.Contains(UserSettingResourceVisibilityValue, resourceVisibilityValue) {
+			return fmt.Errorf("invalid user setting resource visibility value")
 		}
 	} else {
 		return fmt.Errorf("invalid user setting key")

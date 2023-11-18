@@ -14,7 +14,7 @@ type TextCompletionChoice struct {
 }
 
 type TextCompletionResponse struct {
-	Error   any                    `json:"error"`
+	Error   interface{}            `json:"error"`
 	Model   string                 `json:"model"`
 	Choices []TextCompletionChoice `json:"choices"`
 }
@@ -28,7 +28,7 @@ func PostTextCompletion(prompt string, apiKey string, apiHost string) (string, e
 		return "", err
 	}
 
-	values := map[string]any{
+	values := map[string]interface{}{
 		"model":       "gpt-3.5-turbo",
 		"prompt":      prompt,
 		"temperature": 0.5,

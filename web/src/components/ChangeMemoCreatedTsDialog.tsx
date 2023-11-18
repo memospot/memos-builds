@@ -1,8 +1,8 @@
-import { getNormalizedTimeString, getUnixTime } from "@/helpers/datetime";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useMemoStore } from "@/store/module";
+import { useMemoStore } from "../store/module";
 import Icon from "./Icon";
 import { generateDialog } from "./Dialog";
 
@@ -15,12 +15,12 @@ const ChangeMemoCreatedTsDialog: React.FC<Props> = (props: Props) => {
   const { destroy, memoId } = props;
   const memoStore = useMemoStore();
   const [createdAt, setCreatedAt] = useState("");
-  const maxDatetimeValue = getNormalizedTimeString();
+  const maxDatetimeValue = dayjs().format("YYYY-MM-DDTHH:mm");
 
   useEffect(() => {
     memoStore.getMemoById(memoId).then((memo) => {
       if (memo) {
-        const datetime = getNormalizedTimeString(memo.createdTs);
+        const datetime = dayjs(memo.createdTs).format("YYYY-MM-DDTHH:mm");
         setCreatedAt(datetime);
       } else {
         toast.error(t("message.memo-not-found"));
@@ -39,8 +39,8 @@ const ChangeMemoCreatedTsDialog: React.FC<Props> = (props: Props) => {
   };
 
   const handleSaveBtnClick = async () => {
-    const nowTs = getUnixTime();
-    const createdTs = getUnixTime(createdAt);
+    const nowTs = dayjs().unix();
+    const createdTs = dayjs(createdAt).unix();
 
     if (createdTs > nowTs) {
       toast.error(t("message.invalid-created-datetime"));
@@ -69,10 +69,9 @@ const ChangeMemoCreatedTsDialog: React.FC<Props> = (props: Props) => {
         </button>
       </div>
       <div className="flex flex-col justify-start items-start !w-72 max-w-full">
-        <div className="w-full bg-yellow-100 border border-yellow-400 rounded p-2 text-black">
-          <p className="uppercase">{t("message.change-memo-created-time-warning-1")}</p>
-          <p>{t("message.change-memo-created-time-warning-2")}</p>
-        </div>
+        <p className="w-full bg-yellow-100 border border-yellow-400 rounded p-2 text-xs leading-4">
+          THIS IS NOT A NORMAL BEHAVIOR. PLEASE MAKE SURE YOU REALLY NEED IT.
+        </p>
         <input
           className="input-text mt-2"
           type="datetime-local"

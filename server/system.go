@@ -9,8 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/usememos/memos/api"
 	"github.com/usememos/memos/common"
-	"github.com/usememos/memos/common/log"
-	"go.uber.org/zap"
 
 	"github.com/labstack/echo/v4"
 )
@@ -42,7 +40,6 @@ func (s *Server) registerSystemRoutes(g *echo.Group) {
 			Profile:            *s.Profile,
 			DBSize:             0,
 			AllowSignUp:        false,
-			IgnoreUpgrade:      false,
 			DisablePublicMemos: false,
 			AdditionalStyle:    "",
 			AdditionalScript:   "",
@@ -54,8 +51,7 @@ func (s *Server) registerSystemRoutes(g *echo.Group) {
 				Appearance:  "system",
 				ExternalURL: "",
 			},
-			StorageServiceID: api.DatabaseStorage,
-			LocalStoragePath: "",
+			StorageServiceID: 0,
 		}
 
 		systemSettingList, err := s.Store.FindSystemSettingList(ctx, &api.SystemSettingFind{})
@@ -63,21 +59,18 @@ func (s *Server) registerSystemRoutes(g *echo.Group) {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting list").SetInternal(err)
 		}
 		for _, systemSetting := range systemSettingList {
-			if systemSetting.Name == api.SystemSettingServerIDName || systemSetting.Name == api.SystemSettingSecretSessionName || systemSetting.Name == api.SystemSettingOpenAIConfigName {
+			if systemSetting.Name == api.SystemSettingServerID || systemSetting.Name == api.SystemSettingSecretSessionName || systemSetting.Name == api.SystemSettingOpenAIConfigName {
 				continue
 			}
 
-			var baseValue any
+			var baseValue interface{}
 			err := json.Unmarshal([]byte(systemSetting.Value), &baseValue)
 			if err != nil {
-				log.Warn("Failed to unmarshal system setting value", zap.String("setting name", systemSetting.Name.String()))
-				continue
+				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to unmarshal system setting value").SetInternal(err)
 			}
 
 			if systemSetting.Name == api.SystemSettingAllowSignUpName {
 				systemStatus.AllowSignUp = baseValue.(bool)
-			} else if systemSetting.Name == api.SystemSettingIgnoreUpgradeName {
-				systemStatus.IgnoreUpgrade = baseValue.(bool)
 			} else if systemSetting.Name == api.SystemSettingDisablePublicMemosName {
 				systemStatus.DisablePublicMemos = baseValue.(bool)
 			} else if systemSetting.Name == api.SystemSettingAdditionalStyleName {
@@ -93,8 +86,6 @@ func (s *Server) registerSystemRoutes(g *echo.Group) {
 				systemStatus.CustomizedProfile = customizedProfile
 			} else if systemSetting.Name == api.SystemSettingStorageServiceIDName {
 				systemStatus.StorageServiceID = int(baseValue.(float64))
-			} else if systemSetting.Name == api.SystemSettingLocalStoragePathName {
-				systemStatus.LocalStoragePath = baseValue.(string)
 			}
 		}
 
@@ -200,14 +191,14 @@ func (s *Server) registerSystemRoutes(g *echo.Group) {
 
 func (s *Server) getSystemServerID(ctx context.Context) (string, error) {
 	serverIDValue, err := s.Store.FindSystemSetting(ctx, &api.SystemSettingFind{
-		Name: api.SystemSettingServerIDName,
+		Name: api.SystemSettingServerID,
 	})
 	if err != nil && common.ErrorCode(err) != common.NotFound {
 		return "", err
 	}
 	if serverIDValue == nil || serverIDValue.Value == "" {
 		serverIDValue, err = s.Store.UpsertSystemSetting(ctx, &api.SystemSettingUpsert{
-			Name:  api.SystemSettingServerIDName,
+			Name:  api.SystemSettingServerID,
 			Value: uuid.NewString(),
 		})
 		if err != nil {

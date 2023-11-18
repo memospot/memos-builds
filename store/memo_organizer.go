@@ -148,7 +148,7 @@ func upsertMemoOrganizer(ctx context.Context, tx *sql.Tx, upsert *api.MemoOrgani
 }
 
 func deleteMemoOrganizer(ctx context.Context, tx *sql.Tx, delete *api.MemoOrganizerDelete) error {
-	where, args := []string{}, []any{}
+	where, args := []string{}, []interface{}{}
 
 	if v := delete.MemoID; v != nil {
 		where, args = append(where, "memo_id = ?"), append(args, *v)

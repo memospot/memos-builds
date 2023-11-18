@@ -9,10 +9,10 @@ import (
 )
 
 type response struct {
-	Data any `json:"data"`
+	Data interface{} `json:"data"`
 }
 
-func composeResponse(data any) response {
+func composeResponse(data interface{}) response {
 	return response{
 		Data: data,
 	}

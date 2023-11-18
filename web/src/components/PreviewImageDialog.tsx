@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { getDateTimeString } from "@/helpers/datetime";
+import * as utils from "../helpers/utils";
 import Icon from "./Icon";
 import { generateDialog } from "./Dialog";
-import "@/less/preview-image-dialog.less";
+import "../less/preview-image-dialog.less";
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 5;
@@ -14,12 +14,14 @@ interface Props extends DialogProps {
 }
 
 interface State {
+  angle: number;
   scale: number;
   originX: number;
   originY: number;
 }
 
 const defaultState: State = {
+  angle: 0,
   scale: 1,
   originX: -1,
   originY: -1,
@@ -38,7 +40,7 @@ const PreviewImageDialog: React.FC<Props> = ({ destroy, imgUrls, initialIndex }:
   const handleDownloadBtnClick = () => {
     const a = document.createElement("a");
     a.href = imgUrls[currentIndex];
-    a.download = `memos-${getDateTimeString(Date.now())}.png`;
+    a.download = `memos-${utils.getDateTimeString(Date.now())}.png`;
     a.click();
   };
 
@@ -102,22 +104,36 @@ const PreviewImageDialog: React.FC<Props> = ({ destroy, imgUrls, initialIndex }:
     }
   };
 
+  const handleImgRotate = (event: React.MouseEvent, angle: number) => {
+    const curImgAngle = (state.angle + angle + 360) % 360;
+    setState({
+      ...state,
+      originX: -1,
+      originY: -1,
+      angle: curImgAngle,
+    });
+  };
+
   const handleImgContainerScroll = (event: React.WheelEvent) => {
     const offsetX = event.nativeEvent.offsetX;
     const offsetY = event.nativeEvent.offsetY;
     const sign = event.deltaY < 0 ? 1 : -1;
-    const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, state.scale + sign * SCALE_UNIT));
+    const curAngle = Math.max(MIN_SCALE, Math.min(MAX_SCALE, state.scale + sign * SCALE_UNIT));
     setState({
       ...state,
       originX: offsetX,
       originY: offsetY,
-      scale: scale,
+      scale: curAngle,
     });
   };
 
-  const imageComputedStyle = {
-    transform: `scale(${state.scale})`,
-    transformOrigin: `${state.originX === -1 ? "center" : `${state.originX}px`} ${state.originY === -1 ? "center" : `${state.originY}px`}`,
+  const getImageComputedStyle = () => {
+    return {
+      transform: `scale(${state.scale}) rotate(${state.angle}deg)`,
+      transformOrigin: `${state.originX === -1 ? "center" : `${state.originX}px`} ${
+        state.originY === -1 ? "center" : `${state.originY}px`
+      }`,
+    };
   };
 
   return (
@@ -129,16 +145,22 @@ const PreviewImageDialog: React.FC<Props> = ({ destroy, imgUrls, initialIndex }:
         <button className="btn" onClick={handleDownloadBtnClick}>
           <Icon.Download className="icon-img" />
         </button>
+        <button className="btn" onClick={(e) => handleImgRotate(e, -90)}>
+          <Icon.RotateCcw className="icon-img" />
+        </button>
+        <button className="btn" onClick={(e) => handleImgRotate(e, 90)}>
+          <Icon.RotateCw className="icon-img" />
+        </button>
       </div>
       <div className="img-container" onClick={handleImgContainerClick}>
         <img
-          style={imageComputedStyle}
-          src={imgUrls[currentIndex]}
           onClick={(e) => e.stopPropagation()}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          src={imgUrls[currentIndex]}
           onWheel={handleImgContainerScroll}
+          style={getImageComputedStyle()}
         />
       </div>
     </>

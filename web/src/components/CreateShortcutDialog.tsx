@@ -1,14 +1,14 @@
+import dayjs from "dayjs";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useShortcutStore, useTagStore } from "@/store/module";
-import { filterConsts, getDefaultFilter, relationConsts } from "@/helpers/filter";
-import { getNormalizedTimeString } from "@/helpers/datetime";
-import useLoading from "@/hooks/useLoading";
+import { useShortcutStore, useTagStore } from "../store/module";
+import { filterConsts, getDefaultFilter, relationConsts } from "../helpers/filter";
+import useLoading from "../hooks/useLoading";
 import Icon from "./Icon";
 import { generateDialog } from "./Dialog";
-import Selector from "./kit/Selector";
-import "@/less/create-shortcut-dialog.less";
+import Selector from "./base/Selector";
+import "../less/create-shortcut-dialog.less";
 
 interface Props extends DialogProps {
   shortcutId?: ShortcutId;
@@ -166,7 +166,6 @@ const MemoFilterInputer: React.FC<MemoFilterInputerProps> = (props: MemoFilterIn
 
   const typeDataSource = Object.values(filterConsts).map(({ text, value }) => ({ text: t(text), value }));
   const operatorDataSource = Object.values(filterConsts[type as FilterType].operators).map(({ text, value }) => ({ text: t(text), value }));
-  const relationDataSource = Object.values(relationConsts).map(({ text, value }) => ({ text: t(text), value }));
 
   const valueDataSource =
     type === "TYPE"
@@ -177,11 +176,11 @@ const MemoFilterInputer: React.FC<MemoFilterInputerProps> = (props: MemoFilterIn
           return { text: t, value: t };
         });
 
-  const maxDatetimeValue = getNormalizedTimeString("9999-12-31T23:59");
+  const maxDatetimeValue = dayjs().format("9999-12-31T23:59");
 
   useEffect(() => {
     if (type === "DISPLAY_TIME") {
-      const nowDatetimeValue = getNormalizedTimeString();
+      const nowDatetimeValue = dayjs().format("YYYY-MM-DDTHH:mm");
       handleValueChange(nowDatetimeValue);
     } else {
       setValue(filter.value.value);
@@ -241,7 +240,7 @@ const MemoFilterInputer: React.FC<MemoFilterInputerProps> = (props: MemoFilterIn
       {index > 0 ? (
         <Selector
           className="relation-selector"
-          dataSource={relationDataSource}
+          dataSource={relationConsts}
           value={filter.relation}
           handleValueChanged={handleRelationChange}
         />

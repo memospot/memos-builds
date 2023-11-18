@@ -1,9 +1,8 @@
-import { camelCase } from "lodash-es";
-import * as api from "@/helpers/api";
-import * as storage from "@/helpers/storage";
-import { UNKNOWN_ID } from "@/helpers/consts";
-import { getSystemColorScheme } from "@/helpers/utils";
 import store, { useAppSelector } from "..";
+import * as api from "../../helpers/api";
+import * as storage from "../../helpers/storage";
+import { UNKNOWN_ID } from "../../helpers/consts";
+import { getSystemColorScheme } from "../../helpers/utils";
 import { setAppearance, setLocale } from "../reducer/global";
 import { setUser, patchUser, setHost, setUserById } from "../reducer/user";
 
@@ -11,6 +10,7 @@ const defaultSetting: Setting = {
   locale: "en",
   appearance: getSystemColorScheme(),
   memoVisibility: "PRIVATE",
+  resourceVisibility: "PRIVATE",
 };
 
 const defaultLocalSetting: LocalSetting = {
@@ -30,7 +30,7 @@ export const convertResponseModelUser = (user: User): User => {
 
   if (user.userSettingList) {
     for (const userSetting of user.userSettingList) {
-      (setting as any)[camelCase(userSetting.key)] = JSON.parse(userSetting.value);
+      (setting as any)[userSetting.key] = JSON.parse(userSetting.value);
     }
   }
 
@@ -120,7 +120,7 @@ export const useUserStore = () => {
         return undefined;
       }
     },
-    upsertUserSetting: async (key: string, value: any) => {
+    upsertUserSetting: async (key: keyof Setting, value: any) => {
       await api.upsertUserSetting({
         key: key as any,
         value: JSON.stringify(value),

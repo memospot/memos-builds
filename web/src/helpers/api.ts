@@ -164,17 +164,6 @@ export function getResourceList() {
   return axios.get<ResponseObject<Resource[]>>("/api/resource");
 }
 
-export function getResourceListWithLimit(resourceFind?: ResourceFind) {
-  const queryList = [];
-  if (resourceFind?.offset) {
-    queryList.push(`offset=${resourceFind.offset}`);
-  }
-  if (resourceFind?.limit) {
-    queryList.push(`limit=${resourceFind.limit}`);
-  }
-  return axios.get<ResponseObject<Resource[]>>(`/api/resource?${queryList.join("&")}`);
-}
-
 export function createResource(resourceCreate: ResourceCreate) {
   return axios.post<ResponseObject<Resource>>("/api/resource", resourceCreate);
 }
@@ -261,8 +250,16 @@ export function deleteIdentityProvider(id: IdentityProviderId) {
   return axios.delete(`/api/idp/${id}`);
 }
 
-export function postChatCompletion(messages: any[]) {
-  return axios.post<ResponseObject<string>>(`/api/openai/chat-completion`, messages);
+export function postChatCompletion(prompt: string) {
+  return axios.post<ResponseObject<string>>(`/api/openai/chat-completion`, {
+    prompt,
+  });
+}
+
+export function postTextCompletion(prompt: string) {
+  return axios.post<ResponseObject<string>>(`/api/openai/text-completion`, {
+    prompt,
+  });
 }
 
 export function checkOpenAIEnabled() {

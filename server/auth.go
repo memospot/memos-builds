@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *Server) registerAuthRoutes(g *echo.Group, secret string) {
+func (s *Server) registerAuthRoutes(g *echo.Group) {
 	g.POST("/auth/signin", func(c echo.Context) error {
 		ctx := c.Request().Context()
 		signin := &api.SignIn{}
@@ -44,8 +44,8 @@ func (s *Server) registerAuthRoutes(g *echo.Group, secret string) {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Incorrect login credentials, please try again")
 		}
 
-		if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate tokens").SetInternal(err)
+		if err = setUserSession(c, user); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set signin session").SetInternal(err)
 		}
 		if err := s.createUserAuthSignInActivity(c, user); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
@@ -128,8 +128,8 @@ func (s *Server) registerAuthRoutes(g *echo.Group, secret string) {
 			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("User has been archived with username %s", userInfo.Identifier))
 		}
 
-		if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate tokens").SetInternal(err)
+		if err = setUserSession(c, user); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set signin session").SetInternal(err)
 		}
 		if err := s.createUserAuthSignInActivity(c, user); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
@@ -196,18 +196,23 @@ func (s *Server) registerAuthRoutes(g *echo.Group, secret string) {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create user").SetInternal(err)
 		}
-		if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate tokens").SetInternal(err)
-		}
 		if err := s.createUserAuthSignUpActivity(c, user); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
 		}
 
+		err = setUserSession(c, user)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set signup session").SetInternal(err)
+		}
 		return c.JSON(http.StatusOK, composeResponse(user))
 	})
 
 	g.POST("/auth/signout", func(c echo.Context) error {
-		RemoveTokensAndCookies(c)
+		err := removeUserSession(c)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set sign out session").SetInternal(err)
+		}
+
 		return c.JSON(http.StatusOK, true)
 	})
 }
