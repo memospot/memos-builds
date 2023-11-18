@@ -1,4 +1,4 @@
-import { Divider } from "@mui/joy";
+import { Divider, Tooltip } from "@mui/joy";
 import { memo, useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
@@ -19,11 +19,13 @@ import MemoRelationListView from "./MemoRelationListView";
 import MemoResourceListView from "./MemoResourceListView";
 import showPreviewImageDialog from "./PreviewImageDialog";
 import UserAvatar from "./UserAvatar";
+import VisibilityIcon from "./VisibilityIcon";
 import "@/less/memo.less";
 
 interface Props {
   memo: Memo;
   showVisibility?: boolean;
+  showPinnedStyle?: boolean;
   lazyRendering?: boolean;
 }
 
@@ -42,6 +44,8 @@ const Memo: React.FC<Props> = (props: Props) => {
   const memoContainerRef = useRef<HTMLDivElement>(null);
   const readonly = memo.creatorUsername !== user?.username;
   const creator = userV1Store.getUserByUsername(memo.creatorUsername);
+  const referenceRelations = memo.relationList.filter((relation) => relation.type === "REFERENCE");
+  const commentRelations = memo.relationList.filter((relation) => relation.relatedMemoId === memo.id && relation.type === "COMMENT");
 
   // Prepare memo creator.
   useEffect(() => {
@@ -87,7 +91,7 @@ const Memo: React.FC<Props> = (props: Props) => {
 
   if (!shouldRender) {
     // Render a placeholder to occupy the space.
-    return <div className={`memo-wrapper min-h-[128px] ${"memos-" + memo.id}`} ref={memoContainerRef}></div>;
+    return <div className={`w-full h-32 !bg-transparent ${"memos-" + memo.id}`} ref={memoContainerRef}></div>;
   }
 
   const handleGotoMemoDetailPage = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -144,7 +148,7 @@ const Memo: React.FC<Props> = (props: Props) => {
     showCommonDialog({
       title: t("memo.delete-memo"),
       content: t("memo.delete-confirm"),
-      style: "warning",
+      style: "danger",
       dialogName: "delete-memo-dialog",
       onConfirm: async () => {
         await memoStore.deleteMemoById(memo.id);
@@ -224,18 +228,9 @@ const Memo: React.FC<Props> = (props: Props) => {
 
   return (
     <>
-      <div className={`memo-wrapper ${"memos-" + memo.id} ${memo.pinned && !readonly ? "pinned" : ""}`} ref={memoContainerRef}>
+      <div className={`memo-wrapper ${"memos-" + memo.id} ${memo.pinned && props.showPinnedStyle ? "pinned" : ""}`} ref={memoContainerRef}>
         <div className="memo-top-wrapper">
           <div className="w-full max-w-[calc(100%-20px)] flex flex-row justify-start items-center mr-1">
-            {creator && (
-              <>
-                <Link className="flex flex-row justify-start items-center" to={`/u/${encodeURIComponent(memo.creatorUsername)}`}>
-                  <UserAvatar className="!w-5 !h-auto mr-1" avatarUrl={creator.avatarUrl} />
-                  <span className="text-sm text-gray-600 max-w-[8em] truncate dark:text-gray-400">{creator.nickname}</span>
-                </Link>
-                <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
-              </>
-            )}
             <span className="text-sm text-gray-400 select-none" onClick={handleGotoMemoDetailPage}>
               {displayTime}
             </span>
@@ -248,18 +243,26 @@ const Memo: React.FC<Props> = (props: Props) => {
                 </span>
                 <div className="more-action-btns-wrapper">
                   <div className="more-action-btns-container min-w-[6em]">
-                    <span className="btn" onClick={handleTogglePinMemoBtnClick}>
-                      {memo.pinned ? <Icon.BookmarkMinus className="w-4 h-auto mr-2" /> : <Icon.BookmarkPlus className="w-4 h-auto mr-2" />}
-                      {memo.pinned ? t("common.unpin") : t("common.pin")}
-                    </span>
+                    {!memo.parent && (
+                      <span className="btn" onClick={handleTogglePinMemoBtnClick}>
+                        {memo.pinned ? (
+                          <Icon.BookmarkMinus className="w-4 h-auto mr-2" />
+                        ) : (
+                          <Icon.BookmarkPlus className="w-4 h-auto mr-2" />
+                        )}
+                        {memo.pinned ? t("common.unpin") : t("common.pin")}
+                      </span>
+                    )}
                     <span className="btn" onClick={handleEditMemoClick}>
                       <Icon.Edit3 className="w-4 h-auto mr-2" />
                       {t("common.edit")}
                     </span>
-                    <span className="btn" onClick={handleMarkMemoClick}>
-                      <Icon.Link className="w-4 h-auto mr-2" />
-                      {t("common.mark")}
-                    </span>
+                    {!memo.parent && (
+                      <span className="btn" onClick={handleMarkMemoClick}>
+                        <Icon.Link className="w-4 h-auto mr-2" />
+                        {t("common.mark")}
+                      </span>
+                    )}
                     <Divider className="!my-1" />
                     <span className="btn text-orange-500" onClick={handleArchiveMemoClick}>
                       <Icon.Archive className="w-4 h-auto mr-2" />
@@ -281,7 +284,52 @@ const Memo: React.FC<Props> = (props: Props) => {
           onMemoContentDoubleClick={handleMemoContentDoubleClick}
         />
         <MemoResourceListView resourceList={memo.resourceList} />
-        <MemoRelationListView relationList={memo.relationList} />
+        <MemoRelationListView memo={memo} relationList={referenceRelations} />
+        <div className="mt-4 w-full flex flex-row justify-between items-center gap-2">
+          <div className="flex flex-row justify-start items-center">
+            {creator && (
+              <>
+                <Link className="flex flex-row justify-start items-center" to={`/m/${memo.id}`}>
+                  <Tooltip title={"Identifier"} placement="top">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">#{memo.id}</span>
+                  </Tooltip>
+                </Link>
+                <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
+                <Link to={`/u/${encodeURIComponent(memo.creatorUsername)}`}>
+                  <Tooltip title={"Creator"} placement="top">
+                    <span className="flex flex-row justify-start items-center">
+                      <UserAvatar className="!w-5 !h-auto mr-1" avatarUrl={creator.avatarUrl} />
+                      <span className="text-sm text-gray-600 max-w-[8em] truncate dark:text-gray-400">{creator.nickname}</span>
+                    </span>
+                  </Tooltip>
+                </Link>
+                {memo.pinned && props.showPinnedStyle && (
+                  <>
+                    <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
+                    <Tooltip title={"Pinned"} placement="top">
+                      <Icon.Bookmark className="w-4 h-auto text-green-600" />
+                    </Tooltip>
+                  </>
+                )}
+                {props.showVisibility && memo.visibility !== "PRIVATE" && (
+                  <>
+                    <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
+                    <Tooltip title={t(`memo.visibility.${memo.visibility.toLowerCase()}` as any)} placement="top">
+                      <span>
+                        <VisibilityIcon visibility={memo.visibility} />
+                      </span>
+                    </Tooltip>
+                  </>
+                )}
+                <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
+                <Link className="flex flex-row justify-start items-center" to={`/m/${memo.id}`}>
+                  <Icon.MessageCircle className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">{commentRelations.length}</span>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
