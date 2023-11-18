@@ -2,21 +2,39 @@ package v1
 
 import (
 	"github.com/labstack/echo/v4"
+
+	"github.com/usememos/memos/plugin/telegram"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
 )
 
 type APIV1Service struct {
-	Secret  string
-	Profile *profile.Profile
-	Store   *store.Store
+	Secret      string
+	Profile     *profile.Profile
+	Store       *store.Store
+	telegramBot *telegram.Bot
 }
 
-func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store) *APIV1Service {
+// @title						memos API
+// @version					1.0
+// @description				A privacy-first, lightweight note-taking service.
+//
+// @contact.name				API Support
+// @contact.url				https://github.com/orgs/usememos/discussions
+//
+// @license.name				MIT License
+// @license.url				https://github.com/usememos/memos/blob/main/LICENSE
+//
+// @BasePath					/
+//
+// @externalDocs.url			https://usememos.com/
+// @externalDocs.description	Find out more about Memos.
+func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store, telegramBot *telegram.Bot) *APIV1Service {
 	return &APIV1Service{
-		Secret:  secret,
-		Profile: profile,
-		Store:   store,
+		Secret:      secret,
+		Profile:     profile,
+		Store:       store,
+		telegramBot: telegramBot,
 	}
 }
 
@@ -50,4 +68,7 @@ func (s *APIV1Service) Register(rootGroup *echo.Group) {
 	})
 	s.registerGetterPublicRoutes(publicGroup)
 	s.registerResourcePublicRoutes(publicGroup)
+
+	// programmatically set API version same as the server version
+	SwaggerInfo.Version = s.Profile.Version
 }

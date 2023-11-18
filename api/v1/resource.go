@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,12 +20,12 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/usememos/memos/api/auth"
+	"go.uber.org/zap"
+
 	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/common/util"
 	"github.com/usememos/memos/plugin/storage/s3"
 	"github.com/usememos/memos/store"
-	"go.uber.org/zap"
 )
 
 type Resource struct {
@@ -44,17 +43,13 @@ type Resource struct {
 	ExternalLink string `json:"externalLink"`
 	Type         string `json:"type"`
 	Size         int64  `json:"size"`
-
-	// Related fields
-	LinkedMemoAmount int `json:"linkedMemoAmount"`
 }
 
 type CreateResourceRequest struct {
-	Filename        string `json:"filename"`
-	InternalPath    string `json:"internalPath"`
-	ExternalLink    string `json:"externalLink"`
-	Type            string `json:"type"`
-	DownloadToLocal bool   `json:"downloadToLocal"`
+	Filename     string `json:"filename"`
+	InternalPath string `json:"internalPath"`
+	ExternalLink string `json:"externalLink"`
+	Type         string `json:"type"`
 }
 
 type FindResourceRequest struct {
@@ -103,11 +98,10 @@ func (s *APIV1Service) registerResourcePublicRoutes(g *echo.Group) {
 //	@Success	200		{object}	[]store.Resource	"Resource list"
 //	@Failure	401		{object}	nil					"Missing user in session"
 //	@Failure	500		{object}	nil					"Failed to fetch resource list"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/resource [GET]
 func (s *APIV1Service) GetResourceList(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -143,11 +137,10 @@ func (s *APIV1Service) GetResourceList(c echo.Context) error {
 //	@Failure	400		{object}	nil						"Malformatted post resource request | Invalid external link | Invalid external link scheme | Failed to request %s | Failed to read %s | Failed to read mime from %s"
 //	@Failure	401		{object}	nil						"Missing user in session"
 //	@Failure	500		{object}	nil						"Failed to save resource | Failed to create resource | Failed to create activity"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/resource [POST]
 func (s *APIV1Service) CreateResource(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -172,41 +165,6 @@ func (s *APIV1Service) CreateResource(c echo.Context) error {
 		if linkURL.Scheme != "http" && linkURL.Scheme != "https" {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid external link scheme")
 		}
-
-		if request.DownloadToLocal {
-			resp, err := http.Get(linkURL.String())
-			if err != nil {
-				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Failed to request %s", request.ExternalLink))
-			}
-			defer resp.Body.Close()
-
-			blob, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Failed to read %s", request.ExternalLink))
-			}
-
-			mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-			if err != nil {
-				return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Failed to read mime from %s", request.ExternalLink))
-			}
-			create.Type = mediaType
-
-			filename := path.Base(linkURL.Path)
-			if path.Ext(filename) == "" {
-				extensions, _ := mime.ExtensionsByType(mediaType)
-				if len(extensions) > 0 {
-					filename += extensions[0]
-				}
-			}
-			create.Filename = filename
-			create.ExternalLink = ""
-			create.Size = int64(len(blob))
-
-			err = SaveResourceBlob(ctx, s.Store, create, bytes.NewReader(blob))
-			if err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save resource").SetInternal(err)
-			}
-		}
 	}
 
 	resource, err := s.Store.CreateResource(ctx, create)
@@ -230,11 +188,10 @@ func (s *APIV1Service) CreateResource(c echo.Context) error {
 //	@Failure	400		{object}	nil				"Upload file not found | File size exceeds allowed limit of %d MiB | Failed to parse upload data"
 //	@Failure	401		{object}	nil				"Missing user in session"
 //	@Failure	500		{object}	nil				"Failed to get uploading file | Failed to open file | Failed to save resource | Failed to create resource | Failed to create activity"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/resource/blob [POST]
 func (s *APIV1Service) UploadResource(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -303,11 +260,10 @@ func (s *APIV1Service) UploadResource(c echo.Context) error {
 //	@Failure	401			{object}	nil		"Missing user in session"
 //	@Failure	404			{object}	nil		"Resource not found: %d"
 //	@Failure	500			{object}	nil		"Failed to find resource | Failed to delete resource"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/resource/{resourceId} [DELETE]
 func (s *APIV1Service) DeleteResource(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -360,11 +316,10 @@ func (s *APIV1Service) DeleteResource(c echo.Context) error {
 //	@Failure	401			{object}	nil						"Missing user in session | Unauthorized"
 //	@Failure	404			{object}	nil						"Resource not found: %d"
 //	@Failure	500			{object}	nil						"Failed to find resource | Failed to patch resource"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/resource/{resourceId} [PATCH]
 func (s *APIV1Service) UpdateResource(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -435,7 +390,7 @@ func (s *APIV1Service) streamResource(c echo.Context) error {
 	}
 
 	// Protected resource require a logined user
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if resourceVisibility == store.Protected && (!ok || userID <= 0) {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Resource visibility not match").SetInternal(err)
 	}
@@ -630,17 +585,16 @@ func checkResourceVisibility(ctx context.Context, s *store.Store, resourceID int
 
 func convertResourceFromStore(resource *store.Resource) *Resource {
 	return &Resource{
-		ID:               resource.ID,
-		CreatorID:        resource.CreatorID,
-		CreatedTs:        resource.CreatedTs,
-		UpdatedTs:        resource.UpdatedTs,
-		Filename:         resource.Filename,
-		Blob:             resource.Blob,
-		InternalPath:     resource.InternalPath,
-		ExternalLink:     resource.ExternalLink,
-		Type:             resource.Type,
-		Size:             resource.Size,
-		LinkedMemoAmount: resource.LinkedMemoAmount,
+		ID:           resource.ID,
+		CreatorID:    resource.CreatorID,
+		CreatedTs:    resource.CreatedTs,
+		UpdatedTs:    resource.UpdatedTs,
+		Filename:     resource.Filename,
+		Blob:         resource.Blob,
+		InternalPath: resource.InternalPath,
+		ExternalLink: resource.ExternalLink,
+		Type:         resource.Type,
+		Size:         resource.Size,
 	}
 }
 
@@ -653,14 +607,14 @@ func convertResourceFromStore(resource *store.Resource) *Resource {
 func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resource, r io.Reader) error {
 	systemSettingStorageServiceID, err := s.GetSystemSetting(ctx, &store.FindSystemSetting{Name: SystemSettingStorageServiceIDName.String()})
 	if err != nil {
-		return fmt.Errorf("Failed to find SystemSettingStorageServiceIDName: %s", err)
+		return errors.Errorf("Failed to find SystemSettingStorageServiceIDName: %s", err)
 	}
 
-	storageServiceID := DatabaseStorage
+	storageServiceID := LocalStorage
 	if systemSettingStorageServiceID != nil {
 		err = json.Unmarshal([]byte(systemSettingStorageServiceID.Value), &storageServiceID)
 		if err != nil {
-			return fmt.Errorf("Failed to unmarshal storage service id: %s", err)
+			return errors.Errorf("Failed to unmarshal storage service id: %s", err)
 		}
 	}
 
@@ -668,23 +622,21 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 	if storageServiceID == DatabaseStorage {
 		fileBytes, err := io.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("Failed to read file: %s", err)
+			return errors.Errorf("Failed to read file: %s", err)
 		}
 		create.Blob = fileBytes
 		return nil
-	}
-
-	// `LocalStorage` means save blob into local disk
-	if storageServiceID == LocalStorage {
+	} else if storageServiceID == LocalStorage {
+		// `LocalStorage` means save blob into local disk
 		systemSettingLocalStoragePath, err := s.GetSystemSetting(ctx, &store.FindSystemSetting{Name: SystemSettingLocalStoragePathName.String()})
 		if err != nil {
-			return fmt.Errorf("Failed to find SystemSettingLocalStoragePathName: %s", err)
+			return errors.Errorf("Failed to find SystemSettingLocalStoragePathName: %s", err)
 		}
-		localStoragePath := "assets/{filename}"
+		localStoragePath := "assets/{timestamp}_{filename}"
 		if systemSettingLocalStoragePath != nil && systemSettingLocalStoragePath.Value != "" {
 			err = json.Unmarshal([]byte(systemSettingLocalStoragePath.Value), &localStoragePath)
 			if err != nil {
-				return fmt.Errorf("Failed to unmarshal SystemSettingLocalStoragePathName: %s", err)
+				return errors.Errorf("Failed to unmarshal SystemSettingLocalStoragePathName: %s", err)
 			}
 		}
 		filePath := filepath.FromSlash(localStoragePath)
@@ -695,16 +647,16 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 
 		dir := filepath.Dir(filePath)
 		if err = os.MkdirAll(dir, os.ModePerm); err != nil {
-			return fmt.Errorf("Failed to create directory: %s", err)
+			return errors.Errorf("Failed to create directory: %s", err)
 		}
 		dst, err := os.Create(filePath)
 		if err != nil {
-			return fmt.Errorf("Failed to create file: %s", err)
+			return errors.Errorf("Failed to create file: %s", err)
 		}
 		defer dst.Close()
 		_, err = io.Copy(dst, r)
 		if err != nil {
-			return fmt.Errorf("Failed to copy file: %s", err)
+			return errors.Errorf("Failed to copy file: %s", err)
 		}
 
 		create.InternalPath = filePath
@@ -714,18 +666,18 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 	// Others: store blob into external service, such as S3
 	storage, err := s.GetStorage(ctx, &store.FindStorage{ID: &storageServiceID})
 	if err != nil {
-		return fmt.Errorf("Failed to find StorageServiceID: %s", err)
+		return errors.Errorf("Failed to find StorageServiceID: %s", err)
 	}
 	if storage == nil {
-		return fmt.Errorf("Storage %d not found", storageServiceID)
+		return errors.Errorf("Storage %d not found", storageServiceID)
 	}
 	storageMessage, err := ConvertStorageFromStore(storage)
 	if err != nil {
-		return fmt.Errorf("Failed to ConvertStorageFromStore: %s", err)
+		return errors.Errorf("Failed to ConvertStorageFromStore: %s", err)
 	}
 
 	if storageMessage.Type != StorageS3 {
-		return fmt.Errorf("Unsupported storage type: %s", storageMessage.Type)
+		return errors.Errorf("Unsupported storage type: %s", storageMessage.Type)
 	}
 
 	s3Config := storageMessage.Config.S3Config
@@ -739,7 +691,7 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 		URLSuffix: s3Config.URLSuffix,
 	})
 	if err != nil {
-		return fmt.Errorf("Failed to create s3 client: %s", err)
+		return errors.Errorf("Failed to create s3 client: %s", err)
 	}
 
 	filePath := s3Config.Path
@@ -750,7 +702,7 @@ func SaveResourceBlob(ctx context.Context, s *store.Store, create *store.Resourc
 
 	link, err := s3Client.UploadFile(ctx, filePath, create.Type, r)
 	if err != nil {
-		return fmt.Errorf("Failed to upload via s3 client: %s", err)
+		return errors.Errorf("Failed to upload via s3 client: %s", err)
 	}
 
 	create.ExternalLink = link

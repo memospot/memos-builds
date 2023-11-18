@@ -3,10 +3,11 @@ package v2
 import (
 	"context"
 
-	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
-	"github.com/usememos/memos/store"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
+	"github.com/usememos/memos/store"
 )
 
 type TagService struct {
@@ -34,7 +35,6 @@ func (s *TagService) ListTags(ctx context.Context, request *apiv2pb.ListTagsRequ
 	for _, tag := range tags {
 		response.Tags = append(response.Tags, convertTagFromStore(tag))
 	}
-
 	return response, nil
 }
 
