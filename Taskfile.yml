@@ -5,21 +5,25 @@ tasks:
     desc: Build binaries for current OS/Arch
     cmds:
       - goreleaser build --clean --single-target
+      - task: clean
 
   build:all:
     desc: Build binaries for all OS/Arch
     cmds:
       - goreleaser build --clean
+      - task: clean
 
   build:snapshot:
     desc: Build binaries for current OS/Arch, ignores git status
     cmds:
       - goreleaser build --snapshot --clean --single-target
+      - task: clean
 
   build:snapshot:all:
     desc: Build binaries for all OS/Arch, ignores git status
     cmds:
       - goreleaser build --snapshot --clean
+      - task: clean
 
   clean:
     desc: Cleanup build artifacts
