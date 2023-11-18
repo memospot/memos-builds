@@ -57,7 +57,7 @@ tasks:
       - sh -c "rm -rf ./memos-upstream || true"
       - git rm -fr memos-upstream --ignore-unmatch
       - git commit -m "Remove memos-upstream subtree"
-      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
+      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Setup memos-upstream subtree"
 
   pushbuild:
     desc: |
