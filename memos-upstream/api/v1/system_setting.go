@@ -2,12 +2,12 @@ package v1
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/usememos/memos/api/auth"
+	"github.com/pkg/errors"
+
 	"github.com/usememos/memos/store"
 )
 
@@ -91,11 +91,10 @@ func (s *APIV1Service) registerSystemSettingRoutes(g *echo.Group) {
 //	@Success	200	{object}	[]SystemSetting	"System setting list"
 //	@Failure	401	{object}	nil				"Missing user in session | Unauthorized"
 //	@Failure	500	{object}	nil				"Failed to find user | Failed to find system setting list"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/system/setting [GET]
 func (s *APIV1Service) GetSystemSettingList(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -134,11 +133,10 @@ func (s *APIV1Service) GetSystemSettingList(c echo.Context) error {
 //	@Failure	401		{object}	nil							"Missing user in session | Unauthorized"
 //	@Failure	403		{object}	nil							"Cannot disable passwords if no SSO identity provider is configured."
 //	@Failure	500		{object}	nil							"Failed to find user | Failed to upsert system setting"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/system/setting [POST]
 func (s *APIV1Service) CreateSystemSetting(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -189,36 +187,36 @@ func (s *APIV1Service) CreateSystemSetting(c echo.Context) error {
 func (upsert UpsertSystemSettingRequest) Validate() error {
 	switch settingName := upsert.Name; settingName {
 	case SystemSettingServerIDName:
-		return fmt.Errorf("updating %v is not allowed", settingName)
+		return errors.Errorf("updating %v is not allowed", settingName)
 	case SystemSettingAllowSignUpName:
 		var value bool
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingDisablePasswordLoginName:
 		var value bool
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingDisablePublicMemosName:
 		var value bool
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingMaxUploadSizeMiBName:
 		var value int
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingAdditionalStyleName:
 		var value string
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingAdditionalScriptName:
 		var value string
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingCustomizedProfileName:
 		customizedProfile := CustomizedProfile{
@@ -230,27 +228,27 @@ func (upsert UpsertSystemSettingRequest) Validate() error {
 			ExternalURL: "",
 		}
 		if err := json.Unmarshal([]byte(upsert.Value), &customizedProfile); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingStorageServiceIDName:
 		// Note: 0 is the default value(database) for storage service ID.
 		value := 0
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 		return nil
 	case SystemSettingLocalStoragePathName:
 		value := ""
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingAutoBackupIntervalName:
 		var value int
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 		if value < 0 {
-			return fmt.Errorf("must be positive")
+			return errors.Errorf("must be positive")
 		}
 	case SystemSettingTelegramBotTokenName:
 		if upsert.Value == "" {
@@ -262,19 +260,19 @@ func (upsert UpsertSystemSettingRequest) Validate() error {
 			if strings.HasPrefix(upsert.Value[slashIndex:], "/bot") {
 				return nil
 			}
-			return fmt.Errorf("token start with `http` must end with `/bot<token>`")
+			return errors.Errorf("token start with `http` must end with `/bot<token>`")
 		}
 		fragments := strings.Split(upsert.Value, ":")
 		if len(fragments) != 2 {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	case SystemSettingMemoDisplayWithUpdatedTsName:
 		var value bool
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return fmt.Errorf(systemSettingUnmarshalError, settingName)
+			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
 	default:
-		return fmt.Errorf("invalid system setting name")
+		return errors.Errorf("invalid system setting name")
 	}
 	return nil
 }

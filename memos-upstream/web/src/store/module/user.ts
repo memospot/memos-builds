@@ -1,11 +1,10 @@
 import { camelCase } from "lodash-es";
 import * as api from "@/helpers/api";
-import { UNKNOWN_USERNAME } from "@/helpers/consts";
 import storage from "@/helpers/storage";
 import { getSystemColorScheme } from "@/helpers/utils";
 import store, { useAppSelector } from "..";
 import { setAppearance, setLocale } from "../reducer/global";
-import { patchUser, setHost, setUser, setUserById } from "../reducer/user";
+import { patchUser, setHost, setUser } from "../reducer/user";
 
 const defaultSetting: Setting = {
   locale: "en",
@@ -16,7 +15,6 @@ const defaultSetting: Setting = {
 
 const defaultLocalSetting: LocalSetting = {
   enableDoubleClickEditing: false,
-  enableAutoCollapse: false,
   dailyReviewTimeOffset: 0,
 };
 
@@ -69,27 +67,8 @@ export const initialUserState = async () => {
     if (user.setting.appearance) {
       store.dispatch(setAppearance(user.setting.appearance));
     }
+    return user;
   }
-};
-
-const getUserIdFromPath = () => {
-  const pathname = window.location.pathname;
-  const userIdRegex = /^\/u\/(\d+).*/;
-  const result = pathname.match(userIdRegex);
-  if (result && result.length === 2) {
-    return Number(result[1]);
-  }
-  return undefined;
-};
-
-const getUsernameFromPath = () => {
-  const pathname = window.location.pathname;
-  const usernameRegex = /^\/u\/(\w+).*/;
-  const result = pathname.match(usernameRegex);
-  if (result && result.length === 2) {
-    return String(result[1]);
-  }
-  return undefined;
 };
 
 const doSignIn = async () => {
@@ -109,37 +88,13 @@ const doSignOut = async () => {
 export const useUserStore = () => {
   const state = useAppSelector((state) => state.user);
 
-  const isVisitorMode = () => {
-    return state.user === undefined || (getUsernameFromPath() && state.user.username !== getUsernameFromPath());
-  };
-
   return {
     state,
     getState: () => {
       return store.getState().user;
     },
-    isVisitorMode,
-    getUserIdFromPath,
-    getUsernameFromPath,
     doSignIn,
     doSignOut,
-    getCurrentUsername: () => {
-      if (isVisitorMode()) {
-        return getUsernameFromPath() || UNKNOWN_USERNAME;
-      } else {
-        return state.user?.username || UNKNOWN_USERNAME;
-      }
-    },
-    getUserByUsername: async (username: string) => {
-      const { data } = await api.getUserByUsername(username);
-      if (data) {
-        const user = convertResponseModelUser(data);
-        store.dispatch(setUserById(user));
-        return user;
-      } else {
-        return undefined;
-      }
-    },
     upsertUserSetting: async (key: string, value: any) => {
       await api.upsertUserSetting({
         key: key as any,
@@ -152,10 +107,10 @@ export const useUserStore = () => {
       store.dispatch(patchUser({ localSetting }));
     },
     patchUser: async (userPatch: UserPatch): Promise<void> => {
-      const { data } = await api.patchUser(userPatch);
-      if (userPatch.id === store.getState().user.user?.id) {
-        const user = convertResponseModelUser(data);
-        store.dispatch(patchUser(user));
+      await api.patchUser(userPatch);
+      // If the user is the current user and the username is changed, reload the page.
+      if (userPatch.id === store.getState().user.user?.id && userPatch.username) {
+        window.location.reload();
       }
     },
     deleteUser: async (userDelete: UserDelete) => {

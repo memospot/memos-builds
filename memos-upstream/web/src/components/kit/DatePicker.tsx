@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getMemoStats } from "@/helpers/api";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
 import { getDateStampByDate, isFutureDate } from "@/helpers/datetime";
-import { useUserStore } from "@/store/module";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "../Icon";
 import "@/less/common/date-picker.less";
@@ -12,23 +12,23 @@ import "@/less/common/date-picker.less";
 interface DatePickerProps {
   className?: string;
   isFutureDateDisabled?: boolean;
-  datestamp: DateStamp;
-  handleDateStampChange: (datestamp: DateStamp) => void;
+  datestamp: number;
+  handleDateStampChange: (datestamp: number) => void;
 }
 
 const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
   const t = useTranslate();
   const { className, isFutureDateDisabled, datestamp, handleDateStampChange } = props;
-  const [currentDateStamp, setCurrentDateStamp] = useState<DateStamp>(getMonthFirstDayDateStamp(datestamp));
+  const [currentDateStamp, setCurrentDateStamp] = useState<number>(getMonthFirstDayDateStamp(datestamp));
   const [countByDate, setCountByDate] = useState(new Map());
-  const currentUsername = useUserStore().getCurrentUsername();
+  const user = useCurrentUser();
 
   useEffect(() => {
     setCurrentDateStamp(getMonthFirstDayDateStamp(datestamp));
   }, [datestamp]);
 
   useEffect(() => {
-    getMemoStats(currentUsername).then(({ data }) => {
+    getMemoStats(user.username).then(({ data }) => {
       const m = new Map();
       for (const record of data) {
         const date = getDateStampByDate(record * 1000);
@@ -36,7 +36,7 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
       }
       setCountByDate(m);
     });
-  }, [currentUsername]);
+  }, [user.username]);
 
   const firstDate = new Date(currentDateStamp);
   const firstDateDay = firstDate.getDay() === 0 ? 7 : firstDate.getDay();
@@ -55,35 +55,33 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
     });
   }
 
-  const handleDateItemClick = (datestamp: DateStamp) => {
+  const handleDateItemClick = (datestamp: number) => {
     handleDateStampChange(datestamp);
   };
 
-  const handleChangeMonthBtnClick = (i: -1 | 1) => {
-    const year = firstDate.getFullYear();
-    const month = firstDate.getMonth() + 1;
-    let nextDateStamp = 0;
-    if (month === 1 && i === -1) {
-      nextDateStamp = new Date(`${year - 1}/12/1`).getTime();
-    } else if (month === 12 && i === 1) {
-      nextDateStamp = new Date(`${year + 1}/1/1`).getTime();
-    } else {
-      nextDateStamp = new Date(`${year}/${month + i}/1`).getTime();
-    }
-    setCurrentDateStamp(getMonthFirstDayDateStamp(nextDateStamp));
+  const handleChangeMonthBtnClick = (i: number) => {
+    const nextDate = new Date(firstDate.getTime());
+    nextDate.setMonth(nextDate.getMonth() + i);
+    setCurrentDateStamp(getMonthFirstDayDateStamp(nextDate.getTime()));
   };
 
   return (
     <div className={`date-picker-wrapper ${className}`}>
       <div className="date-picker-header">
+        <Button variant="plain" color="neutral" onClick={() => handleChangeMonthBtnClick(-12)}>
+          <Icon.ChevronsLeft className="icon-img" />
+        </Button>
         <Button variant="plain" color="neutral" onClick={() => handleChangeMonthBtnClick(-1)}>
           <Icon.ChevronLeft className="icon-img" />
         </Button>
         <span className="normal-text">
-          {firstDate.getFullYear()}/{firstDate.getMonth() + 1}
+          {firstDate.getFullYear()}/{(firstDate.getMonth() + 1).toString().padStart(2, "0")}
         </span>
         <Button variant="plain" color="neutral" onClick={() => handleChangeMonthBtnClick(1)}>
           <Icon.ChevronRight className="icon-img" />
+        </Button>
+        <Button variant="plain" color="neutral" onClick={() => handleChangeMonthBtnClick(12)}>
+          <Icon.ChevronsRight className="icon-img" />
         </Button>
       </div>
       <div className="date-picker-day-container">
@@ -122,7 +120,7 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
   );
 };
 
-function getMonthDayAmount(datestamp: DateStamp): number {
+function getMonthDayAmount(datestamp: number): number {
   const dateTemp = new Date(datestamp);
   const currentDate = new Date(`${dateTemp.getFullYear()}/${dateTemp.getMonth() + 1}/1`);
   const nextMonthDate =
@@ -133,7 +131,7 @@ function getMonthDayAmount(datestamp: DateStamp): number {
   return (nextMonthDate.getTime() - currentDate.getTime()) / DAILY_TIMESTAMP;
 }
 
-function getMonthFirstDayDateStamp(timestamp: TimeStamp): DateStamp {
+function getMonthFirstDayDateStamp(timestamp: number): number {
   const dateTemp = new Date(timestamp);
   const currentDate = new Date(`${dateTemp.getFullYear()}/${dateTemp.getMonth() + 1}/1`);
   return currentDate.getTime();

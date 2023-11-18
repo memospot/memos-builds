@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/usememos/memos/api/auth"
+
 	"github.com/usememos/memos/common/util"
 	"github.com/usememos/memos/store"
 )
@@ -83,7 +83,6 @@ func (s *APIV1Service) GetMemoResourceList(c echo.Context) error {
 //	@Failure	400		{object}	nil							"ID is not a number: %s | Malformatted post memo resource request | Resource not found"
 //	@Failure	401		{object}	nil							"Missing user in session | Unauthorized to bind this resource"
 //	@Failure	500		{object}	nil							"Failed to fetch resource | Failed to upsert memo resource"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/memo/{memoId}/resource [POST]
 //
 // NOTES:
@@ -95,7 +94,7 @@ func (s *APIV1Service) BindMemoResource(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("ID is not a number: %s", c.Param("memoId"))).SetInternal(err)
 	}
 
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}
@@ -141,11 +140,10 @@ func (s *APIV1Service) BindMemoResource(c echo.Context) error {
 //	@Failure	400			{object}	nil		"Memo ID is not a number: %s | Resource ID is not a number: %s | Memo not found"
 //	@Failure	401			{object}	nil		"Missing user in session | Unauthorized"
 //	@Failure	500			{object}	nil		"Failed to find memo | Failed to fetch resource list"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/memo/{memoId}/resource/{resourceId} [DELETE]
 func (s *APIV1Service) UnbindMemoResource(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}

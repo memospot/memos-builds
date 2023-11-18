@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/usememos/memos/api/auth"
+	"go.uber.org/zap"
+
 	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
-	"go.uber.org/zap"
 )
 
 type SystemStatus struct {
@@ -89,7 +89,7 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 			Appearance:  "system",
 			ExternalURL: "",
 		},
-		StorageServiceID:         DatabaseStorage,
+		StorageServiceID:         LocalStorage,
 		LocalStoragePath:         "assets/{timestamp}_{filename}",
 		MemoDisplayWithUpdatedTs: false,
 	}
@@ -164,11 +164,10 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 //	@Success	200	{boolean}	true	"Database vacuumed"
 //	@Failure	401	{object}	nil		"Missing user in session | Unauthorized"
 //	@Failure	500	{object}	nil		"Failed to find user | Failed to ExecVacuum database"
-//	@Security	ApiKeyAuth
 //	@Router		/api/v1/system/vacuum [POST]
 func (s *APIV1Service) ExecVacuum(c echo.Context) error {
 	ctx := c.Request().Context()
-	userID, ok := c.Get(auth.UserIDContextKey).(int32)
+	userID, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
 		return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 	}

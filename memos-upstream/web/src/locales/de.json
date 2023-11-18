@@ -141,9 +141,6 @@
         "file-name-placeholder": "Dateiname",
         "type": "Typ",
         "type-placeholder": "Dateityp"
-      },
-      "download-link": {
-        "option": "Download-Link"
       }
     }
   },
@@ -240,7 +237,7 @@
         "title": "Server bearbeiten",
         "default": "Standard: memos",
         "icon-url": "Icon-URL",
-        "description": "Beschreibunb",
+        "description": "Beschreibung",
         "locale": "Sprache",
         "appearance": "Erscheinungsbild"
       },
