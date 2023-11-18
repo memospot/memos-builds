@@ -1,39 +1,43 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useParams } from "react-router-dom";
-import MemoFilter from "@/components/MemoFilter";
-import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
+import { useTranslation } from "react-i18next";
+import { useFilterStore, useMemoStore, useShortcutStore, useUserStore } from "@/store/module";
+import { TAG_REG, LINK_REG } from "@/labs/marked/parser";
 import { getTimeStampByDate } from "@/helpers/datetime";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { TAG_REG } from "@/labs/marked/parser";
-import { useFilterStore, useMemoStore } from "@/store/module";
-import { extractUsernameFromName } from "@/store/v1";
-import { useTranslate } from "@/utils/i18n";
-import Empty from "./Empty";
+import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
+import { checkShouldShowMemoWithFilters } from "@/helpers/filter";
 import Memo from "./Memo";
+import "@/less/memo-list.less";
 
-const MemoList: React.FC = () => {
-  const t = useTranslate();
-  const params = useParams();
+const MemoList = () => {
+  const { t } = useTranslation();
   const memoStore = useMemoStore();
+  const userStore = useUserStore();
+  const shortcutStore = useShortcutStore();
   const filterStore = useFilterStore();
   const filter = filterStore.state;
-  const { loadingStatus, memos } = memoStore.state;
-  const user = useCurrentUser();
-  const { tag: tagQuery, duration, text: textQuery, visibility } = filter;
-  const showMemoFilter = Boolean(tagQuery || (duration && duration.from < duration.to) || textQuery || visibility);
-  const username = params.username || extractUsernameFromName(user.name);
+  const { memos, isFetching } = memoStore.state;
+  const [isComplete, setIsComplete] = useState<boolean>(false);
 
-  const fetchMoreRef = useRef<HTMLSpanElement>(null);
+  const currentUserId = userStore.getCurrentUserId();
+  const { tag: tagQuery, duration, type: memoType, text: textQuery, shortcutId, visibility } = filter;
+  const shortcut = shortcutId ? shortcutStore.getShortcutById(shortcutId) : null;
+  const showMemoFilter = Boolean(tagQuery || (duration && duration.from < duration.to) || memoType || textQuery || shortcut || visibility);
 
   const shownMemos = (
-    showMemoFilter
+    showMemoFilter || shortcut
       ? memos.filter((memo) => {
           let shouldShow = true;
 
+          if (shortcut) {
+            const filters = JSON.parse(shortcut.payload) as Filter[];
+            if (Array.isArray(filters)) {
+              shouldShow = checkShouldShowMemoWithFilters(memo, filters);
+            }
+          }
           if (tagQuery) {
             const tagsSet = new Set<string>();
-            for (const t of Array.from(memo.content.match(new RegExp(TAG_REG, "gu")) ?? [])) {
+            for (const t of Array.from(memo.content.match(new RegExp(TAG_REG, "g")) ?? [])) {
               const tag = t.replace(TAG_REG, "$1").trim();
               const items = tag.split("/");
               let temp = "";
@@ -50,9 +54,16 @@ const MemoList: React.FC = () => {
           if (
             duration &&
             duration.from < duration.to &&
-            (getTimeStampByDate(memo.displayTs) < duration.from || getTimeStampByDate(memo.displayTs) > duration.to)
+            (getTimeStampByDate(memo.createdTs) < duration.from || getTimeStampByDate(memo.createdTs) > duration.to)
           ) {
             shouldShow = false;
+          }
+          if (memoType) {
+            if (memoType === "NOT_TAGGED" && memo.content.match(TAG_REG) !== null) {
+              shouldShow = false;
+            } else if (memoType === "LINKED" && memo.content.match(LINK_REG) === null) {
+              shouldShow = false;
+            }
           }
           if (textQuery && !memo.content.toLowerCase().includes(textQuery.toLowerCase())) {
             shouldShow = false;
@@ -64,72 +75,89 @@ const MemoList: React.FC = () => {
           return shouldShow;
         })
       : memos
-  ).filter((memo) => memo.creatorUsername === username && memo.rowStatus === "NORMAL" && !memo.parent);
+  ).filter((memo) => memo.creatorId === currentUserId);
 
   const pinnedMemos = shownMemos.filter((m) => m.pinned);
   const unpinnedMemos = shownMemos.filter((m) => !m.pinned);
   const memoSort = (mi: Memo, mj: Memo) => {
-    return mj.displayTs - mi.displayTs;
+    return mj.createdTs - mi.createdTs;
   };
   pinnedMemos.sort(memoSort);
   unpinnedMemos.sort(memoSort);
   const sortedMemos = pinnedMemos.concat(unpinnedMemos).filter((m) => m.rowStatus === "NORMAL");
 
   useEffect(() => {
-    const root = document.body.querySelector("#root");
-    if (root) {
-      root.scrollTo(0, 0);
+    memoStore
+      .fetchMemos()
+      .then((fetchedMemos) => {
+        if (fetchedMemos.length < DEFAULT_MEMO_LIMIT) {
+          setIsComplete(true);
+        } else {
+          setIsComplete(false);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        toast.error(error.response.data.message);
+      });
+  }, [currentUserId]);
+
+  useEffect(() => {
+    const pageWrapper = document.body.querySelector(".page-wrapper");
+    if (pageWrapper) {
+      pageWrapper.scrollTo(0, 0);
     }
   }, [filter]);
 
   useEffect(() => {
-    if (!fetchMoreRef.current) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      observer.disconnect();
+    if (isFetching || isComplete) {
+      return;
+    }
+    if (sortedMemos.length < DEFAULT_MEMO_LIMIT) {
       handleFetchMoreClick();
-    });
-    observer.observe(fetchMoreRef.current);
-
-    return () => observer.disconnect();
-  }, [loadingStatus]);
+    }
+  }, [isFetching, isComplete, filter, sortedMemos.length]);
 
   const handleFetchMoreClick = async () => {
     try {
-      await memoStore.fetchMemos(username, DEFAULT_MEMO_LIMIT, memos.length);
+      const fetchedMemos = await memoStore.fetchMemos(DEFAULT_MEMO_LIMIT, memos.length);
+      if (fetchedMemos.length < DEFAULT_MEMO_LIMIT) {
+        setIsComplete(true);
+      } else {
+        setIsComplete(false);
+      }
     } catch (error: any) {
+      console.error(error);
       toast.error(error.response.data.message);
     }
   };
 
   return (
-    <div className="flex flex-col justify-start items-start w-full max-w-full overflow-y-scroll pb-28 hide-scrollbar">
-      <MemoFilter />
+    <div className="memo-list-container">
       {sortedMemos.map((memo) => (
-        <Memo key={memo.id} memo={memo} lazyRendering showVisibility showPinnedStyle />
+        <Memo key={`${memo.id}-${memo.createdTs}`} memo={memo} />
       ))}
-
-      {loadingStatus === "fetching" ? (
-        <div className="flex flex-col justify-start items-center w-full mt-2 mb-1">
-          <p className="text-sm text-gray-400 italic">{t("memo.fetching-data")}</p>
+      {isFetching ? (
+        <div className="status-text-container fetching-tip">
+          <p className="status-text">{t("memo.fetching-data")}</p>
         </div>
       ) : (
-        <div className="flex flex-col justify-start items-center w-full my-6">
-          <div className="text-gray-400 italic">
-            {loadingStatus === "complete" ? (
-              sortedMemos.length === 0 && (
-                <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
-                  <Empty />
-                  <p className="mt-2 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
-                </div>
+        <div className="status-text-container">
+          <p className="status-text">
+            {isComplete ? (
+              sortedMemos.length === 0 ? (
+                t("message.no-memos")
+              ) : (
+                t("message.memos-ready")
               )
             ) : (
-              <span ref={fetchMoreRef} className="cursor-pointer hover:text-green-600" onClick={handleFetchMoreClick}>
-                {t("memo.fetch-more")}
-              </span>
+              <>
+                <span className="cursor-pointer hover:text-green-600" onClick={handleFetchMoreClick}>
+                  {t("memo.fetch-more")}
+                </span>
+              </>
             )}
-          </div>
+          </p>
         </div>
       )}
     </div>

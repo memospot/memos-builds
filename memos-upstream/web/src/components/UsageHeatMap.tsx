@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useFilterStore, useMemoStore, useUserStore } from "../store/module";
+import { useTranslation } from "react-i18next";
 import { getMemoStats } from "@/helpers/api";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
 import { getDateStampByDate, getDateString, getTimeStampByDate } from "@/helpers/datetime";
 import * as utils from "@/helpers/utils";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { useGlobalStore } from "@/store/module";
-import { useUserV1Store, extractUsernameFromName } from "@/store/v1";
-import { useTranslate, Translations } from "@/utils/i18n";
-import { useFilterStore, useMemoStore } from "../store/module";
 import "@/less/usage-heat-map.less";
 
 const tableConfig = {
@@ -32,16 +29,12 @@ interface DailyUsageStat {
 }
 
 const UsageHeatMap = () => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const filterStore = useFilterStore();
-  const userV1Store = useUserV1Store();
-  const user = useCurrentUser();
+  const userStore = useUserStore();
   const memoStore = useMemoStore();
   const todayTimeStamp = getDateStampByDate(Date.now());
-  const weekDay = new Date(todayTimeStamp).getDay();
-  const weekFromMonday = ["zh-Hans", "ko"].includes(useGlobalStore().state.locale);
-  const dayTips = weekFromMonday ? ["mon", "", "wed", "", "fri", "", "sun"] : ["sun", "", "tue", "", "thu", "", "sat"];
-  const todayDay = weekFromMonday ? (weekDay == 0 ? 7 : weekDay) : weekDay + 1;
+  const todayDay = new Date(todayTimeStamp).getDay() + 1;
   const nullCell = new Array(7 - todayDay).fill(0);
   const usedDaysAmount = (tableConfig.width - 1) * tableConfig.height + todayDay;
   const beginDayTimestamp = todayTimeStamp - usedDaysAmount * DAILY_TIMESTAMP;
@@ -53,21 +46,15 @@ const UsageHeatMap = () => {
   const containerElRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    userV1Store.getOrFetchUserByUsername(extractUsernameFromName(user.name)).then((user) => {
-      if (!user) {
-        return;
-      }
-      setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createTime)) / 1000 / 3600 / 24));
-    });
-  }, [user.name]);
-
-  useEffect(() => {
-    if (memos.length === 0) {
+    if (!userStore.state.user) {
       return;
     }
+    setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(userStore.state.user.createdTs)) / 1000 / 3600 / 24));
+  }, [userStore.state.user]);
 
-    getMemoStats(extractUsernameFromName(user.name))
-      .then(({ data }) => {
+  useEffect(() => {
+    getMemoStats(userStore.getCurrentUserId())
+      .then(({ data: { data } }) => {
         setMemoAmount(data.length);
         const newStat: DailyUsageStat[] = getInitialUsageStat(usedDaysAmount, beginDayTimestamp);
         for (const record of data) {
@@ -85,7 +72,11 @@ const UsageHeatMap = () => {
       .catch((error) => {
         console.error(error);
       });
-  }, [memos.length, user.name]);
+
+    return () => {
+      handleUsageStatItemMouseLeave();
+    };
+  }, [memos.length]);
 
   const handleUsageStatItemMouseEnter = useCallback((event: React.MouseEvent, item: DailyUsageStat) => {
     const tempDiv = document.createElement("div");
@@ -119,7 +110,7 @@ const UsageHeatMap = () => {
 
   // This interpolation is not being used because of the current styling,
   // but it can improve translation quality by giving it a more meaningful context
-  const tMemoInOpts = { amount: memoAmount, period: "", date: "" };
+  const tMemoInOpts = { amount: "", period: "", date: "" };
 
   return (
     <>
@@ -161,11 +152,13 @@ const UsageHeatMap = () => {
           ))}
         </div>
         <div className="day-tip-text-container">
-          {dayTips.map((v, i) => (
-            <span className="tip-text" key={i}>
-              {v && t(("days." + v) as Translations)}
-            </span>
-          ))}
+          <span className="tip-text">{t("days.sun")}</span>
+          <span className="tip-text"></span>
+          <span className="tip-text">{t("days.tue")}</span>
+          <span className="tip-text"></span>
+          <span className="tip-text">{t("days.thu")}</span>
+          <span className="tip-text"></span>
+          <span className="tip-text">{t("days.sat")}</span>
         </div>
       </div>
       <p className="w-full pl-4 text-xs -mt-2 mb-3 text-gray-400 dark:text-zinc-400">

@@ -8,7 +8,9 @@ interface Duration {
 interface State {
   tag?: string;
   duration?: Duration;
+  type?: MemoSpecType;
   text?: string;
+  shortcutId?: ShortcutId;
   visibility?: Visibility;
 }
 

@@ -1,33 +1,29 @@
-import BlockLatex from "./BlockLatex";
-import Blockquote from "./Blockquote";
-import Bold from "./Bold";
-import BoldEmphasis from "./BoldEmphasis";
-import Br from "./Br";
 import CodeBlock from "./CodeBlock";
-import DoneList from "./DoneList";
-import Emphasis from "./Emphasis";
-import Heading from "./Heading";
-import HorizontalRules from "./HorizontalRules";
-import Image from "./Image";
-import InlineCode from "./InlineCode";
-import InlineLatex from "./InlineLatex";
-import Link from "./Link";
-import OrderedList from "./OrderedList";
-import Paragraph from "./Paragraph";
-import PlainLink from "./PlainLink";
-import PlainText from "./PlainText";
-import Strikethrough from "./Strikethrough";
-import Tag from "./Tag";
 import TodoList from "./TodoList";
+import DoneList from "./DoneList";
+import OrderedList from "./OrderedList";
 import UnorderedList from "./UnorderedList";
+import Paragraph from "./Paragraph";
+import Br from "./Br";
+import Tag from "./Tag";
+import Image from "./Image";
+import Link from "./Link";
+import Bold from "./Bold";
+import Emphasis from "./Emphasis";
+import PlainLink from "./PlainLink";
+import InlineCode from "./InlineCode";
+import PlainText from "./PlainText";
+import BoldEmphasis from "./BoldEmphasis";
+import Blockquote from "./Blockquote";
+import HorizontalRules from "./HorizontalRules";
+import Strikethrough from "./Strikethrough";
+import Heading from "./Heading";
 
 export { TAG_REG } from "./Tag";
 export { LINK_REG } from "./Link";
-export { PLAIN_LINK_REG } from "./PlainLink";
 
 // The order determines the order of execution.
 export const blockElementParserList = [
-  BlockLatex,
   Br,
   CodeBlock,
   Blockquote,
@@ -39,16 +35,5 @@ export const blockElementParserList = [
   HorizontalRules,
   Paragraph,
 ];
-export const inlineElementParserList = [
-  InlineLatex,
-  Image,
-  BoldEmphasis,
-  Bold,
-  Emphasis,
-  Link,
-  InlineCode,
-  PlainLink,
-  Strikethrough,
-  Tag,
-  PlainText,
-];
+
+export const inlineElementParserList = [Image, BoldEmphasis, Bold, Emphasis, Link, InlineCode, PlainLink, Strikethrough, Tag, PlainText];

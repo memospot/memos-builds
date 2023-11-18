@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import useDebounce from "react-use/lib/useDebounce";
+import { useEffect, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import useDebounce from "@/hooks/useDebounce";
 import { useFilterStore } from "@/store/module";
-import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 
 const SearchBar = () => {
-  const t = useTranslate();
+  const { t } = useTranslation();
   const filterStore = useFilterStore();
   const [queryText, setQueryText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -19,12 +19,13 @@ const SearchBar = () => {
     () => {
       filterStore.setTextFilter(queryText.length === 0 ? undefined : queryText);
     },
-    1000,
+    200,
     [queryText]
   );
 
   const handleTextQueryInput = (event: React.FormEvent<HTMLInputElement>) => {
-    setQueryText(event.currentTarget.value);
+    const text = event.currentTarget.value;
+    setQueryText(text);
   };
 
   return (

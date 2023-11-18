@@ -1,26 +1,48 @@
-import HomeSidebar from "@/components/HomeSidebar";
-import HomeSidebarDrawer from "@/components/HomeSidebarDrawer";
+import { useEffect } from "react";
+import { toast } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
+import { useGlobalStore, useUserStore } from "@/store/module";
 import MemoEditor from "@/components/MemoEditor";
+import MemoFilter from "@/components/MemoFilter";
 import MemoList from "@/components/MemoList";
 import MobileHeader from "@/components/MobileHeader";
-import useResponsiveWidth from "@/hooks/useResponsiveWidth";
+import HomeSidebar from "@/components/HomeSidebar";
 
-const Home = () => {
-  const { md } = useResponsiveWidth();
+function Home() {
+  const { t } = useTranslation();
+  const globalStore = useGlobalStore();
+  const userStore = useUserStore();
+  const user = userStore.state.user;
+
+  useEffect(() => {
+    const currentUserId = userStore.getCurrentUserId();
+    userStore.getUserById(currentUserId).then((user) => {
+      if (!user) {
+        toast.error(t("message.user-not-found"));
+        return;
+      }
+    });
+  }, [userStore.getCurrentUserId()]);
+
+  useEffect(() => {
+    if (user?.setting.locale) {
+      globalStore.setLocale(user.setting.locale);
+    }
+  }, [user?.setting.locale]);
+
   return (
     <div className="w-full flex flex-row justify-start items-start">
-      <div className="w-full px-4 md:max-w-[calc(100%-14rem)] sm:px-2 sm:pt-4">
-        <MobileHeader>{!md && <HomeSidebarDrawer />}</MobileHeader>
-        <MemoEditor className="mb-2" cacheKey="home-memo-editor" />
+      <div className="flex-grow w-auto max-w-2xl px-4 sm:px-2 sm:pt-4">
+        <MobileHeader />
+        <div className="w-full h-auto flex flex-col justify-start items-start bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+          {!userStore.isVisitorMode() && <MemoEditor />}
+          <MemoFilter />
+        </div>
         <MemoList />
       </div>
-      {md && (
-        <div className="hidden md:block sticky top-0 left-0 w-56">
-          <HomeSidebar />
-        </div>
-      )}
+      <HomeSidebar />
     </div>
   );
-};
+}
 
 export default Home;

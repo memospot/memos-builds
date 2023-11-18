@@ -5,41 +5,36 @@ type Visibility = "PUBLIC" | "PROTECTED" | "PRIVATE";
 interface Memo {
   id: MemoId;
 
-  creatorUsername: string;
-  createdTs: number;
-  updatedTs: number;
+  creatorId: UserId;
+  createdTs: TimeStamp;
+  updatedTs: TimeStamp;
   rowStatus: RowStatus;
 
-  displayTs: number;
   content: string;
   visibility: Visibility;
   pinned: boolean;
 
   creatorName: string;
-  resourceList: any[];
-  relationList: MemoRelation[];
-  parent?: Memo;
+  resourceList: Resource[];
 }
 
 interface MemoCreate {
   content: string;
   resourceIdList: ResourceId[];
-  relationList: MemoRelationUpsert[];
   visibility?: Visibility;
 }
 
 interface MemoPatch {
   id: MemoId;
-  createdTs?: number;
+  createdTs?: TimeStamp;
   rowStatus?: RowStatus;
   content?: string;
   resourceIdList?: ResourceId[];
-  relationList?: MemoRelationUpsert[];
   visibility?: Visibility;
 }
 
 interface MemoFind {
-  creatorUsername?: string;
+  creatorId?: UserId;
   rowStatus?: RowStatus;
   pinned?: boolean;
   visibility?: Visibility;
