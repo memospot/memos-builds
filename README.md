@@ -59,54 +59,27 @@ This project hosts builds for [Memos](https://github.com/usememos/memos), a beau
 |   v6   | VFPv1 only: ARM11 or better cores |
 |   v7   | VFPv3: Cortex-A cores             |
 
-## Notes
+## ⚠ Notes
 
 Most binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
 
-⚠ It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite driver) is not compatible with these targets.
+It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite driver) is not compatible with these targets.
 
-⚠ The oldest version of Memos supported by this repository CI is v0.13.2, as CGO was used before that. Supporting legacy versions would require a very complex build system, which is not worth the effort.
+The oldest version of Memos supported by this repository CI is v0.13.2, as CGO was used before that. Supporting legacy versions would require a complex build system, which is not worth the effort.
 
 ## Support
 
-⚠ Memos official first-class [support](https://github.com/usememos/memos/issues) is for the official Docker container.
+Memos official first-class [support](https://github.com/usememos/memos/issues) is for its Docker container.
 These binaries are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your own discretion.
 
-Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the official Docker container.
+Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the Docker container.
 
 ## Running as a Service
 
 You should manually setup a system service to start Memos on boot.
 
 [Memos Windows Service Guide](docs/windows-service.md)
-
-Sample service environment setup. Adjust to openrc or systemd as needed.
-
-```sh
-# For all supported environment variables,
-# see https://github.com/usememos/memos/blob/main/cmd/memos.go
-
-# dev, prod, demo
-MEMOS_MODE="prod"
-# set addr to 127.0.0.1 to restrict access to localhost
-MEMOS_ADDR=""
-# port to listen on
-MEMOS_PORT="5230"
-# data directory: database and asset uploads
-MEMOS_DATA="/opt/memos"
-# database driver: sqlite, mysql
-MEMOS_DRIVER="sqlite"
-# database connection string: leave empty for sqlite
-# see: https://www.usememos.com/docs/advanced-settings/mysql
-MEMOS_DSN="dbuser:dbpass@tcp(dbhost)/dbname"
-# allow metric collection
-MEMOS_METRIC="true"
-
-./memos
-
-# Alternatively:
-./memos --mode=prod --port=5230 --addr=127.0.0.1 --data=/opt/memos
-```
+[Memos Service Guide](docs/service.md)
 
 ## Star History
 
