@@ -1,4 +1,4 @@
-import { Select, Option, Button, IconButton } from "@mui/joy";
+import { Select, Option, Button, IconButton, Divider } from "@mui/joy";
 import { isNumber, last, uniq, uniqBy } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
@@ -6,9 +6,11 @@ import { useTranslation } from "react-i18next";
 import useLocalStorage from "react-use/lib/useLocalStorage";
 import { TAB_SPACE_WIDTH, UNKNOWN_ID, VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
 import { clearContentQueryParam } from "@/helpers/utils";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import { getMatchedNodes } from "@/labs/marked";
 import { useFilterStore, useGlobalStore, useMemoStore, useResourceStore, useTagStore, useUserStore } from "@/store/module";
 import { Resource } from "@/types/proto/api/v2/resource_service";
+import { User_Role } from "@/types/proto/api/v2/user_service";
 import { useTranslate } from "@/utils/i18n";
 import showCreateMemoRelationDialog from "../CreateMemoRelationDialog";
 import showCreateResourceDialog from "../CreateResourceDialog";
@@ -43,7 +45,8 @@ const MemoEditor = (props: Props) => {
   const { className, editorClassName, cacheKey, memoId, onConfirm } = props;
   const { i18n } = useTranslation();
   const t = useTranslate();
-  const [contentCache, setContentCache] = useLocalStorage<string>(`memo-editor-${cacheKey}`, "");
+  const contentCacheKey = `memo-editor-${cacheKey}`;
+  const [contentCache, setContentCache] = useLocalStorage<string>(contentCacheKey, "");
   const {
     state: { systemStatus },
   } = useGlobalStore();
@@ -52,6 +55,7 @@ const MemoEditor = (props: Props) => {
   const memoStore = useMemoStore();
   const tagStore = useTagStore();
   const resourceStore = useResourceStore();
+  const currentUser = useCurrentUser();
   const [state, setState] = useState<State>({
     memoVisibility: "PRIVATE",
     resourceList: [],
@@ -72,6 +76,7 @@ const MemoEditor = (props: Props) => {
 
   useEffect(() => {
     editorRef.current?.setContent(contentCache || "");
+    handleEditorFocus();
   }, []);
 
   useEffect(() => {
@@ -280,7 +285,11 @@ const MemoEditor = (props: Props) => {
 
   const handleContentChange = (content: string) => {
     setHasContent(content !== "");
-    setContentCache(content);
+    if (content !== "") {
+      setContentCache(content);
+    } else {
+      localStorage.removeItem(contentCacheKey);
+    }
   };
 
   const handleSaveBtnClick = async () => {
@@ -317,6 +326,8 @@ const MemoEditor = (props: Props) => {
         });
         filterStore.clearFilter();
       }
+      editorRef.current?.setContent("");
+      clearContentQueryParam();
     } catch (error: any) {
       console.error(error);
       toast.error(error.response.data.message);
@@ -339,8 +350,6 @@ const MemoEditor = (props: Props) => {
       ...prevState,
       resourceList: [],
     }));
-    editorRef.current?.setContent("");
-    clearContentQueryParam();
     if (onConfirm) {
       onConfirm();
     }
@@ -407,6 +416,15 @@ const MemoEditor = (props: Props) => {
 
   const allowSave = (hasContent || state.resourceList.length > 0) && !state.isUploadingResource && !state.isRequesting;
 
+  const disableOption = (v: string) => {
+    const isAdminOrHost = currentUser.role === User_Role.ADMIN || currentUser.role === User_Role.HOST;
+
+    if (v === "PUBLIC" && !isAdminOrHost) {
+      return systemStatus.disablePublicMemos;
+    }
+    return false;
+  };
+
   return (
     <div
       className={`${
@@ -424,23 +442,26 @@ const MemoEditor = (props: Props) => {
         <div className="flex flex-row justify-start items-center">
           <TagSelector onTagSelectorClick={(tag) => handleTagSelectorClick(tag)} />
           <IconButton
-            onClick={handleUploadFileBtnClick}
             className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
+            onClick={handleUploadFileBtnClick}
           >
             <Icon.Image className="w-5 h-5 mx-auto" />
           </IconButton>
           <IconButton
-            onClick={handleAddMemoRelationBtnClick}
             className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
+            onClick={handleAddMemoRelationBtnClick}
           >
             <Icon.Link className="w-5 h-5 mx-auto" />
           </IconButton>
-          <IconButton onClick={handleCheckBoxBtnClick}>
+          <IconButton
+            className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
+            onClick={handleCheckBoxBtnClick}
+          >
             <Icon.CheckSquare className="w-5 h-5 mx-auto" />
           </IconButton>
           <IconButton
-            onClick={handleCodeBlockBtnClick}
             className="flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow"
+            onClick={handleCodeBlockBtnClick}
           >
             <Icon.Code className="w-5 h-5 mx-auto" />
           </IconButton>
@@ -448,7 +469,8 @@ const MemoEditor = (props: Props) => {
       </div>
       <ResourceListView resourceList={state.resourceList} setResourceList={handleSetResourceList} />
       <RelationListView relationList={referenceRelations} setRelationList={handleSetRelationList} />
-      <div className="w-full flex flex-row justify-between items-center py-3 mt-2 border-t border-t-gray-100 dark:border-t-zinc-500">
+      <Divider className="!mt-2" />
+      <div className="w-full flex flex-row justify-between items-center py-3 dark:border-t-zinc-500">
         <div className="relative flex flex-row justify-start items-center" onFocus={(e) => e.stopPropagation()}>
           <Select
             variant="plain"
@@ -461,7 +483,7 @@ const MemoEditor = (props: Props) => {
             }}
           >
             {VISIBILITY_SELECTOR_ITEMS.map((item) => (
-              <Option key={item} value={item} className="whitespace-nowrap">
+              <Option key={item} value={item} className="whitespace-nowrap" disabled={disableOption(item)}>
                 {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
               </Option>
             ))}

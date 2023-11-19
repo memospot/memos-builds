@@ -14,25 +14,24 @@ import DatePicker from "@/components/kit/DatePicker";
 import { DAILY_TIMESTAMP, DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
 import { getDateStampByDate, getNormalizedDateString, getTimeStampByDate, getTimeString } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { useMemoStore, useUserStore } from "@/store/module";
+import { useMemoStore } from "@/store/module";
+import { extractUsernameFromName } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 
 const DailyReview = () => {
   const t = useTranslate();
   const memoStore = useMemoStore();
-  const userStore = useUserStore();
   const user = useCurrentUser();
-  const { localSetting } = userStore.state.user as User;
   const currentDateStamp = getDateStampByDate(getNormalizedDateString()) as number;
   const [selectedDateStamp, setSelectedDateStamp] = useState<number>(currentDateStamp as number);
   const [showDatePicker, toggleShowDatePicker] = useToggle(false);
   const dailyMemos = memoStore.state.memos
     .filter((m) => {
       const displayTimestamp = getTimeStampByDate(m.displayTs);
-      const selectedDateStampWithOffset = selectedDateStamp + localSetting.dailyReviewTimeOffset * 60 * 60 * 1000;
+      const selectedDateStampWithOffset = selectedDateStamp;
       return (
         m.rowStatus === "NORMAL" &&
-        m.creatorUsername === user.username &&
+        m.creatorUsername === extractUsernameFromName(user.name) &&
         displayTimestamp >= selectedDateStampWithOffset &&
         displayTimestamp < selectedDateStampWithOffset + DAILY_TIMESTAMP
       );
@@ -66,7 +65,7 @@ const DailyReview = () => {
 
   return (
     <section className="@container w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
-      <MobileHeader showSearch={false} />
+      <MobileHeader />
       <div className="w-full shadow flex flex-col justify-start items-start px-4 py-3 rounded-xl bg-white dark:bg-zinc-700 text-black dark:text-gray-300">
         <div className="relative w-full flex flex-row justify-start items-center">
           <p
@@ -90,8 +89,9 @@ const DailyReview = () => {
               showDatePicker ? "" : "!hidden"
             }`}
             datestamp={selectedDateStamp}
-            handleDateStampChange={handleDataPickerChange}
             isFutureDateDisabled
+            handleDateStampChange={handleDataPickerChange}
+            handleClickAway={() => toggleShowDatePicker(false)}
           />
         </div>
         <div className="w-full h-auto flex flex-col justify-start items-start px-2 pb-4 bg-white dark:bg-zinc-700">
@@ -127,7 +127,7 @@ const DailyReview = () => {
             ))}
 
             {selectedDateStamp === currentDateStamp && (
-              <div className="w-full pl-0 sm:pl-10 sm:mt-4">
+              <div className="w-full pl-0 sm:pl-12 sm:mt-4">
                 <MemoEditor className="!border" cacheKey="daily-review-editor" />
               </div>
             )}

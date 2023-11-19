@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import { getDateTimeString } from "@/helpers/datetime";
 import useLoading from "@/hooks/useLoading";
 import toImage from "@/labs/html2image";
-import { useUserV1Store } from "@/store/v1";
+import { useUserV1Store, extractUsernameFromName } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import showEmbedMemoDialog from "./EmbedMemoDialog";
@@ -113,14 +113,14 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
             <span className="w-full px-6 pt-5 pb-2 text-sm text-gray-500">{memo.displayTsStr}</span>
             <div className="w-full px-6 text-base pb-4">
               <MemoContent content={memo.content} />
-              <MemoResourceListView className="!grid-cols-2" resourceList={memo.resourceList} />
+              <MemoResourceListView resourceList={memo.resourceList} />
             </div>
             <div className="flex flex-row justify-between items-center w-full bg-gray-100 dark:bg-zinc-700 py-4 px-6">
               <div className="flex flex-row justify-start items-center">
                 <UserAvatar className="mr-2" avatarUrl={user.avatarUrl} />
                 <div className="w-auto grow truncate flex mr-2 flex-col justify-center items-start">
                   <span className="w-full text truncate font-medium text-gray-600 dark:text-gray-300">
-                    {user.nickname || user.username}
+                    {user.nickname || extractUsernameFromName(user.name)}
                   </span>
                 </div>
               </div>

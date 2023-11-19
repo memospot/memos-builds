@@ -2,47 +2,21 @@ package sqlite
 
 import (
 	"context"
-	"strings"
+
+	"github.com/usememos/memos/store"
 )
 
-type MigrationHistory struct {
-	Version   string
-	CreatedTs int64
-}
-
-type MigrationHistoryUpsert struct {
-	Version string
-}
-
-type MigrationHistoryFind struct {
-	Version *string
-}
-
-func (d *DB) FindMigrationHistoryList(ctx context.Context, find *MigrationHistoryFind) ([]*MigrationHistory, error) {
-	where, args := []string{"1 = 1"}, []any{}
-
-	if v := find.Version; v != nil {
-		where, args = append(where, "version = ?"), append(args, *v)
-	}
-
-	query := `
-		SELECT 
-			version,
-			created_ts
-		FROM
-			migration_history
-		WHERE ` + strings.Join(where, " AND ") + `
-		ORDER BY created_ts DESC
-	`
-	rows, err := d.db.QueryContext(ctx, query, args...)
+func (d *DB) FindMigrationHistoryList(ctx context.Context, _ *store.FindMigrationHistory) ([]*store.MigrationHistory, error) {
+	query := "SELECT `version`, `created_ts` FROM `migration_history` ORDER BY `created_ts` DESC"
+	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	list := make([]*MigrationHistory, 0)
+	list := make([]*store.MigrationHistory, 0)
 	for rows.Next() {
-		var migrationHistory MigrationHistory
+		var migrationHistory store.MigrationHistory
 		if err := rows.Scan(
 			&migrationHistory.Version,
 			&migrationHistory.CreatedTs,
@@ -60,7 +34,7 @@ func (d *DB) FindMigrationHistoryList(ctx context.Context, find *MigrationHistor
 	return list, nil
 }
 
-func (d *DB) UpsertMigrationHistory(ctx context.Context, upsert *MigrationHistoryUpsert) (*MigrationHistory, error) {
+func (d *DB) UpsertMigrationHistory(ctx context.Context, upsert *store.UpsertMigrationHistory) (*store.MigrationHistory, error) {
 	stmt := `
 		INSERT INTO migration_history (
 			version
@@ -71,7 +45,7 @@ func (d *DB) UpsertMigrationHistory(ctx context.Context, upsert *MigrationHistor
 			version=EXCLUDED.version
 		RETURNING version, created_ts
 	`
-	var migrationHistory MigrationHistory
+	var migrationHistory store.MigrationHistory
 	if err := d.db.QueryRowContext(ctx, stmt, upsert.Version).Scan(
 		&migrationHistory.Version,
 		&migrationHistory.CreatedTs,

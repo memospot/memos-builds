@@ -1,5 +1,7 @@
 import { IconButton } from "@mui/joy";
+import { useEffect } from "react";
 import Icon from "@/components/Icon";
+import OverflowTip from "@/components/kit/OverflowTip";
 import { useTagStore } from "@/store/module";
 
 interface Props {
@@ -11,6 +13,16 @@ const TagSelector = (props: Props) => {
   const tagStore = useTagStore();
   const tags = tagStore.state.tags;
 
+  useEffect(() => {
+    (async () => {
+      try {
+        await tagStore.fetchTags();
+      } catch (error) {
+        // do nothing.
+      }
+    })();
+  }, []);
+
   return (
     <IconButton className="relative group flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow">
       <Icon.Hash className="w-5 h-5 mx-auto" />
@@ -18,13 +30,13 @@ const TagSelector = (props: Props) => {
         {tags.length > 0 ? (
           tags.map((tag) => {
             return (
-              <span
-                className="w-auto max-w-full truncate text-black dark:text-gray-300 cursor-pointer rounded text-sm leading-6 px-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 shrink-0"
+              <div
+                className="w-auto max-w-full text-black dark:text-gray-300 cursor-pointer rounded text-sm leading-6 px-2 hover:bg-zinc-300 dark:hover:bg-zinc-700 shrink-0"
                 onClick={() => onTagSelectorClick(tag)}
                 key={tag}
               >
-                #{tag}
-              </span>
+                <OverflowTip>#{tag}</OverflowTip>
+              </div>
             );
           })
         ) : (

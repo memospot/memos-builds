@@ -106,8 +106,11 @@ func (s *APIV1Service) SignIn(c echo.Context) error {
 	}
 
 	var expireAt time.Time
+	// Set cookie expiration to 100 years to make it persistent.
+	cookieExp := time.Now().AddDate(100, 0, 0)
 	if !signin.Remember {
 		expireAt = time.Now().Add(auth.AccessTokenDuration)
+		cookieExp = time.Now().Add(auth.CookieExpDuration)
 	}
 
 	accessToken, err := auth.GenerateAccessToken(user.Username, user.ID, expireAt, []byte(s.Secret))
@@ -117,7 +120,6 @@ func (s *APIV1Service) SignIn(c echo.Context) error {
 	if err := s.UpsertAccessTokenToStore(ctx, user, accessToken); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("failed to upsert access token, err: %s", err)).SetInternal(err)
 	}
-	cookieExp := time.Now().Add(auth.CookieExpDuration)
 	setTokenCookie(c, auth.AccessTokenCookieName, accessToken, cookieExp)
 	userMessage := convertUserFromStore(user)
 	return c.JSON(http.StatusOK, userMessage)
@@ -195,7 +197,7 @@ func (s *APIV1Service) SignInSSO(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting").SetInternal(err)
 		}
 
-		allowSignUpSettingValue := false
+		allowSignUpSettingValue := true
 		if allowSignUpSetting != nil {
 			err = json.Unmarshal([]byte(allowSignUpSetting.Value), &allowSignUpSettingValue)
 			if err != nil {
@@ -331,7 +333,7 @@ func (s *APIV1Service) SignUp(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting").SetInternal(err)
 		}
 
-		allowSignUpSettingValue := false
+		allowSignUpSettingValue := true
 		if allowSignUpSetting != nil {
 			err = json.Unmarshal([]byte(allowSignUpSetting.Value), &allowSignUpSettingValue)
 			if err != nil {
