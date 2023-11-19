@@ -2,8 +2,6 @@
 
 This project hosts builds for [Memos](https://github.com/usememos/memos), a beautiful, privacy-first, lightweight note-taking service.
 
-Some of these builds are consumed by [Memospot](https://github.com/lincolnthalles/memospot), a self-contained, single user desktop client for Memos.
-
 <div align="center" width="100%" style="display: flex; justify-content: center;">
   <p align="center" width="100%">
 
@@ -17,15 +15,15 @@ Some of these builds are consumed by [Memospot](https://github.com/lincolnthalle
     <picture>
       <source
         media="(prefers-color-scheme: dark)"
-        srcset="assets/powered-by-memos_dark.webp"
+        srcset="assets/powered_by_memos_dark.webp"
       />
       <source
         media="(prefers-color-scheme: light)"
-        srcset="assets/powered-by-memos.webp"
+        srcset="assets/powered_by_memos.webp"
       />
       <img height="128"
         alt="powered by memos"
-        src="assets/powered-by-memos.webp"
+        src="assets/powered_by_memos.webp"
       />
     </picture>
   </a>
