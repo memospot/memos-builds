@@ -78,8 +78,9 @@ Please do not open issues on the official Memos repository regarding these build
 
 You should manually setup a system service to start Memos on boot.
 
-[Memos Windows Service Guide](docs/windows-service.md)
 [Memos Service Guide](docs/service.md)
+
+[Memos Windows Service Guide](docs/windows-service.md)
 
 ## Star History
 
