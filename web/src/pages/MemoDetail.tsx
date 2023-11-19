@@ -19,8 +19,8 @@ import { getDateTimeString } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { useGlobalStore, useMemoStore } from "@/store/module";
-import { useUserV1Store } from "@/store/v1";
-import { User } from "@/types/proto/api/v2/user_service";
+import { useUserV1Store, extractUsernameFromName } from "@/store/v1";
+import { User, User_Role } from "@/types/proto/api/v2/user_service";
 import { useTranslate } from "@/utils/i18n";
 
 const MemoDetail = () => {
@@ -35,7 +35,7 @@ const MemoDetail = () => {
   const { systemStatus } = globalStore.state;
   const memoId = Number(params.memoId);
   const memo = memoStore.state.memos.find((memo) => memo.id === memoId);
-  const allowEdit = memo?.creatorUsername === currentUser?.username;
+  const allowEdit = memo?.creatorUsername === extractUsernameFromName(currentUser?.name);
   const referenceRelations = memo?.relationList.filter((relation) => relation.type === "REFERENCE") || [];
   const commentRelations = memo?.relationList.filter((relation) => relation.relatedMemoId === memo.id && relation.type === "COMMENT") || [];
   const comments = commentRelations
@@ -100,6 +100,15 @@ const MemoDetail = () => {
     await memoStore.fetchMemoById(memoId);
   };
 
+  const disableOption = (v: string) => {
+    const isAdminOrHost = currentUser.role === User_Role.ADMIN || currentUser.role === User_Role.HOST;
+
+    if (v === "PUBLIC" && !isAdminOrHost) {
+      return systemStatus.disablePublicMemos;
+    }
+    return false;
+  };
+
   return (
     <>
       <section className="relative top-0 w-full min-h-full overflow-x-hidden bg-zinc-100 dark:bg-zinc-900">
@@ -156,7 +165,7 @@ const MemoDetail = () => {
                       }}
                     >
                       {VISIBILITY_SELECTOR_ITEMS.map((item) => (
-                        <Option key={item} value={item} className="whitespace-nowrap">
+                        <Option key={item} value={item} className="whitespace-nowrap" disabled={disableOption(item)}>
                           {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
                         </Option>
                       ))}

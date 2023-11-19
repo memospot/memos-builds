@@ -7,6 +7,7 @@
     - [Activity](#memos-api-v2-Activity)
     - [ActivityMemoCommentPayload](#memos-api-v2-ActivityMemoCommentPayload)
     - [ActivityPayload](#memos-api-v2-ActivityPayload)
+    - [ActivityVersionUpdatePayload](#memos-api-v2-ActivityVersionUpdatePayload)
     - [GetActivityRequest](#memos-api-v2-GetActivityRequest)
     - [GetActivityResponse](#memos-api-v2-GetActivityResponse)
   
@@ -155,6 +156,22 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | memo_comment | [ActivityMemoCommentPayload](#memos-api-v2-ActivityMemoCommentPayload) |  |  |
+| version_update | [ActivityVersionUpdatePayload](#memos-api-v2-ActivityVersionUpdatePayload) |  |  |
+
+
+
+
+
+
+<a name="memos-api-v2-ActivityVersionUpdatePayload"></a>
+
+### ActivityVersionUpdatePayload
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| version | [string](#string) |  |  |
 
 
 
@@ -377,6 +394,7 @@
 | ---- | ------ | ----------- |
 | TYPE_UNSPECIFIED | 0 |  |
 | TYPE_MEMO_COMMENT | 1 |  |
+| TYPE_VERSION_UPDATE | 2 |  |
 
 
  
@@ -928,7 +946,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| creator_id | [int32](#int32) |  |  |
+| creator | [string](#string) |  | The creator of tags. Format: users/{username} |
 
 
 
@@ -959,7 +977,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | name | [string](#string) |  |  |
-| creator_id | [int32](#int32) |  |  |
+| creator | [string](#string) |  | The creator of tags. Format: users/{username} |
 
 
 
@@ -1032,7 +1050,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| username | [string](#string) |  |  |
+| name | [string](#string) |  | The name of the user. Format: users/{username} |
 | description | [string](#string) |  |  |
 | expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 
@@ -1094,7 +1112,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| username | [string](#string) |  |  |
+| name | [string](#string) |  | The name of the user. Format: users/{username} |
 | access_token | [string](#string) |  | access_token is the access token to delete. |
 
 
@@ -1120,7 +1138,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| username | [string](#string) |  |  |
+| name | [string](#string) |  | The name of the user. Format: users/{username} |
 
 
 
@@ -1150,7 +1168,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| username | [string](#string) |  |  |
+| name | [string](#string) |  | The name of the user. Format: users/{username} |
 
 
 
@@ -1211,8 +1229,8 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | The name of the user. Format: users/{username} |
 | id | [int32](#int32) |  |  |
-| username | [string](#string) |  |  |
 | role | [User.Role](#memos-api-v2-User-Role) |  |  |
 | email | [string](#string) |  |  |
 | nickname | [string](#string) |  |  |
