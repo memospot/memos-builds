@@ -22,7 +22,7 @@ jobs:
       - run: |
           git fetch --force --tags
         #  latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-        #  echo "latest_tag=$latest_tag" >> $GITHUB_ENV          
+        #  echo "latest_tag=$latest_tag" >> $GITHUB_ENV
         #  previous_tag=$(git tag --sort=-creatordate | head -n 3 | tail -n 1)
         #  echo "previous_tag=$previous_tag" >> $GITHUB_ENV
         #  git checkout $latest_tag
@@ -37,17 +37,30 @@ jobs:
           check-latest: true
           cache-dependency-path: memos-upstream/go.sum
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2.4.0
-        with:
-          version: 8
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.4.0
+        with:
+          version: 8
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Build with goreleaser
         uses: goreleaser/goreleaser-action@v5
