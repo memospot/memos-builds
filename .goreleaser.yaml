@@ -1,42 +1,9 @@
 # https://goreleaser.com
 
-# To use this goreleaser setting on Windows, add Git\bin to PATH.
-# This allows using Git's sh.exe to run the build hooks.
-#
-# To add git to the path just for the current powershell session:
-#* $Env:Path += ";$Env:ProgramFiles\Git\bin";
-#
-# To create a local build for current OS/Arch only:
-#* goreleaser build --clean --single-target --snapshot
-#
-# To create local cross-platform builds without publishing to GitHub, run:
-#* goreleaser release --clean --snapshot
-#
-#? Building with --snapshot bumps the patch version and appends -dev to the version.
-#? This also allows git in a dirty state.
-#
-# To restore the repo after a local build:
-# sh -c "rm -rf ./web/dist && rm -rf ./server/dist && mv -f ./server/dist.bak ./server/dist"
-
-before:
-  hooks: 
-    - sh -c "cd ./memos-upstream ; cd ./web && pnpm i --frozen-lockfile"
-    # generate typescript types from protobuf files using type-gen script; falls back to buf generate
-    - sh -c "cd ./memos-upstream ; $(cd ./web && pnpm type-gen) || $(cd ./proto && buf generate) || true" 
-    - sh -c "cd ./memos-upstream ; cd ./web && pnpm build"
-    # backup front-end placeholder only once
-    - sh -c "cd ./memos-upstream && mv -nT ./server/dist ./server/dist.bak || true" 
-    # remove leftover from a previous local build
-    - sh -c "cd ./memos-upstream && rm -rf ./server/dist"
-    # move front-end build to server/dist
-    - sh -c "cd ./memos-upstream && mv -f ./web/dist ./server/"
-    - sh -c "cd ./memos-upstream && go mod tidy"
-
 project_name: memos
 dist: build
 builds:
   - dir: ./memos-upstream
-    # main: ./memos-upstream
     binary: memos
     env:
       - CGO_ENABLED=0
@@ -126,7 +93,7 @@ gomod:
   #
   # This will only be effective if running against a tag. Snapshots will ignore this setting.
   # Notice: for this to work your `build.main` must be a package, not a `.go` file.
-  # Can only be enabled on upstream repo.
+  # Can only be enabled on an unaltered repo, since the tag commit must be verifiable and goreleaser demands a clean git state.
   proxy: true
 
   # If proxy is true, use these environment variables when running `go mod`

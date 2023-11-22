@@ -6,41 +6,93 @@
 # To add git to the path just for the current powershell session:
 #* $Env:Path += ";$Env:ProgramFiles\Git\bin";
 #
+# Dependencies:
+#* git: https://git-scm.com/downloads
+#* task: https://taskfile.dev/#/installation
+#* goreleaser: https://goreleaser.com/install/
+#* pnpm: https://pnpm.io/installation
+#* go: https://golang.org/doc/install
 
 version: "3"
 
 tasks:
-  postbuild:restoreplaceholder:
-    desc: Restore front-end placeholder
+  build:backend:tidy:
+    desc: Tidy backend dependencies
+    summary: This task is used in the CI pipeline.
+    dir: ./memos-upstream
     cmds:
-      - sh -c "rm -rf ./memos-upstream/server/dist"
-      - sh -c "mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist"
+      - go mod tidy -go=1.21
+    sources:
+      - server/go.mod
+      - server/go.sum
+
+  build:frontend:
+    desc: Build front-end
+    summary: This task is used in the CI pipeline.
+    dir: ./memos-upstream
+    cmds:
+      - sh -c "cd ./web && pnpm i --frozen-lockfile"
+      # generate typescript types from protobuf files using type-gen script; fallback to buf generate
+      - sh -c "`$`(cd ./web && pnpm type-gen) || `$`(cd ./proto && buf generate) || true"
+      - sh -c "cd ./web && pnpm build"
+      # backup front-end placeholder only once
+      - sh -c "mv -nT ./server/dist ./server/dist.bak || true"
+      # remove leftover from a previous local build
+      - sh -c "rm -rf ./server/dist"
+      # move front-end build to server/dist
+      - sh -c "mv -f ./web/dist ./server/"
+    sources:
+      - web/src/**/*.ts
+    generates:
+      - server/dist/**/*.js
+
   build:
     desc: Build binaries for current OS/Arch
+    deps:
+      - build:backend:tidy
+      - build:frontend
     cmds:
       - goreleaser build --clean --single-target
-      - task: postbuild:restoreplaceholder
 
   build:all:
     desc: Build binaries for all OS/Arch
+    deps:
+      - build:backend:tidy
+      - build:frontend
     cmds:
-      - goreleaser build --clean
-      - task: postbuild:restoreplaceholder
+      - goreleaser build --clean --timeout 60m
 
   build:snapshot:
     desc: Build binaries for current OS/Arch, ignores git status
+    summary: |
+      Snapshot builds bumps the patch version and appends -dev to the version string.
+    deps:
+      - build:backend:tidy
+      - build:frontend
     cmds:
       - goreleaser build --snapshot --clean --single-target
-      - task: postbuild:restoreplaceholder
 
   build:snapshot:all:
     desc: Build binaries for all OS/Arch, ignores git status
+    deps:
+      - build:backend:tidy
+      - build:frontend
     cmds:
-      - goreleaser build --snapshot --clean
-      - task: postbuild:restoreplaceholder
+      - goreleaser build --snapshot --clean --timeout 60m
 
-  clean:
-    desc: Cleanup build artifacts
+  release:
+    desc: Release binaries to GitHub
+    summary: |
+      Requires GITHUB_TOKEN environment variable to be set.
+      This token must have `write:packages` permission.
+    deps:
+      - build:backend:tidy
+      - build:frontend
+    cmds:
+      - goreleaser release --clean --timeout 60m
+
+  cleanrepo:
+    desc: Cleanup all local changes
     ignore_error: true
     cmds:
       - sh -c "rm -rf ./build"
@@ -50,9 +102,7 @@ tasks:
       - sh -c "mv -f ./memos-upstream/server/dist.bak ./memos-upstream/server/dist"
 
   resetsubtree:
-    desc: |
-      Reset subtree to a tag.
-      Usage: `task setup-subtree -- v0.0.0` to setup a specific tag.
+    desc: Reset subtree.
     cmds:
       - sh -c "rm -rf ./memos-upstream || true"
       - git rm -fr memos-upstream --ignore-unmatch
@@ -62,7 +112,7 @@ tasks:
   pushbuild:
     desc: |
       Checkout subtree to supplied tag and push a new tag to origin.
-      Usage: `task checkout-upstream -- v0.0.0` to checkout a specific tag.
+      Usage: `task pushbuild -- v0.0.0`.
     cmds:
       - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
       - git push origin

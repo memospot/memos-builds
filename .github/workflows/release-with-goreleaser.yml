@@ -21,21 +21,30 @@ jobs:
           fetch-depth: 0
       - run: |
           git fetch --force --tags
-        #  latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-        #  echo "latest_tag=$latest_tag" >> $GITHUB_ENV
-        #  previous_tag=$(git tag --sort=-creatordate | head -n 3 | tail -n 1)
-        #  echo "previous_tag=$previous_tag" >> $GITHUB_ENV
-        #  git checkout $latest_tag
+
+      - name: Setup Task
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: go-task/task
+          cache: enable
+          tag: "v3.31.0"
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@v1.28.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: ">=1.21.0"
           check-latest: true
           cache-dependency-path: memos-upstream/go.sum
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.4.0
+        with:
+          version: 8
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -44,23 +53,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2.4.0
-        with:
-          version: 8
-
-      - name: Get pnpm store directory
-        shell: bash
+      - name: Build frontend
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          task build:frontend
 
-      - uses: actions/cache@v3
-        name: Setup pnpm cache
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+      - name: Tidy backend dependencies
+        run: |
+          task build:backend:tidy
 
       - name: Build with goreleaser
         uses: goreleaser/goreleaser-action@v5
@@ -69,6 +68,4 @@ jobs:
           version: latest
           args: release --clean --timeout 60m
         env:
-          # GORELEASER_CURRENT_TAG: ${{ github.env.latest_tag }}
-          # GORELEASER_PREVIOUS_TAG: ${{ github.env.previous_tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
