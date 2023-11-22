@@ -33,18 +33,19 @@ tasks:
     cmds:
       - sh -c "cd ./web && pnpm i --frozen-lockfile"
       # generate typescript types from protobuf files using type-gen script; fallback to buf generate
-      - sh -c "`$`(cd ./web && pnpm type-gen) || `$`(cd ./proto && buf generate) || true"
+      - sh -c "(cd ./web && pnpm type-gen) || (cd ./proto && buf generate)"
       - sh -c "cd ./web && pnpm build"
       # backup front-end placeholder only once
       - sh -c "mv -nT ./server/dist ./server/dist.bak || true"
       # remove leftover from a previous local build
       - sh -c "rm -rf ./server/dist"
       # move front-end build to server/dist
-      - sh -c "mv -f ./web/dist ./server/"
+      - sh -c "(mv -f ./web/dist ./server/) || (sleep 2 && mv -f ./web/dist ./server/)"
+      - git update-index --assume-unchanged memos-upstream/server/dist/index.html
     sources:
       - web/src/**/*.ts
     generates:
-      - server/dist/**/*.js
+      - server/dist/**/*.jss
 
   build:
     desc: Build binaries for current OS/Arch
