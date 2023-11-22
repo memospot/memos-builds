@@ -45,7 +45,7 @@ tasks:
     sources:
       - web/src/**/*.ts
     generates:
-      - server/dist/**/*.jss
+      - server/dist/**/*.js
 
   build:
     desc: Build binaries for current OS/Arch
