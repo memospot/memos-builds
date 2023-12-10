@@ -41,7 +41,8 @@ tasks:
       - sh -c "rm -rf ./server/dist"
       # move front-end build to server/dist
       - sh -c "(mv -f ./web/dist ./server/) || (sleep 2 && mv -f ./web/dist ./server/)"
-      - git update-index --assume-unchanged memos-upstream/server/dist/index.html
+      - git update-index --assume-unchanged server/dist/index.html || true
+      - git update-index --assume-unchanged server/dist.bak/index.html || true
     sources:
       - web/src/**/*.ts
     generates:
