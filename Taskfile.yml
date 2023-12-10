@@ -16,9 +16,9 @@
 version: "3"
 
 tasks:
+  ##### CI #####
   build:backend:tidy:
     desc: Tidy backend dependencies
-    summary: This task is used in the CI pipeline.
     dir: ./memos-upstream
     cmds:
       - go mod tidy -go=1.21
@@ -28,7 +28,6 @@ tasks:
 
   build:frontend:
     desc: Build front-end
-    summary: This task is used in the CI pipeline.
     dir: ./memos-upstream
     cmds:
       - sh -c "cd ./web && pnpm i --frozen-lockfile"
@@ -47,6 +46,7 @@ tasks:
       - web/src/**/*.ts
     generates:
       - server/dist/**/*.js
+  ##### /CI #####
 
   build:
     desc: Build binaries for current OS/Arch
@@ -111,12 +111,27 @@ tasks:
       - git commit -m "Remove memos-upstream subtree"
       - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Setup memos-upstream subtree"
 
-  pushbuild:
+  pushtag:
     desc: |
       Checkout subtree to supplied tag and push a new tag to origin.
-      Usage: `task pushbuild -- v0.0.0`.
+      Usage: `task pushtag -- v0.0.0`.
+    summary: |
+      This will trigger the GitHub Action to build and release the binaries.
     cmds:
       - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
       - git push origin
       - git tag -a {{.CLI_ARGS}} -m "Push {{.CLI_ARGS}}"
       - git push origin {{.CLI_ARGS}}
+
+  deletetag:
+    desc: |
+      Delete a git tag.
+      Usage: `task deletetag -- v0.0.0`.
+    summary: |
+      Used in case the CI pipeline fails and some correction is needed.
+
+      Goreleaser demands a tag commit to be verifiable (due to gomod.proxy=true setting),
+        so the tag must be made right before the build is triggered.
+    cmds:
+      - git push origin :refs/tags/{{.CLI_ARGS}}
+      - git tag -d {{.CLI_ARGS}}
