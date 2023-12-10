@@ -12,53 +12,7 @@ import (
 	"github.com/usememos/memos/store"
 )
 
-func (d *DB) UpsertUserSetting(ctx context.Context, upsert *store.UserSetting) (*store.UserSetting, error) {
-	stmt := "INSERT INTO `user_setting` (`user_id`, `key`, `value`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = ?"
-	if _, err := d.db.ExecContext(ctx, stmt, upsert.UserID, upsert.Key, upsert.Value, upsert.Value); err != nil {
-		return nil, err
-	}
-
-	return upsert, nil
-}
-
-func (d *DB) ListUserSettings(ctx context.Context, find *store.FindUserSetting) ([]*store.UserSetting, error) {
-	where, args := []string{"1 = 1"}, []any{}
-
-	if v := find.Key; v != "" {
-		where, args = append(where, "`key` = ?"), append(args, v)
-	}
-	if v := find.UserID; v != nil {
-		where, args = append(where, "`user_id` = ?"), append(args, *find.UserID)
-	}
-
-	query := "SELECT `user_id`, `key`, `value` FROM `user_setting` WHERE " + strings.Join(where, " AND ")
-	rows, err := d.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	userSettingList := make([]*store.UserSetting, 0)
-	for rows.Next() {
-		var userSetting store.UserSetting
-		if err := rows.Scan(
-			&userSetting.UserID,
-			&userSetting.Key,
-			&userSetting.Value,
-		); err != nil {
-			return nil, err
-		}
-		userSettingList = append(userSettingList, &userSetting)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return userSettingList, nil
-}
-
-func (d *DB) UpsertUserSettingV1(ctx context.Context, upsert *storepb.UserSetting) (*storepb.UserSetting, error) {
+func (d *DB) UpsertUserSetting(ctx context.Context, upsert *storepb.UserSetting) (*storepb.UserSetting, error) {
 	stmt := "INSERT INTO `user_setting` (`user_id`, `key`, `value`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = ?"
 	var valueString string
 	if upsert.Key == storepb.UserSettingKey_USER_SETTING_ACCESS_TOKENS {
@@ -67,8 +21,16 @@ func (d *DB) UpsertUserSettingV1(ctx context.Context, upsert *storepb.UserSettin
 			return nil, err
 		}
 		valueString = string(valueBytes)
+	} else if upsert.Key == storepb.UserSettingKey_USER_SETTING_LOCALE {
+		valueString = upsert.GetLocale()
+	} else if upsert.Key == storepb.UserSettingKey_USER_SETTING_APPEARANCE {
+		valueString = upsert.GetAppearance()
+	} else if upsert.Key == storepb.UserSettingKey_USER_SETTING_MEMO_VISIBILITY {
+		valueString = upsert.GetMemoVisibility()
+	} else if upsert.Key == storepb.UserSettingKey_USER_SETTING_TELEGRAM_USER_ID {
+		valueString = upsert.GetTelegramUserId()
 	} else {
-		return nil, errors.New("invalid user setting key")
+		return nil, errors.Errorf("unknown user setting key: %s", upsert.Key.String())
 	}
 
 	if _, err := d.db.ExecContext(ctx, stmt, upsert.UserId, upsert.Key.String(), valueString, valueString); err != nil {
@@ -78,7 +40,7 @@ func (d *DB) UpsertUserSettingV1(ctx context.Context, upsert *storepb.UserSettin
 	return upsert, nil
 }
 
-func (d *DB) ListUserSettingsV1(ctx context.Context, find *store.FindUserSettingV1) ([]*storepb.UserSetting, error) {
+func (d *DB) ListUserSettings(ctx context.Context, find *store.FindUserSetting) ([]*storepb.UserSetting, error) {
 	where, args := []string{"1 = 1"}, []any{}
 
 	if v := find.Key; v != storepb.UserSettingKey_USER_SETTING_KEY_UNSPECIFIED {
@@ -115,8 +77,24 @@ func (d *DB) ListUserSettingsV1(ctx context.Context, find *store.FindUserSetting
 			userSetting.Value = &storepb.UserSetting_AccessTokens{
 				AccessTokens: accessTokensUserSetting,
 			}
+		} else if userSetting.Key == storepb.UserSettingKey_USER_SETTING_LOCALE {
+			userSetting.Value = &storepb.UserSetting_Locale{
+				Locale: valueString,
+			}
+		} else if userSetting.Key == storepb.UserSettingKey_USER_SETTING_APPEARANCE {
+			userSetting.Value = &storepb.UserSetting_Appearance{
+				Appearance: valueString,
+			}
+		} else if userSetting.Key == storepb.UserSettingKey_USER_SETTING_MEMO_VISIBILITY {
+			userSetting.Value = &storepb.UserSetting_MemoVisibility{
+				MemoVisibility: valueString,
+			}
+		} else if userSetting.Key == storepb.UserSettingKey_USER_SETTING_TELEGRAM_USER_ID {
+			userSetting.Value = &storepb.UserSetting_TelegramUserId{
+				TelegramUserId: valueString,
+			}
 		} else {
-			// Skip unknown user setting v1 key.
+			// Skip unknown user setting key.
 			continue
 		}
 		userSettingList = append(userSettingList, userSetting)

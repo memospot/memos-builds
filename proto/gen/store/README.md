@@ -9,6 +9,8 @@
     - [ActivityVersionUpdatePayload](#memos-store-ActivityVersionUpdatePayload)
   
 - [store/common.proto](#store_common-proto)
+    - [RowStatus](#memos-store-RowStatus)
+  
 - [store/inbox.proto](#store_inbox-proto)
     - [InboxMessage](#memos-store-InboxMessage)
   
@@ -25,6 +27,9 @@
     - [UserSetting](#memos-store-UserSetting)
   
     - [UserSettingKey](#memos-store-UserSettingKey)
+  
+- [store/webhook.proto](#store_webhook-proto)
+    - [Webhook](#memos-store-Webhook)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -100,6 +105,19 @@
 
 
  
+
+
+<a name="memos-store-RowStatus"></a>
+
+### RowStatus
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| ROW_STATUS_UNSPECIFIED | 0 |  |
+| NORMAL | 1 |  |
+| ARCHIVED | 2 |  |
+
 
  
 
@@ -248,6 +266,10 @@
 | user_id | [int32](#int32) |  |  |
 | key | [UserSettingKey](#memos-store-UserSettingKey) |  |  |
 | access_tokens | [AccessTokensUserSetting](#memos-store-AccessTokensUserSetting) |  |  |
+| locale | [string](#string) |  |  |
+| appearance | [string](#string) |  |  |
+| memo_visibility | [string](#string) |  |  |
+| telegram_user_id | [string](#string) |  |  |
 
 
 
@@ -265,7 +287,48 @@
 | ---- | ------ | ----------- |
 | USER_SETTING_KEY_UNSPECIFIED | 0 |  |
 | USER_SETTING_ACCESS_TOKENS | 1 | Access tokens for the user. |
+| USER_SETTING_LOCALE | 2 | The locale of the user. |
+| USER_SETTING_APPEARANCE | 3 | The appearance of the user. |
+| USER_SETTING_MEMO_VISIBILITY | 4 | The visibility of the memo. |
+| USER_SETTING_TELEGRAM_USER_ID | 5 | The telegram user id of the user. |
 
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="store_webhook-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## store/webhook.proto
+
+
+
+<a name="memos-store-Webhook"></a>
+
+### Webhook
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [int32](#int32) |  |  |
+| created_ts | [int64](#int64) |  |  |
+| updated_ts | [int64](#int64) |  |  |
+| creator_id | [int32](#int32) |  |  |
+| row_status | [RowStatus](#memos-store-RowStatus) |  |  |
+| name | [string](#string) |  |  |
+| url | [string](#string) |  |  |
+
+
+
+
+
+ 
 
  
 

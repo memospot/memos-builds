@@ -64,7 +64,7 @@ const MemoList: React.FC = () => {
           return shouldShow;
         })
       : memos
-  ).filter((memo) => memo.creatorUsername === username && memo.rowStatus === "NORMAL" && !memo.parent);
+  ).filter((memo) => memo.creatorUsername === username && memo.rowStatus === "NORMAL");
 
   const pinnedMemos = shownMemos.filter((m) => m.pinned);
   const unpinnedMemos = shownMemos.filter((m) => !m.pinned);
@@ -111,7 +111,7 @@ const MemoList: React.FC = () => {
     <div className="flex flex-col justify-start items-start w-full max-w-full overflow-y-scroll pb-28 hide-scrollbar">
       <MemoFilter />
       {sortedMemos.map((memo) => (
-        <Memo key={memo.id} memo={memo} lazyRendering showVisibility showPinnedStyle />
+        <Memo key={memo.id} memo={memo} lazyRendering showVisibility showPinnedStyle showParent />
       ))}
 
       {loadingStatus === "fetching" ? (
