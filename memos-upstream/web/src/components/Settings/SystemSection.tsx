@@ -9,7 +9,6 @@ import { useTranslate } from "@/utils/i18n";
 import { showCommonDialog } from "../Dialog/CommonDialog";
 import showDisablePasswordLoginDialog from "../DisablePasswordLoginDialog";
 import Icon from "../Icon";
-import LearnMore from "../LearnMore";
 import showUpdateCustomizedProfileDialog from "../UpdateCustomizedProfileDialog";
 import "@/less/settings/system-section.less";
 
@@ -319,13 +318,11 @@ const SystemSection = () => {
         <div className="flex flex-row items-center">
           <div className="w-auto flex items-center">
             <span className="text-sm mr-1">{t("setting.system-section.telegram-bot-token")}</span>
-            <LearnMore
-              url="https://usememos.com/docs/integration/telegram-bot"
-              title={t("setting.system-section.telegram-bot-token-description")}
-            />
           </div>
         </div>
-        <Button onClick={handleSaveTelegramBotToken}>{t("common.save")}</Button>
+        <Button variant="outlined" color="neutral" onClick={handleSaveTelegramBotToken}>
+          {t("common.save")}
+        </Button>
       </div>
       <Input
         className="w-full"
@@ -337,10 +334,22 @@ const SystemSection = () => {
         value={telegramBotToken}
         onChange={(event) => handleTelegramBotTokenChanged(event.target.value)}
       />
+      <div className="w-full">
+        <Link
+          className="text-gray-500 text-sm inline-flex flex-row justify-start items-center mt-2 hover:underline hover:text-blue-600"
+          to="https://usememos.com/docs/integration/telegram-bot"
+          target="_blank"
+        >
+          {t("common.learn-more")}
+          <Icon.ExternalLink className="inline w-4 h-auto ml-1" />
+        </Link>
+      </div>
       <Divider className="!mt-3 !my-4" />
       <div className="form-label">
         <span className="normal-text">{t("setting.system-section.additional-style")}</span>
-        <Button onClick={handleSaveAdditionalStyle}>{t("common.save")}</Button>
+        <Button variant="outlined" color="neutral" onClick={handleSaveAdditionalStyle}>
+          {t("common.save")}
+        </Button>
       </div>
       <Textarea
         className="w-full"
@@ -356,7 +365,9 @@ const SystemSection = () => {
       />
       <div className="form-label mt-2">
         <span className="normal-text">{t("setting.system-section.additional-script")}</span>
-        <Button onClick={handleSaveAdditionalScript}>{t("common.save")}</Button>
+        <Button variant="outlined" color="neutral" onClick={handleSaveAdditionalScript}>
+          {t("common.save")}
+        </Button>
       </div>
       <Textarea
         className="w-full"

@@ -49,7 +49,7 @@ const Explore = () => {
     : memos;
 
   const sortedMemos = fetchedMemos
-    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE" && !m.parent)
+    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE")
     .sort((mi, mj) => mj.displayTs - mi.displayTs);
 
   useEffect(() => {
@@ -83,7 +83,7 @@ const Explore = () => {
       <div className="relative w-full h-auto flex flex-col justify-start items-start">
         <MemoFilter />
         {sortedMemos.map((memo) => (
-          <Memo key={memo.id} memo={memo} lazyRendering />
+          <Memo key={memo.id} memo={memo} lazyRendering showCreator showParent />
         ))}
 
         {loadingStatus === "fetching" ? (

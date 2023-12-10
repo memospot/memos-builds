@@ -122,7 +122,8 @@
     "memos-on": "{{amount}} memos em {{date}}"
   },
   "inbox": {
-    "memo-comment": "{{user}} tem um comentário sobre o seu {{memo}}."
+    "memo-comment": "{{user}} tem um comentário sobre o seu {{memo}}.",
+    "version-update": "A nova versão {{version}} já está disponível!"
   },
   "memo": {
     "archived-at": "Arquivado em",
@@ -317,7 +318,7 @@
       "s3-compatible-url": "URL compatível com S3",
       "secretkey": "Chave secreta",
       "secretkey-placeholder": "Chave secreta / Chave de acesso",
-      "storage-services-list": "Lista de serviços de armazenamento",
+      "storage-services": "Lista de serviços de armazenamento",
       "type-database": "Banco de dados",
       "type-local": "Sistema de arquivos local",
       "update-a-service": "Atualizar um serviço",
