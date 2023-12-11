@@ -52,7 +52,7 @@ builds:
 upx:
   # Note:
   # - freebsd/*, windows/arm64, */riscv64, */s390x aren't supported by upx
-  - enabled: true
+  - enabled: false
     goos: [darwin, linux, windows]
     goarch: [arm, arm64, "386", amd64, ppc64le]
     compress: "best"
