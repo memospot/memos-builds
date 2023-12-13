@@ -4,6 +4,7 @@ project_name: memos
 dist: build
 builds:
   - dir: ./memos-upstream
+    main: ./bin/memos
     binary: memos
     env:
       - CGO_ENABLED=0
