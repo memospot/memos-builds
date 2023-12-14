@@ -1,8 +1,10 @@
 ### Project-specific ###
 build/
 
-# Frontend backup
-memos-upstream/server/dist.bak
+# Frontend
+memos-upstream/server/frontend/dist.bak
+memos-upstream/server/frontend/dist
+!memos-upstream/server/frontend/dist/index.html
 
 # Air (hot reload) generated
 .air

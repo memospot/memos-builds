@@ -35,17 +35,17 @@ tasks:
       - sh -c "(cd ./web && pnpm type-gen) || (cd ./proto && buf generate)"
       - sh -c "cd ./web && pnpm build"
       # backup front-end placeholder only once
-      - sh -c "mv -nT ./server/dist ./server/dist.bak || true"
+      - sh -c "mv -nT ./server/frontend/dist ./server/frontend/dist.bak || true"
       # remove leftover from a previous local build
-      - sh -c "rm -rf ./server/dist"
+      - sh -c "rm -rf ./server/frontend/dist"
       # move front-end build to server/dist
-      - sh -c "(mv -f ./web/dist ./server/) || (sleep 2 && mv -f ./web/dist ./server/)"
-      - git update-index --assume-unchanged server/dist/index.html || true
-      - git update-index --assume-unchanged server/dist.bak/index.html || true
+      - sh -c "( mv -f ./web/dist ./server/frontend/ ) || ( sleep 2 && mv -f ./web/dist ./server/frontend/ )"
+      - git update-index --assume-unchanged server/frontend/dist/index.html || true
+      - git update-index --assume-unchanged server/frontend/dist.bak/index.html || true
     sources:
       - web/src/**/*.ts
     generates:
-      - server/dist/**/*.js
+      - server/frontend/dist/**/*.js
   ##### /CI #####
 
   build:

@@ -1,0 +1,62 @@
+# https://goreleaser.com
+
+project_name: memos
+dist: build
+builds:
+  - dir: ./memos-upstream
+    main: ./bin/memos
+    binary: memos
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+
+    # Notes on build targets:
+    # - modernc.org/libc doesn't support Windows i386 and any sort of MIPS architecture:
+    #   https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      # - arm
+      - arm64
+      # - riscv64
+    goarm:
+      - '5' # use software floating point; for CPUs without a VFP co-processor
+      - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
+      - "7" # use VFPv3; Cortex-A cores
+    goamd64:
+      - v1 # baseline: all x86_64 CPUs
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: "386"
+    flags: >-
+      -trimpath
+    ldflags: >-
+      -s
+      -w
+      -X main.Date={{.CommitDate}}
+      -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
+      -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+upx:
+  # Note:
+  # - freebsd/*, windows/arm64, */riscv64, */s390x aren't supported by upx
+  - enabled: true
+    goos: [linux, windows]
+    goarch: [arm, arm64, "386", amd64, ppc64le]
+    compress: "best"
+    lzma: true
+
+changelog:
+  skip: true
+
+# Generates a full build, but neither validate anything nor upload it to anywhere.
+# goreleaser --snapshot --skip-publish --rm-dist
+snapshot:
+  # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
+  name_template: "{{ incpatch .Version }}-dev"
