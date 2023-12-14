@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
-      packages: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +51,8 @@ jobs:
 
       - name: Pull latest upstream
         run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
           git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
           git update-index --assume-unchanged memos-upstream/
 
