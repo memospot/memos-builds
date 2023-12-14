@@ -86,7 +86,7 @@ jobs:
           elif [ -n "$PREVIOUS_TAG" ]; then
             VERSION=$PREVIOUS_TAG
           else
-            VERSION=$(date +%Y.%m.%d)".0"
+            VERSION="v"$(date +%Y.%m.%d)".0"
           fi
 
           VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
@@ -112,7 +112,7 @@ jobs:
           cd ${{ github.workspace }}/build/memos_windows_arm64;
           zip ${{ github.workspace }}/build/memos-${{ env.TAG }}-windows-arm64.zip memos.exe
 
-      - name: Create release
+      - name: Create pre-release
         uses: softprops/action-gh-release@v1
         with:
           files: |

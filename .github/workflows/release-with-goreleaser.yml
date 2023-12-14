@@ -3,9 +3,9 @@ name: Release with GoReleaser
 on:
   push:
     branches:
-      - "release/*.*.*"
+      - "release/v*.*.*[!-dev]"
     tags:
-      - "*.*.*"
+      - "v*.*.*[!-dev]"
   workflow_dispatch:
 
 jobs:
