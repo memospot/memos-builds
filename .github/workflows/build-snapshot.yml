@@ -73,47 +73,63 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compress binaries
-        run: |
-          cd ${{ github.workspace }}/build/memos_darwin_amd64_v1/;
-          tar -czvf ${{ github.workspace }}/build/memos_darwin_amd64_v1.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_darwin_arm64/;
-          tar -czvf ${{ github.workspace }}/build/memos_darwin_arm64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_linux_amd64_v1/;
-          tar -czvf ${{ github.workspace }}/build/memos_linux_amd64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_linux_arm64/;
-          tar -czvf ${{ github.workspace }}/build/memos_linux_arm64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_windows_amd64_v1;
-          zip ${{ github.workspace }}/build/memos_windows_amd64.zip memos.exe
-
-          cd ${{ github.workspace }}/build/memos_windows_arm64;
-          zip ${{ github.workspace }}/build/memos_windows_arm64.zip memos.exe
-      
       - name: Get previous tag
         shell: bash
         run: |
-          echo PREVIOUS_TAG=$(git describe --tags --abbrev=0) >> $GITHUB_ENV
-      
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0) 
+          echo PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
+
+          FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
+          
+          if [ -n "$FILE_VERSION" ]; then
+            VERSION=$FILE_VERSION
+          elif [ -n "$PREVIOUS_TAG" ]; then
+            VERSION=$PREVIOUS_TAG
+          else
+            VERSION=$(date +%Y.%m.%d)".0"
+          fi
+
+          VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
+          echo TAG=$VERSION >> $GITHUB_ENV
+
+      - name: Compress binaries
+        run: |
+          cd ${{ github.workspace }}/build/memos_darwin_amd64_v1/;
+          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-darwin-amd64.tar.gz memos
+
+          cd ${{ github.workspace }}/build/memos_darwin_arm64/;
+          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-darwin-arm64.tar.gz memos
+
+          cd ${{ github.workspace }}/build/memos_linux_amd64_v1/;
+          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-linux-amd64.tar.gz memos
+
+          cd ${{ github.workspace }}/build/memos_linux_arm64/;
+          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-linux-arm64.tar.gz memos
+
+          cd ${{ github.workspace }}/build/memos_windows_amd64_v1;
+          zip ${{ github.workspace }}/build/memos-${{ env.TAG }}-windows-amd64.zip memos.exe
+
+          cd ${{ github.workspace }}/build/memos_windows_arm64;
+          zip ${{ github.workspace }}/build/memos-${{ env.TAG }}-windows-arm64.zip memos.exe
+
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/memos_darwin_amd64.tar.gz
-            build/memos_darwin_arm64.tar.gz
-            build/memos_linux_amd64.tar.gz
-            build/memos_linux_arm64.tar.gz
-            build/memos_windows_amd64.zip
-            build/memos_windows_arm64.zip
+            build/memos-${{ env.TAG }}-darwin-amd64.tar.gz
+            build/memos-${{ env.TAG }}-darwin-arm64.tar.gz
+            build/memos-${{ env.TAG }}-linux-amd64.tar.gz
+            build/memos-${{ env.TAG }}-linux-arm64.tar.gz
+            build/memos-${{ env.TAG }}-windows-amd64.zip
+            build/memos-${{ env.TAG }}-windows-arm64.zip
 
           body: |
             This is a pre-release, built with bleeding-edge upstream Memos code.
             Do *not* use in production.
 
-            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/-${{ env.PREVIOUS_TAG }}...main)**
-          tag_name: snapshot-${{ github.sha }}
+            Version identifier `${{ env.TAG }}` is auto-generated and is subject to change when a new upstream release is made.
+
+            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.PREVIOUS_TAG }}...main)**
+          tag_name: ${{ env.TAG }}
           draft: true
           prerelease: true
