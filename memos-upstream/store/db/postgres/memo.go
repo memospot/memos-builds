@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
@@ -20,27 +19,6 @@ func (d *DB) CreateMemo(ctx context.Context, create *store.Memo) (*store.Memo, e
 
 	// Add initial values for the columns
 	values := []any{create.CreatorID, create.Content, create.Visibility}
-
-	// Conditionally add other fields and values
-	if create.ID != 0 {
-		builder = builder.Columns("id")
-		values = append(values, create.ID)
-	}
-
-	if create.CreatedTs != 0 {
-		builder = builder.Columns("created_ts")
-		values = append(values, create.CreatedTs)
-	}
-
-	if create.UpdatedTs != 0 {
-		builder = builder.Columns("updated_ts")
-		values = append(values, create.UpdatedTs)
-	}
-
-	if create.RowStatus != "" {
-		builder = builder.Columns("row_status")
-		values = append(values, create.RowStatus)
-	}
 
 	// Add all the values at once
 	builder = builder.Values(values...)
@@ -232,87 +210,19 @@ func (d *DB) UpdateMemo(ctx context.Context, update *store.UpdateMemo) error {
 }
 
 func (d *DB) DeleteMemo(ctx context.Context, delete *store.DeleteMemo) error {
-	// Start building the DELETE statement
-	builder := squirrel.Delete("memo").
-		PlaceholderFormat(squirrel.Dollar).
-		Where(squirrel.Eq{"id": delete.ID})
-
-	// Prepare the final query
-	query, args, err := builder.ToSql()
+	stmt := `DELETE FROM memo WHERE id = $1`
+	result, err := d.db.ExecContext(ctx, stmt, delete.ID)
 	if err != nil {
 		return err
 	}
-
-	// Execute the query with the context
-	result, err := d.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
 	if _, err := result.RowsAffected(); err != nil {
 		return err
 	}
-
-	// Perform any additional cleanup or operations such as vacuuming
-	// irving: wait, why do we need to vacuum here?
-	// I don't know why delete memo needs to vacuum. so I commented out.
-	// REVIEWERS LOOK AT ME: please check this.
-
 	return d.Vacuum(ctx)
 }
 
-func (d *DB) FindMemosVisibilityList(ctx context.Context, memoIDs []int32) ([]store.Visibility, error) {
-	// Start building the SELECT statement
-	builder := squirrel.Select("DISTINCT(visibility)").From("memo").
-		PlaceholderFormat(squirrel.Dollar).
-		Where(squirrel.Eq{"id": memoIDs})
-
-	// Prepare the final query
-	query, args, err := builder.ToSql()
-	if err != nil {
-		return nil, err
-	}
-
-	// Execute the query with the context
-	rows, err := d.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	visibilityList := make([]store.Visibility, 0)
-	for rows.Next() {
-		var visibility store.Visibility
-		if err := rows.Scan(&visibility); err != nil {
-			return nil, err
-		}
-		visibilityList = append(visibilityList, visibility)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return visibilityList, nil
-}
-
 func vacuumMemo(ctx context.Context, tx *sql.Tx) error {
-	// First, build the subquery
-	subQuery, subArgs, err := squirrel.Select("id").From("user").PlaceholderFormat(squirrel.Dollar).ToSql()
-	if err != nil {
-		return err
-	}
-
-	// Now, build the main delete query using the subquery
-	query, args, err := squirrel.Delete("memo").
-		Where(fmt.Sprintf("creator_id NOT IN (%s)", subQuery), subArgs...).
-		PlaceholderFormat(squirrel.Dollar).
-		ToSql()
-	if err != nil {
-		return err
-	}
-
-	// Execute the query
-	_, err = tx.ExecContext(ctx, query, args...)
+	stmt := `DELETE FROM memo WHERE creator_id NOT IN (SELECT id FROM "user")`
+	_, err := tx.ExecContext(ctx, stmt)
 	return err
 }
