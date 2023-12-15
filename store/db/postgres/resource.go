@@ -16,26 +16,6 @@ func (d *DB) CreateResource(ctx context.Context, create *store.Resource) (*store
 	qb := squirrel.Insert("resource").Columns("filename", "blob", "external_link", "type", "size", "creator_id", "internal_path")
 	values := []any{create.Filename, create.Blob, create.ExternalLink, create.Type, create.Size, create.CreatorID, create.InternalPath}
 
-	if create.ID != 0 {
-		qb = qb.Columns("id")
-		values = append(values, create.ID)
-	}
-
-	if create.CreatedTs != 0 {
-		qb = qb.Columns("created_ts")
-		values = append(values, create.CreatedTs)
-	}
-
-	if create.UpdatedTs != 0 {
-		qb = qb.Columns("updated_ts")
-		values = append(values, create.UpdatedTs)
-	}
-
-	if create.MemoID != nil {
-		qb = qb.Columns("memo_id")
-		values = append(values, *create.MemoID)
-	}
-
 	qb = qb.Values(values...).Suffix("RETURNING id")
 	query, args, err := qb.PlaceholderFormat(squirrel.Dollar).ToSql()
 	if err != nil {
@@ -205,7 +185,7 @@ func (d *DB) DeleteResource(ctx context.Context, delete *store.DeleteResource) e
 
 func vacuumResource(ctx context.Context, tx *sql.Tx) error {
 	// First, build the subquery
-	subQuery, subArgs, err := squirrel.Select("id").From("user").PlaceholderFormat(squirrel.Dollar).ToSql()
+	subQuery, subArgs, err := squirrel.Select("id").From(`"user"`).PlaceholderFormat(squirrel.Dollar).ToSql()
 	if err != nil {
 		return err
 	}

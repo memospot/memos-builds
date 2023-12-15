@@ -16,30 +16,6 @@ func (d *DB) CreateMemo(ctx context.Context, create *store.Memo) (*store.Memo, e
 	placeholder := []string{"?", "?", "?"}
 	args := []any{create.CreatorID, create.Content, create.Visibility}
 
-	if create.ID != 0 {
-		fields = append(fields, "`id`")
-		placeholder = append(placeholder, "?")
-		args = append(args, create.ID)
-	}
-
-	if create.CreatedTs != 0 {
-		fields = append(fields, "`created_ts`")
-		placeholder = append(placeholder, "FROM_UNIXTIME(?)")
-		args = append(args, create.CreatedTs)
-	}
-
-	if create.UpdatedTs != 0 {
-		fields = append(fields, "`updated_ts`")
-		placeholder = append(placeholder, "FROM_UNIXTIME(?)")
-		args = append(args, create.UpdatedTs)
-	}
-
-	if create.RowStatus != "" {
-		fields = append(fields, "`row_status`")
-		placeholder = append(placeholder, "?")
-		args = append(args, create.RowStatus)
-	}
-
 	stmt := "INSERT INTO memo (" + strings.Join(fields, ", ") + ") VALUES (" + strings.Join(placeholder, ", ") + ")"
 	result, err := d.db.ExecContext(ctx, stmt, args...)
 	if err != nil {
@@ -210,38 +186,6 @@ func (d *DB) DeleteMemo(ctx context.Context, delete *store.DeleteMemo) error {
 		return err
 	}
 	return nil
-}
-
-func (d *DB) FindMemosVisibilityList(ctx context.Context, memoIDs []int32) ([]store.Visibility, error) {
-	args := make([]any, 0, len(memoIDs))
-	list := make([]string, 0, len(memoIDs))
-	for _, memoID := range memoIDs {
-		args = append(args, memoID)
-		list = append(list, "?")
-	}
-
-	where := fmt.Sprintf("`id` in (%s)", strings.Join(list, ","))
-	query := "SELECT DISTINCT(`visibility`) FROM `memo` WHERE " + where
-	rows, err := d.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	visibilityList := make([]store.Visibility, 0)
-	for rows.Next() {
-		var visibility store.Visibility
-		if err := rows.Scan(&visibility); err != nil {
-			return nil, err
-		}
-		visibilityList = append(visibilityList, visibility)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return visibilityList, nil
 }
 
 func vacuumMemo(ctx context.Context, tx *sql.Tx) error {

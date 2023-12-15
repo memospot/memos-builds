@@ -16,6 +16,7 @@ import (
 	apiv1 "github.com/usememos/memos/api/v1"
 	apiv2 "github.com/usememos/memos/api/v2"
 	"github.com/usememos/memos/plugin/telegram"
+	"github.com/usememos/memos/server/frontend"
 	"github.com/usememos/memos/server/integration"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/server/service/backup"
@@ -31,9 +32,6 @@ type Server struct {
 	Secret  string
 	Profile *profile.Profile
 	Store   *store.Store
-
-	// API services.
-	apiV2Service *apiv2.APIV2Service
 
 	// Asynchronous runners.
 	backupRunner *backup.BackupRunner
@@ -83,7 +81,8 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	s.ID = serverID
 
 	// Serve frontend.
-	embedFrontend(e)
+	frontendService := frontend.NewFrontendService(profile, store)
+	frontendService.Serve(e)
 
 	// Serve swagger in dev/demo mode.
 	if profile.Mode == "dev" || profile.Mode == "demo" {
@@ -109,9 +108,9 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store, s.telegramBot)
 	apiV1Service.Register(rootGroup)
 
-	s.apiV2Service = apiv2.NewAPIV2Service(s.Secret, profile, store, s.Profile.Port+1)
+	apiV2Service := apiv2.NewAPIV2Service(s.Secret, profile, store, s.Profile.Port+1)
 	// Register gRPC gateway as api v2.
-	if err := s.apiV2Service.RegisterGateway(ctx, e); err != nil {
+	if err := apiV2Service.RegisterGateway(ctx, e); err != nil {
 		return nil, errors.Wrap(err, "failed to register gRPC gateway")
 	}
 
