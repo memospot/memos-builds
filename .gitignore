@@ -2,9 +2,8 @@
 build/
 
 # Frontend
-memos-upstream/server/frontend/dist.bak
-memos-upstream/server/frontend/dist
-!memos-upstream/server/frontend/dist/index.html
+memos-upstream/server/frontend
+!memos-upstream/server/frontend.go
 
 # Air (hot reload) generated
 .air

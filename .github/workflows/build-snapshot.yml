@@ -45,7 +45,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
@@ -54,7 +54,6 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
-          git update-index --assume-unchanged memos-upstream/
 
       - name: Build frontend
         run: |
@@ -79,8 +78,14 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0) 
           echo PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
 
+          if [[ $PREVIOUS_TAG == *"-dev" ]]; then
+            VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
+            echo TAG=$VERSION >> $GITHUB_ENV
+            exit 0
+          fi
+
           FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
-          
+
           if [ -n "$FILE_VERSION" ]; then
             VERSION=$FILE_VERSION
           elif [ -n "$PREVIOUS_TAG" ]; then

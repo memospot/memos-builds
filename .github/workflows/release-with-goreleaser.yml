@@ -3,9 +3,9 @@ name: Release with GoReleaser
 on:
   push:
     branches:
-      - "release/v*.*.*[!-dev]"
-    tags:
-      - "v*.*.*[!-dev]"
+      - "release/v*.*.*"
+    tags-ignore:
+      - "v*.*.*-*"
   workflow_dispatch:
 
 jobs:
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
