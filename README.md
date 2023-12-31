@@ -82,6 +82,34 @@ You should manually setup a system service to start Memos on boot.
 
 [Memos Windows Service Guide](docs/windows-service.md)
 
+## Running on Android
+To run Memos using [Termux](https://play.google.com/store/apps/details?id=com.termux) on Android:
+
+- Download a Linux build suiting device CPU architecture (most modern devices are `arm64`)
+
+- Extract downloaded file and copy the `memos` binary to internal storage
+
+Run this on Termux:
+
+```sh
+# This will prompt you for storage access permission
+termux-setup-storage
+
+# Copy the binary to Termux home directory
+cp ~/storage/shared/memos .
+
+# Make it executable
+chmod +x ./memos
+
+# Run Memos
+MEMOS_MODE=prod MEMOS_DATA=. MEMOS_PORT=5230 ./memos
+
+# Memos will be available at http://localhost:5230
+# and on local network at http://<device-ip>:5230
+```
+
+⚠ As stated at [Termux Wiki](https://wiki.termux.com/wiki/Internal_and_external_storage), all data under Termux home directory will be deleted if you uninstall the app.
+
 ## Star History
 
 <picture>
