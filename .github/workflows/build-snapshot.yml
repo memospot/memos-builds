@@ -1,4 +1,4 @@
-name: Build snapshot with GoReleaser
+name: Build snapshot
 
 on:
 
@@ -73,11 +73,13 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0)
           echo PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
           echo GORELEASER_PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
+          echo "Previous tag is $PREVIOUS_TAG"
 
           if [[ $PREVIOUS_TAG == *"-dev" ]]; then
             VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
             echo TAG=$VERSION >> $GITHUB_ENV
             echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
+            echo "Previous tag is a dev release. Current tag set to $VERSION"
             exit 0
           fi
 
@@ -94,6 +96,7 @@ jobs:
           VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
           echo TAG=$VERSION >> $GITHUB_ENV
           echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
+          echo "Current tag set to $VERSION"
       
       - name: Build snapshot for all configured targets
         run: |
@@ -108,7 +111,7 @@ jobs:
             build/*.txt
 
           body: |
-            This is a pre-release, built with bleeding-edge upstream Memos code.
+            This is a pre-release, built with untested bleeding-edge upstream Memos code.
             Do *not* use in production.
 
             Version identifier `${{ env.TAG }}` is auto-generated and is subject to change when a new upstream release is made.

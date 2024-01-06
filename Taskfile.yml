@@ -8,8 +8,9 @@
 #
 # Dependencies:
 #* git: https://git-scm.com/downloads
-#* go: https://golang.org/doc/install
+#* go: https://golang.org/doc/install (>=1.21)
 #* goreleaser: https://goreleaser.com/install/
+#* nodejs: https://nodejs.org/en/download/ (LTS 20)
 #* pnpm: https://pnpm.io/installation
 #* task: https://taskfile.dev/#/installation
 
@@ -45,38 +46,23 @@ tasks:
     cmds:
       - go mod tidy -go=1.21
     sources:
-      - go.mod
-      - go.sum
-
-  build:snapshot:all:
-    desc: Build binaries for ALL configured OS/Arch, ignores git status
-    deps:
-      - build:backend-tidy
-      - build:frontend
-    cmds:
-      - goreleaser build --snapshot --clean --timeout 60m --config .goreleaser-snapshot.yaml
-      - task: post-build:snapshot:compress
-      - task: post-build:snapshot:gen-checksums
-    sources:
-      - ./.goreleaser-snapshot.yaml
-      - ./memos-upstream/**/*.go
-      - ./memos-upstream/**/go.mod
-      - ./memos-upstream/**/go.sum
-    generates:
-      - ./build/backend/memos*/memos*
-      - ./build/*.{zip,tar.gz}
-      - ./build/memos_SHA256SUMS.txt
+      - go.{mod,sum}
 
   post-build:snapshot:compress:
     desc: Compress built binaries
     summary: |
       - Create compressed archives containing built binaries and dist folder
       Goreleaser doesn't compress snapshot builds, so we do it manually.
+    silent: true
     deps:
       - build:frontend
     cmds:
       - |
         for dir in ./build/backend/memos*; do
+          if ! [ -d "$dir" ]; then
+            continue
+          fi
+
           sh -c "rm -rf ${dir//\\//}/dist"
           sh -c "( mv -f ./build/dist ${dir//\\//}/ ) || ( sleep 2 && mv -f ./build/dist ${dir//\\//}/ )"
 
@@ -110,8 +96,7 @@ tasks:
     sources:
       - ./build/backend/memos-*/**/*
     generates:
-      - ./build/*.zip
-      - ./build/*.tar.gz
+      - "*.{zip,tar.gz}"
 
   post-build:snapshot:gen-checksums:
     desc: Generate checksums for compressed files
@@ -128,32 +113,43 @@ tasks:
           sh -c "sha256sum $file >> memos_SHA256SUMS.txt"
         done || true
     sources:
-      - "*.tar.gz"
-      - "*.zip"
+      - "*.{zip,tar.gz}"
     generates:
       - memos_SHA256SUMS.txt
-  ##### /CI #####
 
-  build:snapshot:
-    desc: Build binaries for current OS/Arch, ignores git status
-    summary: |
+  build:snapshot:all:
+    desc: Build binaries for ALL configured OS/Arch, ignores git status
+    summary: &snapshot-summary | 
       Snapshot builds bumps the patch version and appends -dev to the version string.
-    deps:
+    deps: &snapshot-deps
       - build:backend-tidy
       - build:frontend
-    cmds:
-      - goreleaser build --snapshot --clean --single-target --config .goreleaser-snapshot.yaml
-      - task: post-build:snapshot:compress
-      - task: post-build:snapshot:gen-checksums
-    sources:
+    sources: &snapshot-sources
       - ./.goreleaser-snapshot.yaml
       - ./memos-upstream/**/*.go
       - ./memos-upstream/**/go.mod
       - ./memos-upstream/**/go.sum
-    generates:
+    generates: &snapshot-generates
       - ./build/backend/memos*/memos*
       - ./build/*.{zip,tar.gz}
       - ./build/memos_SHA256SUMS.txt
+    cmds:
+      - goreleaser build --snapshot --clean --timeout 60m --config .goreleaser-snapshot.yaml
+      - task: post-build:snapshot:compress
+      - task: post-build:snapshot:gen-checksums
+  ##### /CI #####
+
+  ##### Local #####
+  build:snapshot:
+    desc: Build binaries for current OS/Arch, ignores git status
+    summary: *snapshot-summary
+    deps: *snapshot-deps
+    sources: *snapshot-sources
+    generates: *snapshot-generates
+    cmds:
+      - goreleaser build --snapshot --clean --single-target --config .goreleaser-snapshot.yaml
+      - task: post-build:snapshot:compress
+      - task: post-build:snapshot:gen-checksums
 
   build:
     desc: Build binaries for current OS/Arch
@@ -162,7 +158,7 @@ tasks:
     deps:
       - build:backend-tidy
       - build:frontend
-    cmds:
+    cmds:      
       - goreleaser build --clean --single-target
 
   build:all:
@@ -194,15 +190,29 @@ tasks:
       - sh -c "rm -rf ./memos-upstream/web/node_modules"
       - sh -c "rm -rf ./memos-upstream/web/dist"
       - sh -c "rm -rf ./memos-upstream/server/frontend/dist"
-      - sh -c "mv -f ./memos-upstream/server/frontend/dist.bak ./memos-upstream/server/frontend/dist"
+      - sh -c "mv -f ./memos-upstream/server/frontend/dist.bak ./memos-upstream/server/frontend/dist"  
+  ##### /Local #####
 
-  resetsubtree:
+  ##### Git-related #####
+  subtree:checkout-latest:
+    desc: Checkout Memos subtree to latest commit.
+    cmds:
+      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
+  
+  subtree:checkout-tag:
+    desc: |
+      Checkout Memos subtree to supplied tag.
+      Usage: `task subtree:checkout-tag -- v0.0.0`.
+    cmds:
+      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
+
+  subtree:reset:
     desc: Reset subtree.
     cmds:
       - sh -c "rm -rf ./memos-upstream || true"
       - git rm -fr memos-upstream --ignore-unmatch
       - git commit -m "Remove memos-upstream subtree"
-      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Setup memos-upstream subtree"
+      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Init memos-upstream subtree"
 
   pushtag:
     desc: |
@@ -228,3 +238,4 @@ tasks:
     cmds:
       - git push origin :refs/tags/{{.CLI_ARGS}}
       - git tag -d {{.CLI_ARGS}}
+  ##### /Git-related #####

@@ -31,6 +31,10 @@ builds:
         goarch: arm
       - goos: windows
         goarch: "386"
+      - goos: windows
+        goarch: arm64
+      - goos: linux
+        goarch: arm64
     flags: >-
       -trimpath
     ldflags: >-
@@ -54,7 +58,8 @@ changelog:
   skip: true
 
 # Generates a full build, but neither validate anything nor upload it to anywhere.
-# goreleaser --snapshot --skip-publish --rm-dist
+# goreleaser --snapshot --skip-publish --clean
 snapshot:
   # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
   name_template: "{{ incpatch .Version }}-dev"
+
