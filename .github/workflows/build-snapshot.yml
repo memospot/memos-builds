@@ -23,12 +23,24 @@ jobs:
         with:
           repo: go-task/task
           cache: enable
-          tag: "v3.32.0"
+          tag: "v3.33.1"
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@v1.28.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup UPX
+        uses: crazy-max/ghaction-upx@v3.0.0
+        with:
+          install-only: true
+
+      - name: Setup Goreleaser
+        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        with:
+          repo: goreleaser/goreleaser
+          cache: enable
+          tag: "v1.23.0"
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -55,32 +67,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash
 
-      - name: Build frontend
-        run: |
-          task build:frontend
-
-      - name: Tidy backend dependencies
-        run: |
-          task build:backend:tidy
-
-      - name: Build snapshot with goreleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          distribution: goreleaser
-          version: latest
-          args: build --snapshot --clean --timeout 60m  --config .goreleaser-pre.yaml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Get previous tag
         shell: bash
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0) 
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0)
           echo PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
+          echo GORELEASER_PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
 
           if [[ $PREVIOUS_TAG == *"-dev" ]]; then
             VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
             echo TAG=$VERSION >> $GITHUB_ENV
+            echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
             exit 0
           fi
 
@@ -96,37 +93,19 @@ jobs:
 
           VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
           echo TAG=$VERSION >> $GITHUB_ENV
-
-      - name: Compress binaries
+          echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
+      
+      - name: Build snapshot for all configured targets
         run: |
-          cd ${{ github.workspace }}/build/memos_darwin_amd64_v1/;
-          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-darwin-amd64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_darwin_arm64/;
-          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-darwin-arm64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_linux_amd64_v1/;
-          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-linux-amd64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_linux_arm64/;
-          tar -czvf ${{ github.workspace }}/build/memos-${{ env.TAG }}-linux-arm64.tar.gz memos
-
-          cd ${{ github.workspace }}/build/memos_windows_amd64_v1;
-          zip ${{ github.workspace }}/build/memos-${{ env.TAG }}-windows-amd64.zip memos.exe
-
-          cd ${{ github.workspace }}/build/memos_windows_arm64;
-          zip ${{ github.workspace }}/build/memos-${{ env.TAG }}-windows-arm64.zip memos.exe
+          task build:snapshot:all
 
       - name: Create pre-release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/memos-${{ env.TAG }}-darwin-amd64.tar.gz
-            build/memos-${{ env.TAG }}-darwin-arm64.tar.gz
-            build/memos-${{ env.TAG }}-linux-amd64.tar.gz
-            build/memos-${{ env.TAG }}-linux-arm64.tar.gz
-            build/memos-${{ env.TAG }}-windows-amd64.zip
-            build/memos-${{ env.TAG }}-windows-arm64.zip
+            build/*.tar.gz
+            build/*.zip
+            build/*.txt
 
           body: |
             This is a pre-release, built with bleeding-edge upstream Memos code.

@@ -27,12 +27,17 @@ jobs:
         with:
           repo: go-task/task
           cache: enable
-          tag: "v3.32.0"
+          tag: "v3.33.1"
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@v1.28.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup UPX
+        uses: crazy-max/ghaction-upx@v3.0.0
+        with:
+          install-only: true
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -59,7 +64,7 @@ jobs:
 
       - name: Tidy backend dependencies
         run: |
-          task build:backend:tidy
+          task build:backend-tidy
 
       - name: Build with goreleaser
         uses: goreleaser/goreleaser-action@v5

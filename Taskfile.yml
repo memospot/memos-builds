@@ -8,16 +8,38 @@
 #
 # Dependencies:
 #* git: https://git-scm.com/downloads
-#* task: https://taskfile.dev/#/installation
+#* go: https://golang.org/doc/install
 #* goreleaser: https://goreleaser.com/install/
 #* pnpm: https://pnpm.io/installation
-#* go: https://golang.org/doc/install
+#* task: https://taskfile.dev/#/installation
 
 version: "3"
 
 tasks:
   ##### CI #####
-  build:backend:tidy:
+  build:frontend:
+    desc: Build front-end
+    dir: ./memos-upstream
+    # silent: true
+    cmds:
+      # install dependencies
+      - cd ./web && pnpm i --frozen-lockfile
+      # generate typescript types from protobuf files using type-gen script; fallback to buf generate
+      - (cd ./web && pnpm type-gen) || (cd ./proto && buf generate)
+      # remove leftovers from previous local builds
+      - sh -c "rm -rf ./web/dist"
+      - sh -c "rm -rf ../build/dist"
+      # build front-end
+      - cd ./web && time pnpm build
+      # move front-end build to top-level build/dist
+      - sh -c "( mv -f ./web/dist ../build/ ) || ( sleep 2 && mv -f ./web/dist ../build/ )"
+    sources:
+      - ./web/src/**/*
+      - ./web/pnpm-lock.yaml
+    generates:
+      - ../build/dist/**/*
+  
+  build:backend-tidy:
     desc: Tidy backend dependencies
     dir: ./memos-upstream
     cmds:
@@ -26,61 +48,132 @@ tasks:
       - go.mod
       - go.sum
 
-  build:frontend:
-    desc: Build front-end
-    dir: ./memos-upstream
+  build:snapshot:all:
+    desc: Build binaries for ALL configured OS/Arch, ignores git status
+    deps:
+      - build:backend-tidy
+      - build:frontend
     cmds:
-      - sh -c "cd ./web && pnpm i --frozen-lockfile"
-      # generate typescript types from protobuf files using type-gen script; fallback to buf generate
-      - sh -c "(cd ./web && pnpm type-gen) || (cd ./proto && buf generate)"
-      - sh -c "cd ./web && pnpm build"
-      # backup front-end placeholder only once
-      - sh -c "mv -nT ./server/frontend/dist ./server/frontend/dist.bak || true"
-      # remove leftover from a previous local build
-      - sh -c "rm -rf ./server/frontend/dist"
-      # move front-end build to server/dist
-      - sh -c "( mv -f ./web/dist ./server/frontend/ ) || ( sleep 2 && mv -f ./web/dist ./server/frontend/ )"
-      - git update-index --assume-unchanged server/frontend/dist/index.html
+      - goreleaser build --snapshot --clean --timeout 60m --config .goreleaser-snapshot.yaml
+      - task: post-build:snapshot:compress
+      - task: post-build:snapshot:gen-checksums
     sources:
-      - web/src/**/*.ts
-      - web/pnpm-lock.yaml
+      - ./.goreleaser-snapshot.yaml
+      - ./memos-upstream/**/*.go
+      - ./memos-upstream/**/go.mod
+      - ./memos-upstream/**/go.sum
     generates:
-      - server/frontend/dist/**/*.js
+      - ./build/backend/memos*/memos*
+      - ./build/*.{zip,tar.gz}
+      - ./build/memos_SHA256SUMS.txt
+
+  post-build:snapshot:compress:
+    desc: Compress built binaries
+    summary: |
+      - Create compressed archives containing built binaries and dist folder
+      Goreleaser doesn't compress snapshot builds, so we do it manually.
+    deps:
+      - build:frontend
+    cmds:
+      - |
+        for dir in ./build/backend/memos*; do
+          sh -c "rm -rf ${dir//\\//}/dist"
+          sh -c "( mv -f ./build/dist ${dir//\\//}/ ) || ( sleep 2 && mv -f ./build/dist ${dir//\\//}/ )"
+
+          filename=$(sh -c "basename ${dir//\\//}")
+          echo "Compressing $filename..."
+
+          ok=false
+          if [[ $filename == *"windows"* ]]; then
+            if ! [ -z $(command -v 7za) ]; then
+              sh -c "cd ${dir//\\//}; 7za -tzip a ../../$filename.zip *" > /dev/null
+              ok=true
+            elif ! [ -z $(command -v zip) ]; then
+              sh -c "cd ${dir//\\//}; zip -r ../../$filename.zip *" > /dev/null
+              ok=true
+            elif ! [ -z $(command -v powershell) ]; then
+              powershell -Command "Compress-Archive -Force -Path ${dir//\\//}/* -DestinationPath ./build/$filename.zip"
+              ok=true
+            elif ! [ -z $(command -v pwsh) ]; then
+              pwsh -Command "Compress-Archive -Force -Path ${dir//\\//}/* -DestinationPath ./build/$filename.zip"
+              ok=true
+            fi
+          fi
+
+          if ! $ok; then
+            sh -c "cd ${dir//\\//}; tar -czf $filename.tar.gz *"
+            sh -c "mv -f ${dir//\\//}/$filename.tar.gz ./build/$filename.tar.gz"
+          fi
+
+          sh -c "( mv -f ${dir//\\//}/dist ./build/ ) || ( sleep 2 && mv -f ${dir//\\//}/dist ./build/ )"
+        done
+    sources:
+      - ./build/backend/memos-*/**/*
+    generates:
+      - ./build/*.zip
+      - ./build/*.tar.gz
+
+  post-build:snapshot:gen-checksums:
+    desc: Generate checksums for compressed files
+    summary: |
+      - Create sha256sums.txt file
+      Goreleaser doesn't generate checksums for snapshot builds, so we do it manually.
+    dir: ./build
+    deps:
+      - post-build:snapshot:compress
+    cmds:
+      - |
+        echo -n > memos_SHA256SUMS.txt
+        for file in *.tar.gz *.zip; do
+          sh -c "sha256sum $file >> memos_SHA256SUMS.txt"
+        done || true
+    sources:
+      - "*.tar.gz"
+      - "*.zip"
+    generates:
+      - memos_SHA256SUMS.txt
   ##### /CI #####
-
-  build:
-    desc: Build binaries for current OS/Arch
-    deps:
-      - build:backend:tidy
-      - build:frontend
-    cmds:
-      - goreleaser build --clean --single-target
-
-  build:all:
-    desc: Build binaries for all OS/Arch
-    deps:
-      - build:backend:tidy
-      - build:frontend
-    cmds:
-      - goreleaser build --clean --timeout 60m
 
   build:snapshot:
     desc: Build binaries for current OS/Arch, ignores git status
     summary: |
       Snapshot builds bumps the patch version and appends -dev to the version string.
     deps:
-      - build:backend:tidy
+      - build:backend-tidy
       - build:frontend
     cmds:
-      - goreleaser build --snapshot --clean --single-target
+      - goreleaser build --snapshot --clean --single-target --config .goreleaser-snapshot.yaml
+      - task: post-build:snapshot:compress
+      - task: post-build:snapshot:gen-checksums
+    sources:
+      - ./.goreleaser-snapshot.yaml
+      - ./memos-upstream/**/*.go
+      - ./memos-upstream/**/go.mod
+      - ./memos-upstream/**/go.sum
+    generates:
+      - ./build/backend/memos*/memos*
+      - ./build/*.{zip,tar.gz}
+      - ./build/memos_SHA256SUMS.txt
 
-  build:snapshot:all:
-    desc: Build binaries for all OS/Arch, ignores git status
+  build:
+    desc: Build binaries for current OS/Arch
+    summary: |
+      This won't work if git is dirty.
     deps:
-      - build:backend:tidy
+      - build:backend-tidy
       - build:frontend
     cmds:
-      - goreleaser build --snapshot --clean --timeout 60m
+      - goreleaser build --clean --single-target
+
+  build:all:
+    desc: Build binaries for all OS/Arch
+    summary: |
+      This won't work if git is dirty.
+    deps:
+      - build:backend-tidy
+      - build:frontend
+    cmds:
+      - goreleaser build --clean --timeout 60m
 
   release:
     desc: Release binaries to GitHub
@@ -88,7 +181,7 @@ tasks:
       Requires GITHUB_TOKEN environment variable to be set.
       This token must have `write:packages` permission.
     deps:
-      - build:backend:tidy
+      - build:backend-tidy
       - build:frontend
     cmds:
       - goreleaser release --clean --timeout 60m

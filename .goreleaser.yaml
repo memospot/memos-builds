@@ -1,7 +1,7 @@
 # https://goreleaser.com
 
 project_name: memos
-dist: build
+dist: build/backend
 builds:
   - dir: ./memos-upstream
     main: ./bin/memos
@@ -53,8 +53,9 @@ builds:
 upx:
   # Note:
   # - freebsd/*, windows/arm64, */riscv64, */s390x aren't supported by upx
-  - enabled: false
-    goos: [darwin, linux, windows]
+  # - Using UPX on Windows may cause false-positives with some antivirus software.
+  - enabled: true
+    goos: [linux]
     goarch: [arm, arm64, "386", amd64, ppc64le]
     compress: "best"
     lzma: true
@@ -73,6 +74,9 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+    files:
+      - src: build/dist/**/*
+        dst: dist
 
 changelog:
   skip: true
@@ -122,7 +126,7 @@ release:
     name: memos-builds
 
   # If set to true, will not auto-publish the release.
-  draft: false
+  draft: true
 
   # If set, will create a release discussion in the category specified.
   # Warning: do not use categories in the 'Announcement' format.

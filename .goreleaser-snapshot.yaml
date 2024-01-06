@@ -1,7 +1,7 @@
 # https://goreleaser.com
 
 project_name: memos
-dist: build
+dist: build/backend
 builds:
   - dir: ./memos-upstream
     main: ./bin/memos
@@ -19,9 +19,7 @@ builds:
       - windows
     goarch:
       - amd64
-      # - arm
       - arm64
-      # - riscv64
     goarm:
       - '5' # use software floating point; for CPUs without a VFP co-processor
       - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
