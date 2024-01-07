@@ -240,7 +240,7 @@ tasks:
       Note: requires a clean git state. `memos-upstream` folder will be reset.
     cmds:
       - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Checkout memos-upstream to latest commit"
-      - git reset -fx memos-upstream
+      - git clean -fx memos-upstream
 
   git:subtree:pull-tag:
     desc: |
@@ -249,7 +249,7 @@ tasks:
       Note: requires a clean git state.
     cmds:
       - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
-      - git reset -fdx memos-upstream
+      - git clean -fx memos-upstream
 
   git:subtree:reset:
     desc: Reset subtree.
