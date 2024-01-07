@@ -7,6 +7,7 @@ import (
 
 	"github.com/usememos/memos/plugin/gomark/ast"
 	"github.com/usememos/memos/plugin/gomark/parser/tokenizer"
+	"github.com/usememos/memos/plugin/gomark/restore"
 )
 
 func TestLinkParser(t *testing.T) {
@@ -30,6 +31,13 @@ func TestLinkParser(t *testing.T) {
 			link: nil,
 		},
 		{
+			text: "[your/slash](https://example.com)",
+			link: &ast.Link{
+				Text: "your/slash",
+				URL:  "https://example.com",
+			},
+		},
+		{
 			text: "[hello world](https://example.com)",
 			link: &ast.Link{
 				Text: "hello world",
@@ -40,6 +48,6 @@ func TestLinkParser(t *testing.T) {
 	for _, test := range tests {
 		tokens := tokenizer.Tokenize(test.text)
 		node, _ := NewLinkParser().Parse(tokens)
-		require.Equal(t, StringifyNodes([]ast.Node{test.link}), StringifyNodes([]ast.Node{node}))
+		require.Equal(t, restore.Restore([]ast.Node{test.link}), restore.Restore([]ast.Node{node}))
 	}
 }

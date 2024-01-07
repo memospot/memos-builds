@@ -12,6 +12,10 @@ import "google/protobuf/timestamp.proto";
 option go_package = "gen/api/v2";
 
 service UserService {
+  // ListUsers returns a list of users.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {get: "/api/v2/users"};
+  }
   // GetUser gets a user by name.
   rpc GetUser(GetUserRequest) returns (GetUserResponse) {
     option (google.api.http) = {get: "/api/v2/{name=users/*}"};
@@ -84,19 +88,27 @@ message User {
   }
   Role role = 3;
 
-  string email = 4;
+  string username = 4;
 
-  string nickname = 5;
+  string email = 5;
 
-  string avatar_url = 6;
+  string nickname = 6;
 
-  string password = 7 [(google.api.field_behavior) = INPUT_ONLY];
+  string avatar_url = 7;
 
-  RowStatus row_status = 8;
+  string password = 8 [(google.api.field_behavior) = INPUT_ONLY];
 
-  google.protobuf.Timestamp create_time = 9;
+  RowStatus row_status = 9;
 
-  google.protobuf.Timestamp update_time = 10;
+  google.protobuf.Timestamp create_time = 10;
+
+  google.protobuf.Timestamp update_time = 11;
+}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+  repeated User users = 1;
 }
 
 message GetUserRequest {

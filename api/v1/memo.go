@@ -60,7 +60,6 @@ type Memo struct {
 	Pinned     bool       `json:"pinned"`
 
 	// Related fields
-	Parent          *Memo           `json:"parent"`
 	CreatorName     string          `json:"creatorName"`
 	CreatorUsername string          `json:"creatorUsername"`
 	ResourceList    []*Resource     `json:"resourceList"`
@@ -184,11 +183,6 @@ func (s *APIV1Service) GetMemoList(c echo.Context) error {
 	if rowStatus != "" {
 		find.RowStatus = &rowStatus
 	}
-	pinnedStr := c.QueryParam("pinned")
-	if pinnedStr != "" {
-		pinned := pinnedStr == "true"
-		find.Pinned = &pinned
-	}
 
 	contentSearch := []string{}
 	tag := c.QueryParam("tag")
@@ -265,7 +259,7 @@ func (s *APIV1Service) CreateMemo(c echo.Context) error {
 	}
 
 	if createMemoRequest.Visibility == "" {
-		userMemoVisibilitySetting, err := s.Store.GetUserSettingV1(ctx, &store.FindUserSetting{
+		userMemoVisibilitySetting, err := s.Store.GetUserSetting(ctx, &store.FindUserSetting{
 			UserID: &userID,
 			Key:    storepb.UserSettingKey_USER_SETTING_MEMO_VISIBILITY,
 		})
@@ -389,7 +383,7 @@ func (s *APIV1Service) CreateMemo(c echo.Context) error {
 	// Send notification to telegram if memo is not private.
 	if memoResponse.Visibility != Private {
 		// fetch all telegram UserID
-		userSettings, err := s.Store.ListUserSettingsV1(ctx, &store.FindUserSetting{Key: storepb.UserSettingKey_USER_SETTING_TELEGRAM_USER_ID})
+		userSettings, err := s.Store.ListUserSettings(ctx, &store.FindUserSetting{Key: storepb.UserSettingKey_USER_SETTING_TELEGRAM_USER_ID})
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to ListUserSettings").SetInternal(err)
 		}
@@ -435,34 +429,34 @@ func (s *APIV1Service) CreateMemo(c echo.Context) error {
 //	- creatorUsername is listed at ./web/src/helpers/api.ts:82, but it's not present here
 func (s *APIV1Service) GetAllMemos(c echo.Context) error {
 	ctx := c.Request().Context()
-	findMemoMessage := &store.FindMemo{}
+	memoFind := &store.FindMemo{}
 	_, ok := c.Get(userIDContextKey).(int32)
 	if !ok {
-		findMemoMessage.VisibilityList = []store.Visibility{store.Public}
+		memoFind.VisibilityList = []store.Visibility{store.Public}
 	} else {
-		findMemoMessage.VisibilityList = []store.Visibility{store.Public, store.Protected}
+		memoFind.VisibilityList = []store.Visibility{store.Public, store.Protected}
 	}
 
 	if limit, err := strconv.Atoi(c.QueryParam("limit")); err == nil {
-		findMemoMessage.Limit = &limit
+		memoFind.Limit = &limit
 	}
 	if offset, err := strconv.Atoi(c.QueryParam("offset")); err == nil {
-		findMemoMessage.Offset = &offset
+		memoFind.Offset = &offset
 	}
 
 	// Only fetch normal status memos.
 	normalStatus := store.Normal
-	findMemoMessage.RowStatus = &normalStatus
+	memoFind.RowStatus = &normalStatus
 
 	memoDisplayWithUpdatedTs, err := s.getMemoDisplayWithUpdatedTsSettingValue(ctx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get memo display with updated ts setting value").SetInternal(err)
 	}
 	if memoDisplayWithUpdatedTs {
-		findMemoMessage.OrderByUpdatedTs = true
+		memoFind.OrderByUpdatedTs = true
 	}
 
-	list, err := s.Store.ListMemos(ctx, findMemoMessage)
+	list, err := s.Store.ListMemos(ctx, memoFind)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to fetch all memo list").SetInternal(err)
 	}
@@ -867,24 +861,6 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		relationList = append(relationList, convertMemoRelationFromStore(relation))
 	}
 	memoMessage.RelationList = relationList
-	for _, relation := range memoMessage.RelationList {
-		if relation.MemoID == memoMessage.ID && relation.Type == MemoRelationComment {
-			parentMemo, err := s.Store.GetMemo(ctx, &store.FindMemo{
-				ID: &relation.RelatedMemoID,
-			})
-			if err != nil {
-				return nil, err
-			}
-			if parentMemo != nil {
-				parent, err := s.convertMemoFromStore(ctx, parentMemo)
-				if err != nil {
-					return nil, err
-				}
-				memoMessage.Parent = parent
-			}
-		}
-	}
-
 	return memoMessage, nil
 }
 

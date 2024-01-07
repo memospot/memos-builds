@@ -81,10 +81,6 @@
     "visibility": "Sichtbarkeit",
     "yourself": "Du selbst"
   },
-  "daily-review": {
-    "no-memos": "Hoppla, da ist ja gar nichts.",
-    "title": "Tagesbilanz"
-  },
   "days": {
     "fri": "Fr",
     "mon": "Mo",
@@ -331,8 +327,6 @@
       "additional-style": "Zusätzlicher Stil",
       "additional-style-placeholder": "Zusätzliches CSS",
       "allow-user-signup": "Erlaube Registrierung neuer Mitglieder",
-      "auto-backup-interval": "Intervall für automatische Sicherung (Sekunden)",
-      "auto-backup-interval-hint": "Setze den Wert auf 0, um die automatische Sicherung zu deaktivieren. Nach Änderung dieses Wertes ist ein Neustart erforderlich.",
       "customize-server": {
         "appearance": "Erscheinungsbild",
         "default": "Standard: memos",

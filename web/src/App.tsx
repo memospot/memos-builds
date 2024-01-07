@@ -1,20 +1,19 @@
 import { useColorScheme } from "@mui/joy";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import storage from "./helpers/storage";
 import { getSystemColorScheme } from "./helpers/utils";
 import useNavigateTo from "./hooks/useNavigateTo";
-import Loading from "./pages/Loading";
 import { useGlobalStore } from "./store/module";
-import { useUserV1Store } from "./store/v1";
+import { useUserStore } from "./store/v1";
 
 const App = () => {
   const { i18n } = useTranslation();
   const navigateTo = useNavigateTo();
-  const globalStore = useGlobalStore();
   const { mode, setMode } = useColorScheme();
-  const userV1Store = useUserV1Store();
+  const globalStore = useGlobalStore();
+  const userStore = useUserStore();
   const [loading, setLoading] = useState(true);
   const { appearance, locale, systemStatus } = globalStore.state;
 
@@ -28,9 +27,9 @@ const App = () => {
   useEffect(() => {
     const initialState = async () => {
       try {
-        await userV1Store.fetchCurrentUser();
+        await userStore.fetchCurrentUser();
       } catch (error) {
-        // Skip.
+        // Do nothing.
       }
       setLoading(false);
     };
@@ -75,8 +74,8 @@ const App = () => {
     }
   }, [systemStatus.additionalScript]);
 
+  // Dynamic update metadata with customized profile.
   useEffect(() => {
-    // dynamic update metadata with customized profile.
     document.title = systemStatus.customizedProfile.name;
     const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
     link.href = systemStatus.customizedProfile.logoUrl || "/logo.png";
@@ -117,13 +116,7 @@ const App = () => {
     }
   }, [mode]);
 
-  return loading ? (
-    <Loading />
-  ) : (
-    <Suspense fallback={<Loading />}>
-      <Outlet />
-    </Suspense>
-  );
+  return loading ? null : <Outlet />;
 };
 
 export default App;

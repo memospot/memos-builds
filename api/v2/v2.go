@@ -3,14 +3,18 @@ package v2
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/usememos/memos/internal/log"
 	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
@@ -26,6 +30,7 @@ type APIV2Service struct {
 	apiv2pb.UnimplementedInboxServiceServer
 	apiv2pb.UnimplementedActivityServiceServer
 	apiv2pb.UnimplementedWebhookServiceServer
+	apiv2pb.UnimplementedMarkdownServiceServer
 
 	Secret  string
 	Profile *profile.Profile
@@ -60,6 +65,7 @@ func NewAPIV2Service(secret string, profile *profile.Profile, store *store.Store
 	apiv2pb.RegisterInboxServiceServer(grpcServer, apiv2Service)
 	apiv2pb.RegisterActivityServiceServer(grpcServer, apiv2Service)
 	apiv2pb.RegisterWebhookServiceServer(grpcServer, apiv2Service)
+	apiv2pb.RegisterMarkdownServiceServer(grpcServer, apiv2Service)
 	reflection.Register(grpcServer)
 
 	return apiv2Service
@@ -110,6 +116,9 @@ func (s *APIV2Service) RegisterGateway(ctx context.Context, e *echo.Echo) error 
 	if err := apiv2pb.RegisterWebhookServiceHandler(context.Background(), gwMux, conn); err != nil {
 		return err
 	}
+	if err := apiv2pb.RegisterMarkdownServiceHandler(context.Background(), gwMux, conn); err != nil {
+		return err
+	}
 	e.Any("/api/v2/*", echo.WrapHandler(gwMux))
 
 	// GRPC web proxy.
@@ -121,6 +130,17 @@ func (s *APIV2Service) RegisterGateway(ctx context.Context, e *echo.Echo) error 
 	}
 	wrappedGrpc := grpcweb.WrapServer(s.grpcServer, options...)
 	e.Any("/memos.api.v2.*", echo.WrapHandler(wrappedGrpc))
+
+	// Start gRPC server.
+	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.Profile.Addr, s.grpcServerPort))
+	if err != nil {
+		return errors.Wrap(err, "failed to start gRPC server")
+	}
+	go func() {
+		if err := s.grpcServer.Serve(listen); err != nil {
+			log.Error("grpc server listen error", zap.Error(err))
+		}
+	}()
 
 	return nil
 }

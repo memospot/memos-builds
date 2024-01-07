@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import App from "@/App";
+import SuspenseWrapper from "@/layouts/SuspenseWrapper";
 import { initialGlobalState } from "@/store/module";
 import AuthStatusProvider from "./AuthStatusProvider";
 
@@ -12,13 +13,14 @@ const Explore = lazy(() => import("@/pages/Explore"));
 const Home = lazy(() => import("@/pages/Home"));
 const UserProfile = lazy(() => import("@/pages/UserProfile"));
 const MemoDetail = lazy(() => import("@/pages/MemoDetail"));
-const EmbedMemo = lazy(() => import("@/pages/EmbedMemo"));
 const Archived = lazy(() => import("@/pages/Archived"));
-const DailyReview = lazy(() => import("@/pages/DailyReview"));
+const Timeline = lazy(() => import("@/pages/Timeline"));
 const Resources = lazy(() => import("@/pages/Resources"));
 const Inboxes = lazy(() => import("@/pages/Inboxes"));
 const Setting = lazy(() => import("@/pages/Setting"));
+const About = lazy(() => import("@/pages/About"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const PermissionDenied = lazy(() => import("@/pages/PermissionDenied"));
 
 const initialGlobalStateLoader = async () => {
   try {
@@ -36,16 +38,22 @@ const router = createBrowserRouter([
     loader: () => initialGlobalStateLoader(),
     children: [
       {
-        path: "/auth",
-        element: <SignIn />,
-      },
-      {
-        path: "/auth/signup",
-        element: <SignUp />,
-      },
-      {
-        path: "/auth/callback",
-        element: <AuthCallback />,
+        path: "/auth/",
+        element: <SuspenseWrapper />,
+        children: [
+          {
+            path: "",
+            element: <SignIn />,
+          },
+          {
+            path: "signup",
+            element: <SignUp />,
+          },
+          {
+            path: "callback",
+            element: <AuthCallback />,
+          },
+        ],
       },
       {
         path: "/",
@@ -60,10 +68,10 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "review",
+            path: "timeline",
             element: (
               <AuthStatusProvider>
-                <DailyReview />
+                <Timeline />
               </AuthStatusProvider>
             ),
           },
@@ -103,23 +111,31 @@ const router = createBrowserRouter([
             path: "explore",
             element: <Explore />,
           },
+          {
+            path: "m/:memoId",
+            element: <MemoDetail />,
+          },
+          {
+            path: "u/:username",
+            element: <UserProfile />,
+          },
+          {
+            path: "about",
+            element: <About />,
+          },
+          {
+            path: "403",
+            element: <PermissionDenied />,
+          },
+          {
+            path: "404",
+            element: <NotFound />,
+          },
+          {
+            path: "*",
+            element: <NotFound />,
+          },
         ],
-      },
-      {
-        path: "/m/:memoId",
-        element: <MemoDetail />,
-      },
-      {
-        path: "/m/:memoId/embed",
-        element: <EmbedMemo />,
-      },
-      {
-        path: "/u/:username",
-        element: <UserProfile />,
-      },
-      {
-        path: "*",
-        element: <NotFound />,
       },
     ],
   },

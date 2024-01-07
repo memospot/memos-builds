@@ -20,13 +20,9 @@ type Store struct {
 // New creates a new instance of Store.
 func New(driver Driver, profile *profile.Profile) *Store {
 	return &Store{
-		Profile: profile,
 		driver:  driver,
+		Profile: profile,
 	}
-}
-
-func (s *Store) BackupTo(ctx context.Context, filename string) error {
-	return s.driver.BackupTo(ctx, filename)
 }
 
 func (s *Store) Vacuum(ctx context.Context) error {

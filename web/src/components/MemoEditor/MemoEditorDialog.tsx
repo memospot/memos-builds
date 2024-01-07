@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useGlobalStore, useTagStore } from "@/store/module";
-import MemoEditor from ".";
+import { MemoRelation } from "@/types/proto/api/v2/memo_relation_service";
+import MemoEditorV1 from ".";
 import { generateDialog } from "../Dialog";
 import Icon from "../Icon";
 
 interface Props extends DialogProps {
-  memoId?: MemoId;
+  memoId?: number;
   relationList?: MemoRelation[];
 }
 
@@ -34,7 +35,7 @@ const MemoEditorDialog: React.FC<Props> = ({ memoId, relationList, destroy }: Pr
         </button>
       </div>
       <div className="flex flex-col justify-start items-start max-w-full w-[36rem]">
-        <MemoEditor
+        <MemoEditorV1
           className="border-none !p-0 -mb-2"
           cacheKey={`memo-editor-${memoId}`}
           memoId={memoId}
@@ -51,7 +52,7 @@ export default function showMemoEditorDialog(props: Pick<Props, "memoId" | "rela
     {
       className: "memo-editor-dialog",
       dialogName: "memo-editor-dialog",
-      containerClassName: "dark:!bg-zinc-700",
+      containerClassName: "dark:!bg-zinc-800",
     },
     MemoEditorDialog,
     props

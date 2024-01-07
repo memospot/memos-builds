@@ -16,11 +16,6 @@
   
     - [InboxMessage.Type](#memos-store-InboxMessage-Type)
   
-- [store/system_setting.proto](#store_system_setting-proto)
-    - [BackupConfig](#memos-store-BackupConfig)
-  
-    - [SystemSettingKey](#memos-store-SystemSettingKey)
-  
 - [store/user_setting.proto](#store_user_setting-proto)
     - [AccessTokensUserSetting](#memos-store-AccessTokensUserSetting)
     - [AccessTokensUserSetting.AccessToken](#memos-store-AccessTokensUserSetting-AccessToken)
@@ -30,6 +25,11 @@
   
 - [store/webhook.proto](#store_webhook-proto)
     - [Webhook](#memos-store-Webhook)
+  
+- [store/workspace_setting.proto](#store_workspace_setting-proto)
+    - [WorkspaceProfileSetting](#memos-store-WorkspaceProfileSetting)
+  
+    - [WorkspaceSettingKey](#memos-store-WorkspaceSettingKey)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -172,51 +172,6 @@
 
 
 
-<a name="store_system_setting-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## store/system_setting.proto
-
-
-
-<a name="memos-store-BackupConfig"></a>
-
-### BackupConfig
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| enabled | [bool](#bool) |  | enabled indicates whether backup is enabled. |
-| cron | [string](#string) |  | cron is the cron expression for backup. See https://godoc.org/github.com/robfig/cron#hdr-CRON_Expression_Format |
-| max_keep | [int32](#int32) |  | max_keep is the maximum number of backups to keep. |
-
-
-
-
-
- 
-
-
-<a name="memos-store-SystemSettingKey"></a>
-
-### SystemSettingKey
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| SYSTEM_SETTING_KEY_UNSPECIFIED | 0 |  |
-| BACKUP_CONFIG | 1 | BackupConfig is the key for auto-backup configuration. |
-
-
- 
-
- 
-
- 
-
-
-
 <a name="store_user_setting-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -329,6 +284,50 @@
 
 
  
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="store_workspace_setting-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## store/workspace_setting.proto
+
+
+
+<a name="memos-store-WorkspaceProfileSetting"></a>
+
+### WorkspaceProfileSetting
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| instance_url | [string](#string) |  |  |
+| disallow_signup | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+
+<a name="memos-store-WorkspaceSettingKey"></a>
+
+### WorkspaceSettingKey
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| WORKSPACE_SETTING_KEY_UNSPECIFIED | 0 |  |
+| WORKSPACE_SETTING_PROFILE | 1 |  |
+
 
  
 
