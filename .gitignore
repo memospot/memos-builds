@@ -1,5 +1,7 @@
 ### Project-specific ###
 build/
+.pnpm-store/
+node_modules/
 
 # Frontend
 memos-upstream/server/frontend
