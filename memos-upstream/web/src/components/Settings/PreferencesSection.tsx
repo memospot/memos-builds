@@ -2,11 +2,12 @@ import { Button, Divider, Input, Option, Select } from "@mui/joy";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
 import { useGlobalStore } from "@/store/module";
-import { useUserV1Store } from "@/store/v1";
+import { useUserStore } from "@/store/v1";
+import { Visibility } from "@/types/proto/api/v2/memo_service";
 import { UserSetting } from "@/types/proto/api/v2/user_service";
 import { useTranslate } from "@/utils/i18n";
+import { convertVisibilityFromString, convertVisibilityToString } from "@/utils/memo";
 import AppearanceSelect from "../AppearanceSelect";
 import Icon from "../Icon";
 import LocaleSelect from "../LocaleSelect";
@@ -17,13 +18,13 @@ import "@/less/settings/preferences-section.less";
 const PreferencesSection = () => {
   const t = useTranslate();
   const globalStore = useGlobalStore();
-  const userV1Store = useUserV1Store();
+  const userStore = useUserStore();
   const { appearance, locale } = globalStore.state;
-  const setting = userV1Store.userSetting as UserSetting;
+  const setting = userStore.userSetting as UserSetting;
   const [telegramUserId, setTelegramUserId] = useState<string>(setting.telegramUserId);
 
   const handleLocaleSelectChange = async (locale: Locale) => {
-    await userV1Store.updateUserSetting(
+    await userStore.updateUserSetting(
       {
         locale,
       },
@@ -33,7 +34,7 @@ const PreferencesSection = () => {
   };
 
   const handleAppearanceSelectChange = async (appearance: Appearance) => {
-    await userV1Store.updateUserSetting(
+    await userStore.updateUserSetting(
       {
         appearance,
       },
@@ -43,7 +44,7 @@ const PreferencesSection = () => {
   };
 
   const handleDefaultMemoVisibilityChanged = async (value: string) => {
-    await userV1Store.updateUserSetting(
+    await userStore.updateUserSetting(
       {
         memoVisibility: value,
       },
@@ -53,7 +54,7 @@ const PreferencesSection = () => {
 
   const handleSaveTelegramUserId = async () => {
     try {
-      await userV1Store.updateUserSetting(
+      await userStore.updateUserSetting(
         {
           telegramUserId: telegramUserId,
         },
@@ -87,18 +88,20 @@ const PreferencesSection = () => {
         <Select
           className="!min-w-fit"
           value={setting.memoVisibility}
-          startDecorator={<VisibilityIcon visibility={setting.memoVisibility as Visibility} />}
+          startDecorator={<VisibilityIcon visibility={convertVisibilityFromString(setting.memoVisibility)} />}
           onChange={(_, visibility) => {
             if (visibility) {
               handleDefaultMemoVisibilityChanged(visibility);
             }
           }}
         >
-          {VISIBILITY_SELECTOR_ITEMS.map((item) => (
-            <Option key={item} value={item} className="whitespace-nowrap">
-              {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
-            </Option>
-          ))}
+          {[Visibility.PRIVATE, Visibility.PROTECTED, Visibility.PUBLIC]
+            .map((v) => convertVisibilityToString(v))
+            .map((item) => (
+              <Option key={item} value={item} className="whitespace-nowrap">
+                {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
+              </Option>
+            ))}
         </Select>
       </div>
 

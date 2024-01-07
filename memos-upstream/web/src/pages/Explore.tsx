@@ -1,111 +1,80 @@
-import { useEffect, useRef } from "react";
-import { toast } from "react-hot-toast";
+import { Button } from "@mui/joy";
+import { useEffect, useState } from "react";
 import Empty from "@/components/Empty";
-import Memo from "@/components/Memo";
+import Icon from "@/components/Icon";
 import MemoFilter from "@/components/MemoFilter";
+import MemoView from "@/components/MemoView";
 import MobileHeader from "@/components/MobileHeader";
 import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
-import { TAG_REG } from "@/labs/marked/parser";
-import { useFilterStore, useMemoStore } from "@/store/module";
+import { getTimeStampByDate } from "@/helpers/datetime";
+import useCurrentUser from "@/hooks/useCurrentUser";
+import { useFilterStore } from "@/store/module";
+import { useMemoList, useMemoStore } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 
 const Explore = () => {
   const t = useTranslate();
+  const user = useCurrentUser();
   const filterStore = useFilterStore();
   const memoStore = useMemoStore();
-  const filter = filterStore.state;
-  const { loadingStatus, memos } = memoStore.state;
-  const { tag: tagQuery, text: textQuery } = filter;
-  const showMemoFilter = Boolean(tagQuery || textQuery);
-  const fetchMoreRef = useRef<HTMLSpanElement>(null);
-
-  const fetchedMemos = showMemoFilter
-    ? memos.filter((memo) => {
-        let shouldShow = true;
-
-        if (tagQuery) {
-          const tagsSet = new Set<string>();
-          for (const t of Array.from(memo.content.match(new RegExp(TAG_REG, "g")) ?? [])) {
-            const tag = t.replace(TAG_REG, "$1").trim();
-            const items = tag.split("/");
-            let temp = "";
-            for (const i of items) {
-              temp += i;
-              tagsSet.add(temp);
-              temp += "/";
-            }
-          }
-          if (!tagsSet.has(tagQuery)) {
-            shouldShow = false;
-          }
-        }
-
-        if (textQuery && !memo.content.toLowerCase().includes(textQuery.toLowerCase())) {
-          shouldShow = false;
-        }
-
-        return shouldShow;
-      })
-    : memos;
-
-  const sortedMemos = fetchedMemos
-    .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE")
-    .sort((mi, mj) => mj.displayTs - mi.displayTs);
+  const memoList = useMemoList();
+  const [isRequesting, setIsRequesting] = useState(true);
+  const [isComplete, setIsComplete] = useState(false);
+  const { tag: tagQuery, text: textQuery } = filterStore.state;
+  const sortedMemos = memoList.value.sort((a, b) => getTimeStampByDate(b.displayTime) - getTimeStampByDate(a.displayTime));
 
   useEffect(() => {
-    memoStore.setLoadingStatus("incomplete");
-  }, []);
+    memoList.reset();
+    fetchMemos();
+  }, [tagQuery, textQuery]);
 
-  useEffect(() => {
-    if (!fetchMoreRef.current) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      observer.disconnect();
-      handleFetchMoreClick();
-    });
-    observer.observe(fetchMoreRef.current);
-
-    return () => observer.disconnect();
-  }, [loadingStatus]);
-
-  const handleFetchMoreClick = async () => {
-    try {
-      await memoStore.fetchAllMemos(DEFAULT_MEMO_LIMIT, memos.length);
-    } catch (error: any) {
-      toast.error(error.response.data.message);
+  const fetchMemos = async () => {
+    const filters = [`row_status == "NORMAL"`, `visibilities == [${user ? "'PUBLIC', 'PROTECTED'" : "'PUBLIC'"}]`];
+    const contentSearch: string[] = [];
+    if (tagQuery) {
+      contentSearch.push(`"#${tagQuery}"`);
     }
+    if (textQuery) {
+      contentSearch.push(`"${textQuery}"`);
+    }
+    if (contentSearch.length > 0) {
+      filters.push(`content_search == [${contentSearch.join(", ")}]`);
+    }
+    setIsRequesting(true);
+    const data = await memoStore.fetchMemos({
+      limit: DEFAULT_MEMO_LIMIT,
+      offset: memoList.size(),
+      filter: filters.join(" && "),
+    });
+    setIsRequesting(false);
+    setIsComplete(data.length < DEFAULT_MEMO_LIMIT);
   };
 
   return (
-    <section className="@container w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+    <section className="@container w-full max-w-5xl min-h-full flex flex-col justify-start items-center sm:pt-3 md:pt-6 pb-8">
       <MobileHeader />
-      <div className="relative w-full h-auto flex flex-col justify-start items-start">
+      <div className="relative w-full h-auto flex flex-col justify-start items-start px-4 sm:px-6">
         <MemoFilter />
         {sortedMemos.map((memo) => (
-          <Memo key={memo.id} memo={memo} lazyRendering showCreator showParent />
+          <MemoView key={memo.id} memo={memo} showCreator showParent />
         ))}
 
-        {loadingStatus === "fetching" ? (
-          <div className="flex flex-col justify-start items-center w-full mt-2 mb-1">
+        {isRequesting ? (
+          <div className="flex flex-col justify-start items-center w-full my-4">
             <p className="text-sm text-gray-400 italic">{t("memo.fetching-data")}</p>
           </div>
-        ) : (
-          <div className="flex flex-col justify-start items-center w-full my-6">
-            <div className="text-sm text-gray-400 italic">
-              {loadingStatus === "complete" ? (
-                sortedMemos.length === 0 && (
-                  <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
-                    <Empty />
-                    <p className="mt-4 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
-                  </div>
-                )
-              ) : (
-                <span ref={fetchMoreRef} className="cursor-pointer hover:text-green-600" onClick={handleFetchMoreClick}>
-                  {t("memo.fetch-more")}
-                </span>
-              )}
+        ) : isComplete ? (
+          sortedMemos.length === 0 && (
+            <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
+              <Empty />
+              <p className="mt-2 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
             </div>
+          )
+        ) : (
+          <div className="w-full flex flex-row justify-center items-center my-4">
+            <Button variant="plain" endDecorator={<Icon.ArrowDown className="w-5 h-auto" />} onClick={fetchMemos}>
+              {t("memo.fetch-more")}
+            </Button>
           </div>
         )}
       </div>

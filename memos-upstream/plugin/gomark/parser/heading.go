@@ -14,39 +14,36 @@ func NewHeadingParser() *HeadingParser {
 }
 
 func (*HeadingParser) Match(tokens []*tokenizer.Token) (int, bool) {
-	cursor := 0
+	level := 0
 	for _, token := range tokens {
-		if token.Type == tokenizer.Hash {
-			cursor++
+		if token.Type == tokenizer.PoundSign {
+			level++
 		} else {
 			break
 		}
 	}
-	if len(tokens) <= cursor+1 {
+	if len(tokens) <= level+1 {
 		return 0, false
 	}
-	if tokens[cursor].Type != tokenizer.Space {
+	if tokens[level].Type != tokenizer.Space {
 		return 0, false
 	}
-	level := cursor
 	if level == 0 || level > 6 {
 		return 0, false
 	}
 
-	cursor++
 	contentTokens := []*tokenizer.Token{}
-	for _, token := range tokens[cursor:] {
-		contentTokens = append(contentTokens, token)
-		cursor++
+	for _, token := range tokens[level+1:] {
 		if token.Type == tokenizer.Newline {
 			break
 		}
+		contentTokens = append(contentTokens, token)
 	}
 	if len(contentTokens) == 0 {
 		return 0, false
 	}
 
-	return cursor, true
+	return len(contentTokens) + level + 1, true
 }
 
 func (p *HeadingParser) Parse(tokens []*tokenizer.Token) (ast.Node, error) {
@@ -57,7 +54,7 @@ func (p *HeadingParser) Parse(tokens []*tokenizer.Token) (ast.Node, error) {
 
 	level := 0
 	for _, token := range tokens {
-		if token.Type == tokenizer.Hash {
+		if token.Type == tokenizer.PoundSign {
 			level++
 		} else {
 			break

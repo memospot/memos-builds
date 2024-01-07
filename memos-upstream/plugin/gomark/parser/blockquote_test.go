@@ -7,6 +7,7 @@ import (
 
 	"github.com/usememos/memos/plugin/gomark/ast"
 	"github.com/usememos/memos/plugin/gomark/parser/tokenizer"
+	"github.com/usememos/memos/plugin/gomark/restore"
 )
 
 func TestBlockquoteParser(t *testing.T) {
@@ -18,8 +19,12 @@ func TestBlockquoteParser(t *testing.T) {
 			text: "> Hello world",
 			blockquote: &ast.Blockquote{
 				Children: []ast.Node{
-					&ast.Text{
-						Content: "Hello world",
+					&ast.Paragraph{
+						Children: []ast.Node{
+							&ast.Text{
+								Content: "Hello world",
+							},
+						},
 					},
 				},
 			},
@@ -28,10 +33,13 @@ func TestBlockquoteParser(t *testing.T) {
 			text: "> Hello\nworld",
 			blockquote: &ast.Blockquote{
 				Children: []ast.Node{
-					&ast.Text{
-						Content: "Hello",
+					&ast.Paragraph{
+						Children: []ast.Node{
+							&ast.Text{
+								Content: "Hello",
+							},
+						},
 					},
-					&ast.LineBreak{},
 				},
 			},
 		},
@@ -44,6 +52,6 @@ func TestBlockquoteParser(t *testing.T) {
 	for _, test := range tests {
 		tokens := tokenizer.Tokenize(test.text)
 		node, _ := NewBlockquoteParser().Parse(tokens)
-		require.Equal(t, StringifyNodes([]ast.Node{test.blockquote}), StringifyNodes([]ast.Node{node}))
+		require.Equal(t, restore.Restore([]ast.Node{test.blockquote}), restore.Restore([]ast.Node{node}))
 	}
 }

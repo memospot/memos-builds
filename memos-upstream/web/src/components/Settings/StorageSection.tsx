@@ -1,4 +1,4 @@
-import { Divider, IconButton, List, ListItem, Radio, RadioGroup } from "@mui/joy";
+import { Button, Divider, IconButton, List, ListItem, Radio, RadioGroup } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -88,9 +88,7 @@ const StorageSection = () => {
           <span className="font-mono text-sm text-gray-400">{t("setting.storage-section.storage-services")}</span>
           <LearnMore url="https://usememos.com/docs/advanced-settings/cloudflare-r2" />
         </div>
-        <button className="btn-normal px-2 py-0 ml-1" onClick={() => showCreateStorageServiceDialog(undefined, fetchStorageList)}>
-          {t("common.create")}
-        </button>
+        <Button onClick={() => showCreateStorageServiceDialog(undefined, fetchStorageList)}>{t("common.create")}</Button>
       </div>
       <div className="mt-2 w-full flex flex-col">
         {storageList.map((storage) => (
@@ -134,12 +132,20 @@ const StorageSection = () => {
         <p className="text-sm">{t("common.learn-more")}:</p>
         <List component="ul" marker="disc" size="sm">
           <ListItem>
-            <Link className="text-sm text-blue-600 hover:underline" to="https://www.usememos.com/docs/advanced-settings/local-storage">
+            <Link
+              className="text-sm text-blue-600 hover:underline"
+              to="https://www.usememos.com/docs/advanced-settings/local-storage"
+              target="_blank"
+            >
               Docs - Local storage
             </Link>
           </ListItem>
           <ListItem>
-            <Link className="text-sm text-blue-600 hover:underline" to="https://www.usememos.com/blog/choosing-a-storage-for-your-resource">
+            <Link
+              className="text-sm text-blue-600 hover:underline"
+              to="https://www.usememos.com/blog/choosing-a-storage-for-your-resource"
+              target="_blank"
+            >
               Choosing a Storage for Your Resource: Database, S3 or Local Storage?
             </Link>
           </ListItem>

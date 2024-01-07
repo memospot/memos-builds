@@ -16,12 +16,11 @@ export const initialGlobalState = async () => {
       disablePasswordLogin: false,
       disablePublicMemos: false,
       maxUploadSizeMiB: 0,
-      autoBackupInterval: 0,
       additionalStyle: "",
       additionalScript: "",
       memoDisplayWithUpdatedTs: false,
       customizedProfile: {
-        name: "memos",
+        name: "Memos",
         logoUrl: "/logo.png",
         description: "",
         locale: "en",
@@ -37,7 +36,7 @@ export const initialGlobalState = async () => {
     defaultGlobalState.systemStatus = {
       ...data,
       customizedProfile: {
-        name: customizedProfile.name || "memos",
+        name: customizedProfile.name || "Memos",
         logoUrl: customizedProfile.logoUrl || "/logo.png",
         description: customizedProfile.description,
         locale: customizedProfile.locale || "en",

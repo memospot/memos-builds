@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"unicode/utf16"
 
@@ -39,7 +40,7 @@ func (t *TelegramHandler) MessageHandle(ctx context.Context, bot *telegram.Bot, 
 	}
 
 	var creatorID int32
-	userSettingList, err := t.store.ListUserSettingsV1(ctx, &store.FindUserSetting{
+	userSettingList, err := t.store.ListUserSettings(ctx, &store.FindUserSetting{
 		Key: storepb.UserSettingKey_USER_SETTING_TELEGRAM_USER_ID,
 	})
 	if err != nil {
@@ -84,7 +85,7 @@ func (t *TelegramHandler) MessageHandle(ctx context.Context, bot *telegram.Bot, 
 		// Fill the common field of create
 		create := store.Resource{
 			CreatorID: creatorID,
-			Filename:  attachment.FileName,
+			Filename:  filepath.Base(attachment.FileName),
 			Type:      attachment.GetMimeType(),
 			Size:      attachment.FileSize,
 			MemoID:    &memoMessage.ID,

@@ -1,8 +1,7 @@
-html,
 body {
-  @apply text-base w-full h-full overflow-hidden dark:bg-zinc-800;
+  @apply text-base w-full min-h-[100svh] bg-zinc-100 dark:bg-zinc-900;
 }
 
 #root {
-  @apply w-full h-full overflow-auto;
+  @apply relative w-full min-h-full;
 }

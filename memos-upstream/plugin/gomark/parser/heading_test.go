@@ -7,6 +7,7 @@ import (
 
 	"github.com/usememos/memos/plugin/gomark/ast"
 	"github.com/usememos/memos/plugin/gomark/parser/tokenizer"
+	"github.com/usememos/memos/plugin/gomark/restore"
 )
 
 func TestHeadingParser(t *testing.T) {
@@ -19,7 +20,7 @@ func TestHeadingParser(t *testing.T) {
 			heading: nil,
 		},
 		{
-			text: "## Hello World",
+			text: "## Hello World\n123",
 			heading: &ast.Heading{
 				Level: 2,
 				Children: []ast.Node{
@@ -53,7 +54,6 @@ Hello World`,
 					&ast.Text{
 						Content: "123 ",
 					},
-					&ast.LineBreak{},
 				},
 			},
 		},
@@ -63,8 +63,12 @@ Hello World`,
 				Level: 3,
 				Children: []ast.Node{
 					&ast.Bold{
-						Symbol:  "*",
-						Content: "Hello",
+						Symbol: "*",
+						Children: []ast.Node{
+							&ast.Text{
+								Content: "Hello",
+							},
+						},
 					},
 					&ast.Text{
 						Content: " World",
@@ -77,6 +81,6 @@ Hello World`,
 	for _, test := range tests {
 		tokens := tokenizer.Tokenize(test.text)
 		node, _ := NewHeadingParser().Parse(tokens)
-		require.Equal(t, StringifyNodes([]ast.Node{test.heading}), StringifyNodes([]ast.Node{node}))
+		require.Equal(t, restore.Restore([]ast.Node{test.heading}), restore.Restore([]ast.Node{node}))
 	}
 }
