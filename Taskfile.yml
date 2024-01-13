@@ -1,12 +1,22 @@
 # https://taskfile.dev/#/installation
 
-# To use this Taskfile on Windows, add Git\bin (or git\usr\bin) to PATH.
-# This allows using Git's sh.exe to run posix shell commands.
+# To use this Taskfile on Windows, add Git\usr\bin to PATH.
+# This allows using Git's bundled GNU Core Utils (rm, mv, etc).
 #
-# To add git to the path just for the current powershell session:
-#* $Env:Path += ";$Env:ProgramFiles\Git\bin";
+# To add git\usr\bin to the current powershell session PATH:
+#* $Env:Path += ";$Env:ProgramFiles\Git\usr\bin";
 
 version: "3"
+env:
+  RED:
+    sh: tput setaf 1
+  GREEN:
+    sh: tput setaf 2
+  CYAN:
+    sh: tput setaf 6
+  RESET:
+    sh: tput sgr0
+
 tasks:
   ##### CI #####
   build:frontend:
@@ -14,33 +24,34 @@ tasks:
     dir: ./memos-upstream/web
     vars:
       SRC: ./dist
-      DST: ../../build
+      DST: ../../build/frontend
     sources:
-      - ./src/**/*
-      - ./pnpm-lock.yaml
+      - ../proto/**/*.{proto,go,yaml,lock}
+      - src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html}
+      - src/*.{ts,js,json,html}
+      - pnpm-lock.yaml
     generates:
       - "{{.DST}}/dist/**/*"
     cmds:
       - silent: true
         cmd: |
-          sh -c '
-            echo -e "\e[36mCleaning up leftovers...\e[0m"
-            rm -rf "{{.SRC}}"
-            rm -rf "{{.DST}}/{{.SRC}}"
-            mkdir -p "{{.DST}}"
-          '
+          echo "{{.CYAN}}Cleaning up leftovers...{{.RESET}}"
+          rm -rf "{{.SRC}}"
+          rm -rf "{{.DST}}/{{.SRC}}"
+          mkdir -p "{{.DST}}"
+
       - pnpm i --frozen-lockfile
       - pnpm type-gen
       - pnpm build
       - silent: true
         cmd: |
-          echo -e "\e[36mMoving front-end build...\e[0m"
-          sh -c 'mv -f "{{.SRC}}" "{{.DST}}"'
+          echo "Moving front-end build..."
+          mv -f "{{.SRC}}" "{{.DST}}"
           if ! [ -d "{{.DST}}" ]; then
-            echo -e "\n\e[31m>> Front-end build failed! <<\e[0m"
+            echo "{{.RED}}>> Front-end build failed! <<{{.RESET}}"
             exit 1
           fi
-          echo -e "\n\e[32m>> Front-end build succeeded. <<\e[0m"
+          echo "{{.GREEN}}>> Front-end build succeeded. <<{{.RESET}}"
 
   build:backend-tidy:
     desc: Tidy backend dependencies
@@ -48,130 +59,124 @@ tasks:
     cmds:
       - go mod tidy -go=1.21
     sources:
-      - go.{mod,sum}
+      - "./**/go.{mod,sum}"
 
-  post-build:snapshot:compress:
-    desc: Compress built binaries
-    summary: |
-      - Create compressed archives containing built binaries and dist folder
-      Goreleaser doesn't compress snapshot builds, so we do it manually.
-    deps:
-      - build:frontend
+  post-build:rename-to-docker:
+    desc: Rename builds to Docker format
+    dir: ./build/backend
+    sources:
+      - ./memos*amd64_v*/memos
+      - ./memos*arm_*/memos
+      - ./memos*arm64/memos
+    generates:
+      - ./memos*amd64*/memos
+      - ./memos*arm32v*/memos
+      - ./memos*arm64v8/memos
     cmds:
       - silent: true
         cmd: |
-          for dir in ./build/backend/memos*; do
-            if ! [ -d "$dir" ]; then
+          set -eu
+          echo "{{.CYAN}}Renaming builds to Docker format...{{.RESET}}"
+          for dir in ./memos*; do
+            if [[ ! -d "${dir}" ]]; then
               continue
             fi
 
-            sh -c "rm -rf ${dir//\\//}/dist"
-            sh -c "( mv -f ./build/dist ${dir//\\//}/ ) || ( sleep 2 && mv -f ./build/dist ${dir//\\//}/ )"
-
-            filename=$(sh -c "basename ${dir//\\//}")
-            echo -e "\e[36mCompressing $filename...\e[0m"
-
-            error=1
-            if [[ $filename == *"windows"* ]]; then
-              if ! [ -z $(command -v 7za) ]; then
-                sh -c "cd ${dir//\\//}; 7za -tzip a ../../$filename.zip *" > /dev/null
-                error=$?
-              elif ! [ -z $(command -v zip) ]; then
-                sh -c "cd ${dir//\\//}; zip -r ../../$filename.zip *" > /dev/null
-                error=$?
-              elif ! [ -z $(command -v powershell) ]; then
-                powershell -Command "Compress-Archive -Force -Path ${dir//\\//}/* -DestinationPath ./build/$filename.zip"
-                error=$?
-              elif ! [ -z $(command -v pwsh) ]; then
-                pwsh -Command "Compress-Archive -Force -Path ${dir//\\//}/* -DestinationPath ./build/$filename.zip"
-                error=$?
-              fi
+            already_renamed=$(echo "${dir}" | grep -E "arm32v[5-7]|arm64v8|amd64v[2-4]|i386" || true)
+            if [[ -n "${already_renamed}" ]]; then
+              continue
             fi
 
-            if [[ $error -ne 0 ]]; then
-              sh -c "cd ${dir//\\//}; tar -czf $filename.tar.gz *"
-              sh -c "mv -f ${dir//\\//}/$filename.tar.gz ./build/$filename.tar.gz"
+            new_name="${dir}"
+            new_name="${new_name//amd64_v1/amd64}"
+            new_name="${new_name//_386/_i386}"
+            new_name=$(echo "${new_name}" | sh -c 'sed -E "s/(amd64_v)([2-4])/amd64v\2/"')
+            new_name=$(echo "${new_name}" | sh -c 'sed -E "s/(arm_)([5-7])/arm32v\2/"')
+
+            if [[ "${new_name}" == "${dir}" ]]; then
+              continue
             fi
 
-            sh -c "( mv -f ${dir//\\//}/dist ./build/ ) || ( sleep 2 && mv -f ${dir//\\//}/dist ./build/ )"
+            dir=${dir//\\//}
+            new_name=${new_name//\\//}
+
+            echo "Renaming ${dir} to ${new_name}"
+            mv -f "$dir" "$new_name"
           done
-    sources:
-      - ./build/backend/memos-*/**/*
-    generates:
-      - "*.{zip,tar.gz}"
 
-  post-build:snapshot:gen-checksums:
-    desc: Generate checksums for compressed files
-    summary: |
-      - Create sha256sums.txt file
-      Goreleaser doesn't generate checksums for snapshot builds, so we do it manually.
-    dir: ./build
-    deps:
-      - post-build:snapshot:compress
-    cmds:
-      - |
-        echo -n > memos_SHA256SUMS.txt
-        for file in *.tar.gz *.zip; do
-          sh -c "sha256sum $file >> memos_SHA256SUMS.txt"
-        done || true
-    sources:
-      - "*.{zip,tar.gz}"
-    generates:
-      - memos_SHA256SUMS.txt
-
-  build:snapshot:all:
-    desc: Build binaries for ALL configured OS/Arch, ignores git status
-    summary: &snapshot-summary |
+  build:nightly:all:
+    desc: "[CI] Build binaries for ALL configured OS/Arch, ignores git status"
+    summary: &nightly-summary |
       Snapshot builds bumps the patch version and appends -dev to the version string.
-    deps: &snapshot-deps
+    deps: &nightly-deps
       - build:backend-tidy
       - build:frontend
-    sources: &snapshot-sources
-      - ./.goreleaser-snapshot.yaml
-      - ./memos-upstream/**/*.go
-      - ./memos-upstream/**/go.{mod,sum}
-      - ./memos-upstream/proto/**/*      
-    generates: &snapshot-generates
-      - ./build/backend/memos*/memos*
-      - ./build/*.{zip,tar.gz}
-      - ./build/memos_SHA256SUMS.txt
+    sources: &nightly-sources
+      - .goreleaser-nightly.yaml
+      - memos-upstream/**/*.go
+      - memos-upstream/**/go.{mod,sum}
+      - memos-upstream/proto/**/*
+    generates: &nightly-generates
+      - build/backend/memos_*/memos
+      - build/backend/*.{zip,tar.gz}
+      - build/backend/memos_SHA256SUMS.txt
     cmds:
-      - goreleaser build --snapshot --clean --timeout 60m --config .goreleaser-snapshot.yaml
-      - task: post-build:snapshot:compress
-      - task: post-build:snapshot:gen-checksums
+      - goreleaser release --snapshot --clean --timeout 60m --config .goreleaser-nightly.yaml
+      - task: post-build:rename-to-docker
+
   ##### /CI #####
 
   ##### Local #####
-  build:snapshot:
+  build:nightly:
     desc: Build binaries for current OS/Arch, ignores git status
-    summary: *snapshot-summary
-    deps: *snapshot-deps
-    sources: *snapshot-sources
-    generates: *snapshot-generates
+    summary: *nightly-summary
+    deps: *nightly-deps
+    sources: *nightly-sources
+    generates: *nightly-generates
     cmds:
-      - goreleaser build --snapshot --clean --single-target --config .goreleaser-snapshot.yaml
-      - task: post-build:snapshot:compress
-      - task: post-build:snapshot:gen-checksums
+      - goreleaser release --snapshot --clean --single-target --config .goreleaser-nightly.yaml
+
+  build:nightly:docker:
+    desc: Build Docker images for ALL configured OS/Arch, ignores git status
+    env:
+      DOCKER_BUILDKIT: 1
+    deps:
+      - build:nightly:all
+    ignore_error: true
+    cmds:
+      - for:
+          - linux/amd64
+          # - linux/amd64v2
+          # - linux/amd64v3
+          # - linux/arm32v5
+          - linux/arm32v6
+          # - linux/arm32v7
+          - linux/arm64
+          # - linux/i386
+          - linux/riscv64
+        silent: true
+        cmd: |
+          container_name='memos-nightly-{{ .ITEM | replace "/" "-" }}'
+          docker buildx build --tag ${container_name} --file ./docker/Dockerfile . --platform={{ .ITEM }}
+          if [ $? -ne 0 ]; then
+            echo "{{.RED}}>> Docker build failed for {{ .ITEM }} <<{{.RESET}}"
+          fi
+          docker rm -f ${container_name} >/dev/null 2>&1 || true
+          docker run -p "0:5230" -d --init --rm --name ${container_name} --platform {{ .ITEM }} ${container_name}
+          if [ $? -ne 0 ]; then
+            echo "{{.RED}}>> Failed to run container {{ .ITEM }} <<{{.RESET}}"
+          fi
+      - docker ps
 
   build:
-    desc: Build binaries for current OS/Arch
+    desc: Build without publishing
     summary: |
-      This won't work if git is dirty.
+      Requires a clean git state.
     deps:
       - build:backend-tidy
       - build:frontend
     cmds:
-      - goreleaser build --clean --single-target
-
-  build:all:
-    desc: Build binaries for all OS/Arch
-    summary: |
-      This won't work if git is dirty.
-    deps:
-      - build:backend-tidy
-      - build:frontend
-    cmds:
-      - goreleaser build --clean --timeout 60m
+      - goreleaser release --clean --skip=publish --timeout 60m
 
   release:
     desc: Release binaries to GitHub
@@ -193,31 +198,29 @@ tasks:
           - "./memos-upstream/web/dist"
           - "./memos-upstream/server/frontend/dist"
           - "./memos-upstream/server/frontend/dist.bak"
-        cmd: sh -c 'rm -rf "{{ .ITEM }}"'
+        cmd: rm -rf "{{ .ITEM }}"
+      - docker builder prune -f
+      - docker buildx prune -f
+      - docker volume prune -f
+      - docker image prune -f
 
   ##### /Local #####
-
   default:
     silent: true
-    preconditions:
-      - sh: "! [ -z $(command -v sh) ]"
-        msg: "sh not found. Please install git from https://git-scm.com/downloads and add it to PATH."
-      - sh: "! [ -z $(command -v go) ]"
-        msg: |
-          go not found. Please install it from https://golang.org/doc/install
-          If it's installed with gobrew or similar, make sure to run `gobrew use` before running this task.
-      - sh: "! [ -z $(command -v goreleaser) ]"
-        msg: "goreleaser not found. Please install it from https://goreleaser.com/install/"
-      - sh: "! [ -z $(command -v node) ]"
-        msg: |
-          node not found. Please install version 20 from https://nodejs.org/en/download/
-          If it's installed with nvm or similar, make sure to run `nvm use 20` before running this task.
-      - sh: "! [ -z $(command -v pnpm) ]"
-        msg: "pnpm not found. Please install it from https://pnpm.io/installation"
-      - sh: "! [ -z $(command -v buf) ]"
-        msg: "buf not found. Please install it from https://docs.buf.build/installation"
     cmds:
-      - echo -e "\e[36mAll requirements are met.\e[0m\n"
+      - for:
+          - "sh"
+          - "go"
+          - "goreleaser"
+          - "node"
+          - "pnpm"
+        cmd: |
+          if [[ -z $(command -v "{{ .ITEM }}") ]]; then
+            echo -e '\e[31m"{{ .ITEM }}" not found.\e[0m'
+            echo "Please install it before running tasks."
+            exit 1
+          fi
+      - echo -e "\e[36mAll task requirements are met.\e[0m\n"
       - task --list
 
   ##### Git-related #####
@@ -239,8 +242,10 @@ tasks:
       Pull latest commit from Memos subtree.
       Note: requires a clean git state. `memos-upstream` folder will be reset.
     cmds:
-      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Checkout memos-upstream to latest commit"
+      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Pull latest memos-upstream commit"
       - git clean -fx memos-upstream
+      - git add -A
+      - git commit -am "Clean memos-upstream subtree" || true
 
   git:subtree:pull-tag:
     desc: |
@@ -254,22 +259,10 @@ tasks:
   git:subtree:reset:
     desc: Reset subtree.
     cmds:
-      - sh -c "rm -rf ./memos-upstream"
-      - git rm -fr memos-upstream --ignore-unmatch
+      - rm -rf ./memos-upstream
+      - git rm -rf memos-upstream --ignore-unmatch
       - git commit -m "Remove memos-upstream subtree"
       - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Reset memos-upstream subtree"
-
-  git:tag:push:
-    desc: |
-      Checkout subtree to supplied tag and push a new tag to origin.
-      Usage: `task git:tag:push -- v0.0.0`.
-    summary: |
-      This will trigger the GitHub Action to build and release the binaries.
-    cmds:
-      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
-      - git push origin
-      - git tag -a {{.CLI_ARGS}} -m "Push {{.CLI_ARGS}}"
-      - git push origin {{.CLI_ARGS}}
 
   git:tag:delete:
     desc: |
@@ -283,4 +276,17 @@ tasks:
     cmds:
       - git push origin :refs/tags/{{.CLI_ARGS}}
       - git tag -d {{.CLI_ARGS}}
+
+  git:tag:push:
+    desc: |
+      Checkout subtree to supplied tag and push a new tag to origin.
+      Usage: `task git:tag:push -- v0.0.0`.
+    summary: |
+      This will trigger the GitHub Action to build and release the binaries.
+    cmds:
+      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
+      - git push origin
+      - git tag -a {{.CLI_ARGS}} -m "Push {{.CLI_ARGS}}"
+      - git push origin {{.CLI_ARGS}}
+
   ##### /Git-related #####

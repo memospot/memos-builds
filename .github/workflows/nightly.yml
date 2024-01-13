@@ -1,0 +1,180 @@
+name: Nightly Builds
+
+on:
+  workflow_dispatch:
+  schedule: # Run every day at midnight
+    - cron: "0 0 * * *"
+
+env:
+  DOCKER_CLI_EXPERIMENTAL: enabled
+
+jobs:
+  goreleaser:
+    name: Snapshot
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          fetch-depth: 0
+
+      - name: Setup Task
+        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
+        with:
+          repo: go-task/task
+          cache: enable
+          tag: "v3.33.1"
+
+      - name: Setup Goreleaser
+        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
+        with:
+          repo: goreleaser/goreleaser
+          cache: enable
+          tag: "v1.23.0"
+
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@382440cdb8ec7bc25a68d7b4711163d95f7cc3aa
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup UPX
+        uses: crazy-max/ghaction-upx@0fc45e912669ba9e8fa2b430e97c8da2a632e29b
+        with:
+          install-only: true
+
+      - name: Setup Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
+        with:
+          go-version: ">=1.21.5"
+          check-latest: true
+          cache-dependency-path: memos-upstream/go.sum
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@d882d12c64e032187b2edb46d3a0d003b7a43598
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
+
+      - name: Setup Git
+        shell: bash
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          echo DATE_STRING=$(date +'%Y%m%d') >> $GITHUB_ENV
+
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0)
+          echo PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
+          echo GORELEASER_PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
+          echo "Previous tag is $PREVIOUS_TAG"
+
+          if [[ $PREVIOUS_TAG == *"-dev" ]]; then
+            VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
+            echo TAG=$VERSION >> $GITHUB_ENV
+            echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
+            echo "Previous tag is a dev release. Current tag set to $VERSION"
+            exit 0
+          fi
+
+          FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
+
+          if [ -n "$FILE_VERSION" ]; then
+            VERSION=$FILE_VERSION
+          elif [ -n "$PREVIOUS_TAG" ]; then
+            VERSION=$PREVIOUS_TAG
+          else
+            VERSION="v"$(date +%Y.%m.%d)".0"
+          fi
+
+          VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
+          echo TAG=$VERSION >> $GITHUB_ENV
+          echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
+          echo "Current tag set to $VERSION"
+
+      - name: Build
+        run: |
+          git commit -am "Committed pending local changes"
+          task git:subtree:pull-latest
+          # cd ./memos-upstream/web && rm pnpm-lock.yaml && pnpm install
+          # git commit -am "Committed pending local changes"
+          task build:nightly:all
+
+      - name: Create pre-release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          files: |
+            build/backend/*.tar.gz
+            build/backend/*.zip
+            build/backend/*.txt
+
+          body: |
+            This is an *untested* pre-release, built with bleeding-edge upstream Memos code.
+            Do *not* use in production.
+
+            Version identifier `${{ env.TAG }}` is auto-generated, based on the previous tag of this repository and the version defined in the upstream Memos codebase at build time. Therefore, pre-release versions are subject to change without notice.
+
+            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.PREVIOUS_TAG }}...main)**
+          tag_name: ${{ env.TAG }}
+          draft: true
+          prerelease: true
+
+      # Docker
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
+        with:
+          username: lincolnthalles
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log in to GitHub's Container registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c
+        with:
+          images: |
+            lincolnthalles/memos-builds
+            ghcr.io/lincolnthalles/memos-builds
+          tags: |
+            type=raw,value=nightly
+            type=semver,pattern={{version}},value=${{ env.TAG }}
+          labels: &meta-labels |
+            org.opencontainers.image.title=memos-builds
+            org.opencontainers.image.description=Nightly builds of Memos
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.url=https://usememos.com
+            org.opencontainers.image.source=https://github.com/lincolnthalles/memos-builds
+          annotations: *meta-labels
+
+      - name: Build and Push
+        id: docker_build
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56
+        with:
+          context: ./
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm32v6,linux/arm64,linux/riscv64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+      # /Docker
+
+      # - name: Push built images
+      #   run: |
+      #     docker push --all-tags ghcr.io/lincolnthalles/memos-builds
+      #     docker push --all-tags lincolnthalles/memos-builds

@@ -1,0 +1,71 @@
+project_name: memos
+dist: build/backend
+builds:
+  - dir: ./memos-upstream
+    main: ./bin/memos
+    binary: memos
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm, arm64, riscv64]
+    goarm: [6]
+    goamd64: [v1]
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: "386"
+    flags: >-
+      -trimpath
+    ldflags: >-
+      -s
+      -w
+      -X main.Date={{.CommitDate}}
+      -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
+      -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+upx:
+  - enabled: true
+    goos: [linux]
+    goarch: [arm, arm64, "386", amd64, ppc64le]
+    compress: "best"
+    lzma: true
+
+archives:
+  - format: tar.gz
+    # this template makes the OS and Arch more compatible with `uname` output.
+    name_template: >-
+      {{ .ProjectName }}-{{ .Tag }}-{{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}l{{ end -}}
+      {{- if .Amd64 }}{{- if ne .Amd64  "v1" }}_{{ .Amd64 }}{{ end -}}{{ end -}}
+    builds_info:
+      group: root
+      owner: root
+      mode: 0644
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      # add front-end to compressed archives
+      - src: build/frontend/dist/
+        dst: dist
+
+checksum:
+  disable: false
+  name_template: "{{ .ProjectName }}_SHA256SUMS.txt"
+  algorithm: sha256 # [sha256] sha512 sha1 crc32 md5 sha224 sha384
+
+# Generates a full build, but neither validate anything nor upload it to anywhere.
+# goreleaser --snapshot --skip-publish --rm-dist
+snapshot:
+  # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
+  name_template: "{{ incpatch .Version }}-dev"
+
+#! Due to Goreleaser OSS limitations, GitHub release is created via Actions for nightly builds. *

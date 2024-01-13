@@ -8,67 +8,117 @@ on:
       - "v*.*.*-*"
   workflow_dispatch:
 
+env:
+  DOCKER_CLI_EXPERIMENTAL: enabled
+
 jobs:
   goreleaser:
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
-          fetch-tags: true
           fetch-depth: 0
-      - run: |
-          git fetch --force --tags
 
       - name: Setup Task
-        uses: jaxxstorm/action-install-gh-release@v1.10.0
+        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
         with:
           repo: go-task/task
           cache: enable
           tag: "v3.33.1"
 
+      - name: Setup Goreleaser
+        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
+        with:
+          repo: goreleaser/goreleaser
+          cache: enable
+          tag: "v1.23.0"
+
       - name: Setup buf
-        uses: bufbuild/buf-setup-action@v1.28.1
+        uses: bufbuild/buf-setup-action@382440cdb8ec7bc25a68d7b4711163d95f7cc3aa
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup UPX
-        uses: crazy-max/ghaction-upx@v3.0.0
+        uses: crazy-max/ghaction-upx@0fc45e912669ba9e8fa2b430e97c8da2a632e29b
         with:
           install-only: true
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
         with:
           go-version: ">=1.21.5"
           check-latest: true
           cache-dependency-path: memos-upstream/go.sum
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.4.0
+        uses: pnpm/action-setup@d882d12c64e032187b2edb46d3a0d003b7a43598
         with:
           version: 8
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8
         with:
           node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
-      - name: Build frontend
+      - name: Setup Git
+        shell: bash
         run: |
-          task build:frontend
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
 
-      - name: Tidy backend dependencies
+          FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
+
+          GIT_TAG=$(git describe --tags --abbrev=0)
+          if [ -n "$FILE_VERSION" ]; then
+            VERSION=$FILE_VERSION
+          elif [ -n "$GIT_TAG" ]; then
+            VERSION=$GIT_TAG
+          else
+            VERSION=${GITHUB_REF_NAME#release/}
+          fi
+
+          if [ -z "$VERSION" ]; then
+            VERSION="v"$(date +%Y.%m.%d)".0"
+          fi
+
+          echo TAG=$VERSION >> $GITHUB_ENV
+          echo GIT_TAG=$GIT_TAG >> $GITHUB_ENV
+          echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
+          echo "Current tag set to $VERSION"
+
+      # Docker
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
+        with:
+          username: lincolnthalles
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log in to GitHub's Container registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # /Docker
+
+      - name: Build
         run: |
+          task git:subtree:pull-tag -- "${{env.GIT_TAG}}"
+          task build:frontend
           task build:backend-tidy
 
-      - name: Build with goreleaser
-        uses: goreleaser/goreleaser-action@v5
+      - name: Build and release with goreleaser
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8
         with:
           distribution: goreleaser
           version: latest

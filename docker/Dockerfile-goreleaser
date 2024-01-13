@@ -1,0 +1,64 @@
+#! Target architectures are limited by the image and its version.
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
+FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v1
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as target-arm32v5
+FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
+FROM --platform=${BUILDPLATFORM:-linux/amd64} arm64v8/alpine:latest as target-arm64
+FROM --platform=${BUILDPLATFORM:-linux/amd64} riscv64/alpine:edge as target-riscv64
+
+# Select appropriate base image.
+FROM target-${TARGETARCH}${TARGETVARIANT}
+
+# Setup container OS
+ARG TARGETPLATFORM TARGETOS TARGETARCH TARGETVARIANT
+RUN <<SH
+	set -eu
+	RELEASE=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2 | cut -d' ' -f1);
+	case $RELEASE in
+		Alpine)
+			apk add --no-cache tzdata ncurses
+			;;
+		Debian)
+			mkdir -p /etc/initramfs-tools/
+			echo 'update_initramfs=no' > tee /etc/initramfs-tools/update-initramfs.conf
+			rm -f /var/lib/man-db/auto-update
+
+			apt-get -y update && apt-get --no-install-recommends -y install wget
+			;;
+		*)
+			echo "Unsupported OS: $RELEASE"
+			exit 1
+			;;
+	esac
+
+	mkdir -p /opt/memos
+	echo "TARGETPLATFORM=${TARGETPLATFORM}" >> /opt/memos/buildinfo
+SH
+
+# Find appropriate memos binary and copy it.
+COPY memos /opt/memos/
+# Copy front-end files.
+COPY build/frontend/dist /opt/memos/dist/
+# Copy entrypoint script.
+COPY docker/entrypoint.sh /opt/memos/
+
+# Directory to store the data, which can be referenced as the mounting point.
+RUN mkdir -p /var/opt/memos
+VOLUME /var/opt/memos
+
+ENV TZ=UTC
+ENV MEMOS_MODE="prod"
+ENV MEMOS_PORT="5230"
+ENV MEMOS_METRIC="false"
+EXPOSE 5230
+
+HEALTHCHECK --start-period=1m --interval=1m --timeout=5s \
+	CMD wget -qO - http://localhost:${MEMOS_PORT}/api/v1/ping || exit 1
+
+WORKDIR /opt/memos
+RUN chmod +x ./entrypoint.sh 
+ENTRYPOINT ["sh", "./entrypoint.sh"]
