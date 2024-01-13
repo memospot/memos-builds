@@ -5,14 +5,13 @@ import Icon from "../Icon";
 interface Props {
   trigger?: ReactNode;
   actions?: ReactNode;
-  disabled?: boolean;
   className?: string;
   actionsClassName?: string;
   positionClassName?: string;
 }
 
 const Dropdown: React.FC<Props> = (props: Props) => {
-  const { trigger, actions, disabled, className, actionsClassName, positionClassName } = props;
+  const { trigger, actions, className, actionsClassName, positionClassName } = props;
   const [dropdownStatus, toggleDropdownStatus] = useToggle(false);
   const dropdownWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -30,18 +29,11 @@ const Dropdown: React.FC<Props> = (props: Props) => {
     }
   }, [dropdownStatus]);
 
-  const handleDropdownClick = () => {
-    if (disabled) {
-      return;
-    }
-    toggleDropdownStatus();
-  };
-
   return (
     <div
       ref={dropdownWrapperRef}
       className={`relative flex flex-col justify-start items-start select-none ${className ?? ""}`}
-      onClick={handleDropdownClick}
+      onClick={() => toggleDropdownStatus()}
     >
       {trigger ? (
         trigger

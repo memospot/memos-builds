@@ -49,5 +49,6 @@ func (d *DB) UpsertMigrationHistory(ctx context.Context, upsert *store.UpsertMig
 	); err != nil {
 		return nil, err
 	}
+
 	return &migrationHistory, nil
 }

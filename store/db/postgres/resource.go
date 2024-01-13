@@ -4,58 +4,75 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
+	"time"
+
+	"github.com/Masterminds/squirrel"
+	"github.com/pkg/errors"
 
 	"github.com/usememos/memos/store"
 )
 
 func (d *DB) CreateResource(ctx context.Context, create *store.Resource) (*store.Resource, error) {
-	fields := []string{"filename", "blob", "external_link", "type", "size", "creator_id", "internal_path", "memo_id"}
-	args := []any{create.Filename, create.Blob, create.ExternalLink, create.Type, create.Size, create.CreatorID, create.InternalPath, create.MemoID}
+	qb := squirrel.Insert("resource").Columns("filename", "blob", "external_link", "type", "size", "creator_id", "internal_path", "memo_id")
+	values := []any{create.Filename, create.Blob, create.ExternalLink, create.Type, create.Size, create.CreatorID, create.InternalPath, create.MemoID}
 
-	stmt := "INSERT INTO resource (" + strings.Join(fields, ", ") + ") VALUES (" + placeholders(len(args)) + ") RETURNING id, created_ts, updated_ts"
-	if err := d.db.QueryRowContext(ctx, stmt, args...).Scan(&create.ID, &create.CreatedTs, &create.UpdatedTs); err != nil {
+	qb = qb.Values(values...).Suffix("RETURNING id")
+	query, args, err := qb.PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
 		return nil, err
 	}
-	return create, nil
+
+	var id int32
+	err = d.db.QueryRowContext(ctx, query, args...).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := d.ListResources(ctx, &store.FindResource{ID: &id})
+	if err != nil {
+		return nil, err
+	}
+	if len(list) != 1 {
+		return nil, errors.Wrapf(nil, "unexpected resource count: %d", len(list))
+	}
+
+	return list[0], nil
 }
 
 func (d *DB) ListResources(ctx context.Context, find *store.FindResource) ([]*store.Resource, error) {
-	where, args := []string{"1 = 1"}, []any{}
+	qb := squirrel.Select("id", "filename", "external_link", "type", "size", "creator_id", "created_ts", "updated_ts", "internal_path", "memo_id").From("resource")
 
 	if v := find.ID; v != nil {
-		where, args = append(where, "id = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Where(squirrel.Eq{"id": *v})
 	}
 	if v := find.CreatorID; v != nil {
-		where, args = append(where, "creator_id = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Where(squirrel.Eq{"creator_id": *v})
 	}
 	if v := find.Filename; v != nil {
-		where, args = append(where, "filename = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Where(squirrel.Eq{"filename": *v})
 	}
 	if v := find.MemoID; v != nil {
-		where, args = append(where, "memo_id = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Where(squirrel.Eq{"memo_id": *v})
 	}
 	if find.HasRelatedMemo {
-		where = append(where, "memo_id IS NOT NULL")
+		qb = qb.Where("memo_id IS NOT NULL")
 	}
-
-	fields := []string{"id", "filename", "external_link", "type", "size", "creator_id", "created_ts", "updated_ts", "internal_path", "memo_id"}
 	if find.GetBlob {
-		fields = append(fields, "blob")
+		qb = qb.Columns("blob")
 	}
 
-	query := fmt.Sprintf(`
-		SELECT
-			%s
-		FROM resource
-		WHERE %s
-		ORDER BY updated_ts DESC, created_ts DESC
-	`, strings.Join(fields, ", "), strings.Join(where, " AND "))
+	qb = qb.GroupBy("id").OrderBy("created_ts DESC")
+
 	if find.Limit != nil {
-		query = fmt.Sprintf("%s LIMIT %d", query, *find.Limit)
+		qb = qb.Limit(uint64(*find.Limit))
 		if find.Offset != nil {
-			query = fmt.Sprintf("%s OFFSET %d", query, *find.Offset)
+			qb = qb.Offset(uint64(*find.Offset))
 		}
+	}
+
+	query, args, err := qb.PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
+		return nil, err
 	}
 
 	rows, err := d.db.QueryContext(ctx, query, args...)
@@ -86,6 +103,7 @@ func (d *DB) ListResources(ctx context.Context, find *store.FindResource) ([]*st
 		if err := rows.Scan(dests...); err != nil {
 			return nil, err
 		}
+
 		if memoID.Valid {
 			resource.MemoID = &memoID.Int32
 		}
@@ -100,72 +118,88 @@ func (d *DB) ListResources(ctx context.Context, find *store.FindResource) ([]*st
 }
 
 func (d *DB) UpdateResource(ctx context.Context, update *store.UpdateResource) (*store.Resource, error) {
-	set, args := []string{}, []any{}
+	qb := squirrel.Update("resource")
 
 	if v := update.UpdatedTs; v != nil {
-		set, args = append(set, "updated_ts = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Set("updated_ts", time.Unix(0, *v))
 	}
 	if v := update.Filename; v != nil {
-		set, args = append(set, "filename = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Set("filename", *v)
 	}
 	if v := update.InternalPath; v != nil {
-		set, args = append(set, "internal_path = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Set("internal_path", *v)
 	}
 	if v := update.MemoID; v != nil {
-		set, args = append(set, "memo_id = "+placeholder(len(args)+1)), append(args, *v)
+		qb = qb.Set("memo_id", *v)
 	}
 	if v := update.Blob; v != nil {
-		set, args = append(set, "blob = "+placeholder(len(args)+1)), append(args, v)
+		qb = qb.Set("blob", v)
 	}
 
-	fields := []string{"id", "filename", "external_link", "type", "size", "creator_id", "created_ts", "updated_ts", "internal_path"}
-	stmt := `
-	UPDATE resource
-	SET ` + strings.Join(set, ", ") + `
-	WHERE id = ` + placeholder(len(args)+1) + `
-	RETURNING ` + strings.Join(fields, ", ")
-	args = append(args, update.ID)
-	resource := store.Resource{}
-	dests := []any{
-		&resource.ID,
-		&resource.Filename,
-		&resource.ExternalLink,
-		&resource.Type,
-		&resource.Size,
-		&resource.CreatorID,
-		&resource.CreatedTs,
-		&resource.UpdatedTs,
-		&resource.InternalPath,
-	}
-	if err := d.db.QueryRowContext(ctx, stmt, args...).Scan(dests...); err != nil {
+	qb = qb.Where(squirrel.Eq{"id": update.ID})
+
+	query, args, err := qb.PlaceholderFormat(squirrel.Dollar).ToSql()
+	if err != nil {
 		return nil, err
 	}
 
-	return &resource, nil
+	if _, err := d.db.ExecContext(ctx, query, args...); err != nil {
+		return nil, err
+	}
+
+	list, err := d.ListResources(ctx, &store.FindResource{ID: &update.ID})
+	if err != nil {
+		return nil, err
+	}
+	if len(list) != 1 {
+		return nil, errors.Wrapf(nil, "unexpected resource count: %d", len(list))
+	}
+
+	return list[0], nil
 }
 
 func (d *DB) DeleteResource(ctx context.Context, delete *store.DeleteResource) error {
-	stmt := `DELETE FROM resource WHERE id = $1`
-	result, err := d.db.ExecContext(ctx, stmt, delete.ID)
+	qb := squirrel.Delete("resource").Where(squirrel.Eq{"id": delete.ID})
+
+	query, args, err := qb.PlaceholderFormat(squirrel.Dollar).ToSql()
 	if err != nil {
 		return err
 	}
+
+	result, err := d.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+
 	if _, err := result.RowsAffected(); err != nil {
 		return err
 	}
+
+	if err := d.Vacuum(ctx); err != nil {
+		// Prevent linter warning.
+		return err
+	}
+
 	return nil
 }
 
 func vacuumResource(ctx context.Context, tx *sql.Tx) error {
-	stmt := `
-	DELETE FROM 
-		resource 
-	WHERE 
-		creator_id NOT IN (SELECT id FROM "user")`
-	_, err := tx.ExecContext(ctx, stmt)
+	// First, build the subquery
+	subQuery, subArgs, err := squirrel.Select("id").From(`"user"`).PlaceholderFormat(squirrel.Dollar).ToSql()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	// Now, build the main delete query using the subquery
+	query, args, err := squirrel.Delete("resource").
+		Where(fmt.Sprintf("creator_id NOT IN (%s)", subQuery), subArgs...).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	// Execute the query
+	_, err = tx.ExecContext(ctx, query, args...)
+	return err
 }

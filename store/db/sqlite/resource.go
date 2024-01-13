@@ -51,7 +51,8 @@ func (d *DB) ListResources(ctx context.Context, find *store.FindResource) ([]*st
 			%s
 		FROM resource
 		WHERE %s
-		ORDER BY updated_ts DESC, created_ts DESC
+		GROUP BY id
+		ORDER BY created_ts DESC
 	`, strings.Join(fields, ", "), strings.Join(where, " AND "))
 	if find.Limit != nil {
 		query = fmt.Sprintf("%s LIMIT %d", query, *find.Limit)

@@ -49,7 +49,7 @@ func (s *Store) MigrateResourceInternalPath(ctx context.Context) error {
 		migratedCount++
 	}
 
-	if migratedCount > 0 && s.Profile.Mode == "prod" {
+	if migratedCount > 0 {
 		log.Info(fmt.Sprintf("migrated %d local resource paths in %s", migratedCount, time.Since(migrateStartTime)))
 	}
 	return nil

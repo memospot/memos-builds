@@ -1,6 +1,4 @@
-import { BaseProps } from "./types";
-
-interface Props extends BaseProps {}
+interface Props {}
 
 const LineBreak: React.FC<Props> = () => {
   return <br />;
