@@ -2,8 +2,8 @@ package postgres
 
 import (
 	"context"
-	"strings"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -21,54 +21,61 @@ func (d *DB) CreateInbox(ctx context.Context, create *store.Inbox) (*store.Inbox
 		messageString = string(bytes)
 	}
 
-	fields := []string{"sender_id", "receiver_id", "status", "message"}
-	args := []any{create.SenderID, create.ReceiverID, create.Status, messageString}
-	stmt := "INSERT INTO inbox (" + strings.Join(fields, ", ") + ") VALUES (" + placeholders(len(args)) + ") RETURNING id, created_ts"
-	if err := d.db.QueryRowContext(ctx, stmt, args...).Scan(
-		&create.ID,
-		&create.CreatedTs,
-	); err != nil {
+	qb := squirrel.Insert("inbox").
+		Columns("sender_id", "receiver_id", "status", "message").
+		Values(create.SenderID, create.ReceiverID, create.Status, messageString).
+		Suffix("RETURNING id").
+		PlaceholderFormat(squirrel.Dollar)
+
+	stmt, args, err := qb.ToSql()
+	if err != nil {
 		return nil, err
 	}
 
-	return create, nil
+	var id int32
+	err = d.db.QueryRowContext(ctx, stmt, args...).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+
+	return d.GetInbox(ctx, &store.FindInbox{ID: &id})
 }
 
 func (d *DB) ListInboxes(ctx context.Context, find *store.FindInbox) ([]*store.Inbox, error) {
-	where, args := []string{"1 = 1"}, []any{}
+	qb := squirrel.Select("id", "created_ts", "sender_id", "receiver_id", "status", "message").
+		From("inbox").
+		Where("1 = 1").
+		PlaceholderFormat(squirrel.Dollar)
 
 	if find.ID != nil {
-		where, args = append(where, "id = "+placeholder(len(args)+1)), append(args, *find.ID)
+		qb = qb.Where(squirrel.Eq{"id": *find.ID})
 	}
 	if find.SenderID != nil {
-		where, args = append(where, "sender_id = "+placeholder(len(args)+1)), append(args, *find.SenderID)
+		qb = qb.Where(squirrel.Eq{"sender_id": *find.SenderID})
 	}
 	if find.ReceiverID != nil {
-		where, args = append(where, "receiver_id = "+placeholder(len(args)+1)), append(args, *find.ReceiverID)
+		qb = qb.Where(squirrel.Eq{"receiver_id": *find.ReceiverID})
 	}
 	if find.Status != nil {
-		where, args = append(where, "status = "+placeholder(len(args)+1)), append(args, *find.Status)
+		qb = qb.Where(squirrel.Eq{"status": *find.Status})
 	}
 
-	query := "SELECT id, created_ts, sender_id, receiver_id, status, message FROM inbox WHERE " + strings.Join(where, " AND ") + " ORDER BY created_ts DESC"
+	query, args, err := qb.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := d.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	list := []*store.Inbox{}
+	var list []*store.Inbox
 	for rows.Next() {
 		inbox := &store.Inbox{}
 		var messageBytes []byte
-		if err := rows.Scan(
-			&inbox.ID,
-			&inbox.CreatedTs,
-			&inbox.SenderID,
-			&inbox.ReceiverID,
-			&inbox.Status,
-			&messageBytes,
-		); err != nil {
+		if err := rows.Scan(&inbox.ID, &inbox.CreatedTs, &inbox.SenderID, &inbox.ReceiverID, &inbox.Status, &messageBytes); err != nil {
 			return nil, err
 		}
 
@@ -80,11 +87,7 @@ func (d *DB) ListInboxes(ctx context.Context, find *store.FindInbox) ([]*store.I
 		list = append(list, inbox)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return list, nil
+	return list, rows.Err()
 }
 
 func (d *DB) GetInbox(ctx context.Context, find *store.FindInbox) (*store.Inbox, error) {
@@ -99,36 +102,39 @@ func (d *DB) GetInbox(ctx context.Context, find *store.FindInbox) (*store.Inbox,
 }
 
 func (d *DB) UpdateInbox(ctx context.Context, update *store.UpdateInbox) (*store.Inbox, error) {
-	set, args := []string{"status = $1"}, []any{update.Status.String()}
-	args = append(args, update.ID)
-	query := "UPDATE inbox SET " + strings.Join(set, ", ") + " WHERE id = $2 RETURNING id, created_ts, sender_id, receiver_id, status, message"
-	inbox := &store.Inbox{}
-	var messageBytes []byte
-	if err := d.db.QueryRowContext(ctx, query, args...).Scan(
-		&inbox.ID,
-		&inbox.CreatedTs,
-		&inbox.SenderID,
-		&inbox.ReceiverID,
-		&inbox.Status,
-		&messageBytes,
-	); err != nil {
+	qb := squirrel.Update("inbox").
+		Set("status", update.Status.String()).
+		Where(squirrel.Eq{"id": update.ID}).
+		PlaceholderFormat(squirrel.Dollar)
+
+	stmt, args, err := qb.ToSql()
+	if err != nil {
 		return nil, err
 	}
-	message := &storepb.InboxMessage{}
-	if err := protojsonUnmarshaler.Unmarshal(messageBytes, message); err != nil {
+
+	_, err = d.db.ExecContext(ctx, stmt, args...)
+	if err != nil {
 		return nil, err
 	}
-	inbox.Message = message
-	return inbox, nil
+
+	return d.GetInbox(ctx, &store.FindInbox{ID: &update.ID})
 }
 
 func (d *DB) DeleteInbox(ctx context.Context, delete *store.DeleteInbox) error {
-	result, err := d.db.ExecContext(ctx, "DELETE FROM inbox WHERE id = $1", delete.ID)
+	qb := squirrel.Delete("inbox").
+		Where(squirrel.Eq{"id": delete.ID}).
+		PlaceholderFormat(squirrel.Dollar)
+
+	stmt, args, err := qb.ToSql()
 	if err != nil {
 		return err
 	}
-	if _, err := result.RowsAffected(); err != nil {
+
+	result, err := d.db.ExecContext(ctx, stmt, args...)
+	if err != nil {
 		return err
 	}
-	return nil
+
+	_, err = result.RowsAffected()
+	return err
 }

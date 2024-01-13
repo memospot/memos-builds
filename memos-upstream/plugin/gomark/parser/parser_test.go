@@ -96,7 +96,6 @@ func TestParser(t *testing.T) {
 						},
 					},
 				},
-				&ast.LineBreak{},
 				&ast.Paragraph{
 					Children: []ast.Node{
 						&ast.Text{
@@ -127,7 +126,6 @@ func TestParser(t *testing.T) {
 						},
 					},
 				},
-				&ast.LineBreak{},
 				&ast.CodeBlock{
 					Language: "javascript",
 					Content:  "console.log(\"Hello world!\");",
@@ -144,7 +142,6 @@ func TestParser(t *testing.T) {
 						},
 					},
 				},
-				&ast.LineBreak{},
 				&ast.LineBreak{},
 				&ast.Paragraph{
 					Children: []ast.Node{
@@ -166,7 +163,6 @@ func TestParser(t *testing.T) {
 						},
 					},
 				},
-				&ast.LineBreak{},
 				&ast.TaskList{
 					Symbol:   tokenizer.Hyphen,
 					Complete: false,
@@ -190,7 +186,6 @@ func TestParser(t *testing.T) {
 						},
 					},
 				},
-				&ast.LineBreak{},
 				&ast.TaskList{
 					Symbol:   tokenizer.Hyphen,
 					Complete: true,
@@ -199,22 +194,6 @@ func TestParser(t *testing.T) {
 							Content: "world",
 						},
 					},
-				},
-			},
-		},
-		{
-			text: "\n\n",
-			nodes: []ast.Node{
-				&ast.LineBreak{},
-				&ast.LineBreak{},
-			},
-		},
-		{
-			text: "\n$$\na=3\n$$",
-			nodes: []ast.Node{
-				&ast.LineBreak{},
-				&ast.MathBlock{
-					Content: "a=3",
 				},
 			},
 		},

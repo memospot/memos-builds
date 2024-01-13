@@ -42,8 +42,7 @@ type Memo struct {
 	Visibility Visibility
 
 	// Composed fields
-	Pinned   bool
-	ParentID *int32
+	Pinned bool
 }
 
 type FindMemo struct {
@@ -56,10 +55,10 @@ type FindMemo struct {
 	CreatedTsBefore *int64
 
 	// Domain specific fields
-	ContentSearch   []string
-	VisibilityList  []Visibility
-	ExcludeContent  bool
-	ExcludeComments bool
+	ContentSearch  []string
+	VisibilityList []Visibility
+	Pinned         *bool
+	ExcludeContent bool
 
 	// Pagination
 	Limit            *int

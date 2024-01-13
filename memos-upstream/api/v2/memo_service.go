@@ -19,7 +19,6 @@ import (
 	"github.com/usememos/memos/plugin/gomark/ast"
 	"github.com/usememos/memos/plugin/gomark/parser"
 	"github.com/usememos/memos/plugin/gomark/parser/tokenizer"
-	"github.com/usememos/memos/plugin/gomark/restore"
 	"github.com/usememos/memos/plugin/webhook"
 	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
 	storepb "github.com/usememos/memos/proto/gen/store"
@@ -80,10 +79,7 @@ func (s *APIV2Service) CreateMemo(ctx context.Context, request *apiv2pb.CreateMe
 }
 
 func (s *APIV2Service) ListMemos(ctx context.Context, request *apiv2pb.ListMemosRequest) (*apiv2pb.ListMemosResponse, error) {
-	memoFind := &store.FindMemo{
-		// Exclude comments by default.
-		ExcludeComments: true,
-	}
+	memoFind := &store.FindMemo{}
 	if request.Filter != "" {
 		filter, err := parseListMemosFilter(request.Filter)
 		if err != nil {
@@ -236,10 +232,6 @@ func (s *APIV2Service) UpdateMemo(ctx context.Context, request *apiv2pb.UpdateMe
 					}
 				}
 			})
-		} else if path == "nodes" {
-			nodes := convertToASTNodes(request.Memo.Nodes)
-			content := restore.Restore(nodes)
-			update.Content = &content
 		} else if path == "visibility" {
 			visibility := convertVisibilityToStore(request.Memo.Visibility)
 			update.Visibility = &visibility
@@ -414,13 +406,10 @@ func (s *APIV2Service) GetUserMemosStats(ctx context.Context, request *apiv2pb.G
 	if user == nil {
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
-
 	normalRowStatus := store.Normal
 	memos, err := s.Store.ListMemos(ctx, &store.FindMemo{
-		CreatorID:       &user.ID,
-		RowStatus:       &normalRowStatus,
-		ExcludeComments: true,
-		ExcludeContent:  true,
+		CreatorID: &user.ID,
+		RowStatus: &normalRowStatus,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list memos")
@@ -474,7 +463,6 @@ func (s *APIV2Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		Nodes:       convertFromASTNodes(rawNodes),
 		Visibility:  convertVisibilityFromStore(memo.Visibility),
 		Pinned:      memo.Pinned,
-		ParentId:    memo.ParentID,
 		Relations:   listMemoRelationsResponse.Relations,
 		Resources:   listMemoResourcesResponse.Resources,
 	}, nil
