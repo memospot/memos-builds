@@ -9,13 +9,13 @@
 version: "3"
 env:
   RED:
-    sh: tput setaf 1
+    sh: tput -T xterm-256color setaf 1
   GREEN:
-    sh: tput setaf 2
+    sh: tput -T xterm-256color setaf 2
   CYAN:
-    sh: tput setaf 6
+    sh: tput -T xterm-256color setaf 6
   RESET:
-    sh: tput sgr0
+    sh: tput -T xterm-256color sgr0
 
 tasks:
   ##### CI #####
@@ -242,10 +242,11 @@ tasks:
       Pull latest commit from Memos subtree.
       Note: requires a clean git state. `memos-upstream` folder will be reset.
     cmds:
-      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Pull latest memos-upstream commit"
-      - git clean -fx memos-upstream
-      - git add -A
-      - git commit -am "Clean memos-upstream subtree" || true
+      - |
+        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="chore:ci: pull latest memos-upstream commit"
+        git clean -fx memos-upstream
+        git add -A
+        git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
 
   git:subtree:pull-tag:
     desc: |
@@ -253,8 +254,23 @@ tasks:
       Usage: `task git:subtree:pull-tag -- v0.0.0`.
       Note: requires a clean git state.
     cmds:
-      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
-      - git clean -fx memos-upstream
+      - |
+        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to {{.CLI_ARGS}}"
+        git clean -fx memos-upstream
+        git add -A
+        git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
+  
+  git:subtree:pull-commit:
+    desc: |
+      Pull a specific commit from Memos subtree.
+      Usage: `task git:subtree:pull-commit -- 1234567890`.
+      Note: requires a clean git state.
+    cmds:
+      - |
+        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git {{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to 2eba4e2cd4b3be677a703198f597bbe96edb00ee"
+        git clean -fx memos-upstream
+        git add -A
+        git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
 
   git:subtree:reset:
     desc: Reset subtree.

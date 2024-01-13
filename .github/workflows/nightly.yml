@@ -1,9 +1,10 @@
-name: Nightly Builds
+name: "Nightly Builds"
 
 on:
+  push:
+    tags:
+      - "v*.*.*-*"
   workflow_dispatch:
-  schedule: # Run every day at midnight
-    - cron: "0 0 * * *"
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
@@ -153,13 +154,18 @@ jobs:
           tags: |
             type=raw,value=nightly
             type=semver,pattern={{version}},value=${{ env.TAG }}
-          labels: &meta-labels |
+          labels: |
             org.opencontainers.image.title=memos-builds
             org.opencontainers.image.description=Nightly builds of Memos
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.url=https://usememos.com
             org.opencontainers.image.source=https://github.com/lincolnthalles/memos-builds
-          annotations: *meta-labels
+          annotations:
+            org.opencontainers.image.title=memos-builds
+            org.opencontainers.image.description=Nightly builds of Memos
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.url=https://usememos.com
+            org.opencontainers.image.source=https://github.com/lincolnthalles/memos-builds
 
       - name: Build and Push
         id: docker_build

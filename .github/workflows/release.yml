@@ -113,7 +113,7 @@ jobs:
 
       - name: Build
         run: |
-          task git:subtree:pull-tag -- "${{env.GIT_TAG}}"
+          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
           task build:frontend
           task build:backend-tidy
 
