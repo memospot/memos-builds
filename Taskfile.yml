@@ -237,34 +237,14 @@ tasks:
       - git clean -fdx
       - git checkout -
 
-  git:subtree:pull-latest:
+  git:subtree:pull:
     desc: |
-      Pull latest commit from Memos subtree.
-      Note: requires a clean git state. `memos-upstream` folder will be reset.
-    cmds:
-      - |
-        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="chore:ci: pull latest memos-upstream commit"
-        git clean -fx memos-upstream
-        git add -A
-        git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
-
-  git:subtree:pull-tag:
-    desc: |
-      Pull a specific tag from Memos subtree.
-      Usage: `task git:subtree:pull-tag -- v0.0.0`.
-      Note: requires a clean git state.
-    cmds:
-      - |
-        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to {{.CLI_ARGS}}"
-        git clean -fx memos-upstream
-        git add -A
-        git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
-  
-  git:subtree:pull-commit:
-    desc: |
-      Pull a specific commit from Memos subtree.
-      Usage: `task git:subtree:pull-commit -- 1234567890`.
-      Note: requires a clean git state.
+      Pull a specific commit from Memos upstream.
+      Usage: `task git:subtree:pull -- 1234567890`.
+      Notes: 
+        - requires a clean git state.
+        - `memos-upstream` folder will be reset.
+    silent: true
     cmds:
       - |
         git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git {{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to {{.CLI_ARGS}}"
@@ -272,13 +252,26 @@ tasks:
         git add -A
         git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
 
-  git:subtree:reset:
-    desc: Reset subtree.
+  git:subtree:pull-latest:
+    desc: |
+      Pull latest commit from Memos upstream.
+      Usage: `task git:subtree:pull-latest`.
     cmds:
-      - rm -rf ./memos-upstream
-      - git rm -rf memos-upstream --ignore-unmatch
-      - git commit -m "Remove memos-upstream subtree"
-      - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Reset memos-upstream subtree"
+      - task git:subtree:pull -- main
+
+  git:subtree:pull-tag:
+    desc: |
+      Pull a specific tag from Memos upstream.
+      Usage: `task git:subtree:pull-tag -- v0.0.0`.
+    cmds:
+      - task git:subtree:pull -- tags/v{{trimPrefix "v" .CLI_ARGS}}
+
+  git:subtree:pull-release:
+    desc: |
+      Pull a specific release from Memos upstream.
+      Usage: `task git:subtree:pull-release -- v0.0.0`.
+    cmds:
+      - task git:subtree:pull -- heads/release/{{trimPrefix "v" .CLI_ARGS}}
 
   git:retag:
     desc: |

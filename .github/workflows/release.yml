@@ -173,7 +173,7 @@ jobs:
 
       - name: Pre-build requirements
         run: |
-          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
+          task git:subtree:pull-release -- "${{env.GIT_TAG}}"
           task build:backend-tidy
           cd ./memos-upstream/proto && buf generate
 
