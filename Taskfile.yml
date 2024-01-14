@@ -27,7 +27,7 @@ tasks:
       DST: ../../build/frontend
     sources:
       - ../proto/**/*.{proto,go,yaml,lock}
-      - src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html}
+      - src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp}
       - src/*.{ts,js,json,html}
       - pnpm-lock.yaml
     generates:
