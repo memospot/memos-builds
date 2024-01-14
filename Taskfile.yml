@@ -311,5 +311,6 @@ tasks:
     cmds:
       - task git:subtree:pull-release -- {{.CLI_ARGS}}
       - task git:retag -- {{.CLI_ARGS}}
+      - git push origin main
 
   ##### /Git-related #####

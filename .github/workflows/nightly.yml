@@ -8,8 +8,8 @@ on:
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/i386,linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/riscv64
-  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/riscv64
+  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64
+  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64
 
 jobs:
   goreleaser:
@@ -108,9 +108,10 @@ jobs:
           path: |
             build/frontend
             .task/checksum/build-frontend
-          key: ${{ runner.os }}-frontend-${{ env.TAG }}-${{ env.DATE_STRING }}
+          key: |
+            nightly-frontend-${{ env.TAG }}-${{ env.DATE_STRING }}
           restore-keys: |
-            ${{ runner.os }}-frontend-${{ env.TAG }}-
+            nightly-frontend-${{ env.TAG }}-
 
       - name: Cache back-end build
         uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
@@ -118,9 +119,10 @@ jobs:
           path: |
             build/backend
             ./task/checksum/build-nightly-all
-          key: ${{ runner.os }}-backend-${{ env.TAG }}-${{ env.DATE_STRING }}
+          key: |
+            nightly-backend-${{ env.TAG }}-${{ env.DATE_STRING }}
           restore-keys: |
-            ${{ runner.os }}-backend-${{ env.TAG }}-
+            nightly-backend-${{ env.TAG }}-
 
       - name: Build
         run: |
