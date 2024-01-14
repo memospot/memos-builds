@@ -7,14 +7,32 @@ builds:
     env:
       - CGO_ENABLED=0
       - GO111MODULE=on
-    targets:
-      linux_amd64_v2
-      linux_arm64
-      linux_arm_6
-      linux_riscv64
-      windows_amd64
-      darwin_amd64
-      darwin_arm64
+    goos:
+      - darwin
+      - freebsd
+      - linux
+      - windows
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+      - ppc64le
+      - riscv64
+      - s390x
+    goarm:
+      - "5"
+      - "6"
+      - "7"
+    goamd64:
+      - v1
+      - v2
+      - v3
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: "386"
     flags: >-
       -trimpath
     ldflags: >-
@@ -55,7 +73,7 @@ archives:
 
 checksum:
   disable: false
-  name_template: "{{ .ProjectName }}_SHA256SUMS.txt"
+  name_template: "{{ .ProjectName }}-{{ .Tag }}_SHA256SUMS.txt"
   algorithm: sha256
 
 snapshot:

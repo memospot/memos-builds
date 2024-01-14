@@ -282,6 +282,7 @@ tasks:
 
       Goreleaser demands a tag commit to be verifiable,
         so the tag must be made right before the build is triggered.
+    ignore_error: true
     cmds:      
       - git push origin :refs/tags/{{.CLI_ARGS}}
       - git tag -d {{.CLI_ARGS}}
@@ -303,14 +304,12 @@ tasks:
 
   git:tag:push:
     desc: |
-      Checkout subtree to supplied tag and push a new tag to origin.
+      Checkout subtree to supplied release and push a new tag to origin.
       Usage: `task git:tag:push -- v0.0.0`.
     summary: |
       This will trigger the GitHub Action to build and release the binaries.
     cmds:
-      - git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git tags/{{.CLI_ARGS}} --squash --message="Checkout memos-upstream to {{.CLI_ARGS}}"
-      - git push origin
-      - git tag -a {{.CLI_ARGS}} -m "Push {{.CLI_ARGS}}"
-      - git push origin {{.CLI_ARGS}}
+      - task git:subtree:pull-release -- {{.CLI_ARGS}}
+      - task git:retag -- {{.CLI_ARGS}}
 
   ##### /Git-related #####

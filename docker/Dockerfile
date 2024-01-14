@@ -1,13 +1,13 @@
 #! Target architectures are limited by the image and its version.
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v1
+FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
+FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as target-arm32v5
+FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
+FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as target-arm32v5
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
+FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm64v8/alpine:latest as target-arm64
+FROM --platform=${BUILDPLATFORM:-linux/amd64} ppc64le/alpine:edge as target-ppc64le
 FROM --platform=${BUILDPLATFORM:-linux/amd64} riscv64/alpine:edge as target-riscv64
 
 # Select appropriate base image.
@@ -26,6 +26,7 @@ RUN <<SH
 	RELEASE=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2 | cut -d' ' -f1);
 	case $RELEASE in
 		Alpine)
+			apk upgrade --no-cache
 			apk add --no-cache tzdata ncurses
 			;;
 		Debian)
@@ -33,7 +34,11 @@ RUN <<SH
 			echo 'update_initramfs=no' > /etc/initramfs-tools/update-initramfs.conf
 			rm -f /var/lib/man-db/auto-update
 
-			apt-get -y update && apt-get --no-install-recommends -y install wget
+			apt-get -y update
+			apt-get -y upgrade
+			apt-get --no-install-recommends -y install wget
+			apt-get clean
+			rm -rf /var/lib/apt/lists/*
 			;;
 		*)
 			echo "Unsupported OS: $RELEASE"

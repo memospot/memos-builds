@@ -8,8 +8,8 @@ on:
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/amd64/v2,linux/arm32/v6,linux/arm64,linux/riscv64
-  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm64,linux/riscv64
+  DOCKER_PLATFORMS: linux/i386,linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/riscv64
+  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/riscv64
 
 jobs:
   goreleaser:

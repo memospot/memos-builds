@@ -39,8 +39,15 @@ This project hosts builds for [Memos](https://github.com/usememos/memos), a beau
 
 ## Docker
 
-This side-project provides optimized images for `amd64v2`, `armv6`, `arm64` and `riscv64`. If you need support for legacy `amd64v1` CPUs, use the official `neosmemo/memos` image.
+This project provides optimized Memos images for the following platforms:
+|      amd64     |     arm32    |     Other     |
+| -------------- | ------------ | ------------- |
+| linux/amd64    | linux/arm/v5 |   linux/386   |
+| linux/amd64/v2 | linux/arm/v6 |  linux/arm64  |
+| linux/amd64/v3 | linux/arm/v7 | linux/riscv64 |
+|                |              | linux/ppc64le |
 
+To pull a specific image, append `--platform=<platform>` to the `docker pull` command.
 
 ##### Latest
 
@@ -60,7 +67,6 @@ docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/me
 
 [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos)
 
-
 ## Platform variants
 
 `arm` and `amd64` platforms have multiple builds, with different hardware optimizations. Choose the one that best suits the host CPU.
@@ -71,17 +77,17 @@ docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/me
 
 | Suffix | Target CPUs                                       |
 | ------ | ------------------------------------------------- |
-|   v1   | Runs on all AMD64/Intel 64 CPUs                   |
-|   v2   | Intel Nehalem (1st geN) / AMD Jaguar and newer    |
-|   v3   | Intel Haswell (4th gen) / AMD Excavator and newer |
+| v1     | Runs on all AMD64/Intel 64 CPUs                   |
+| v2     | Intel Nehalem (1st geN) / AMD Jaguar and newer    |
+| v3     | Intel Haswell (4th gen) / AMD Excavator and newer |
 
 ### arm
 
 | Suffix | Target CPUs                       |
-| ------ | ----------------------------------|
-|   v5   | Older ARM without VFP             |
-|   v6   | VFPv1 only: ARM11 or better cores |
-|   v7   | VFPv3: Cortex-A cores             |
+| ------ | --------------------------------- |
+| v5     | Older ARM without VFP             |
+| v6     | VFPv1 only: ARM11 or better cores |
+| v7     | VFPv3: Cortex-A cores             |
 
 ## ⚠ Notes
 
@@ -105,6 +111,7 @@ You should manually setup a system service to start Memos on boot.
 [Memos Windows Service Guide](docs/windows-service.md)
 
 ## Running on Android
+
 To run Memos using [Termux](https://play.google.com/store/apps/details?id=com.termux) on Android:
 
 - Download a Linux build suiting device CPU architecture (most modern devices are `arm64`)
