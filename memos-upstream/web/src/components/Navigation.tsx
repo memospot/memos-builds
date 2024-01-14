@@ -15,7 +15,11 @@ interface NavLinkItem {
   icon: React.ReactNode;
 }
 
-const Navigation = () => {
+interface Props {
+  className?: string;
+}
+
+const Navigation = (props: Props) => {
   const t = useTranslate();
   const user = useCurrentUser();
   const inboxStore = useInboxStore();
@@ -98,13 +102,24 @@ const Navigation = () => {
     title: t("common.sign-in"),
     icon: <Icon.LogIn className="mr-3 w-6 h-auto opacity-70" />,
   };
+  const aboutNavLink: NavLinkItem = {
+    id: "header-about",
+    path: "/about",
+    title: t("common.about"),
+    icon: <Icon.Smile className="mr-3 w-6 h-auto opacity-70" />,
+  };
 
   const navLinks: NavLinkItem[] = user
     ? [homeNavLink, timelineNavLink, resourcesNavLink, exploreNavLink, profileNavLink, inboxNavLink, archivedNavLink, settingNavLink]
-    : [exploreNavLink, signInNavLink];
+    : [exploreNavLink, signInNavLink, aboutNavLink];
 
   return (
-    <header className="w-full h-full overflow-auto flex flex-col justify-start items-start py-4 md:pt-6 z-30">
+    <header
+      className={classNames(
+        "w-full h-full overflow-auto flex flex-col justify-start items-start py-4 md:pt-6 z-30 hide-scrollbar",
+        props.className
+      )}
+    >
       <UserBanner />
       <div className="w-full px-1 py-2 flex flex-col justify-start items-start shrink-0 space-y-2">
         {navLinks.map((navLink) => (
