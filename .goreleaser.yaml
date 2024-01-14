@@ -19,7 +19,7 @@ builds:
       - linux
       - windows
     goarch:
-      - '386'
+      # - "386"
       - amd64
       - arm
       - arm64
@@ -27,9 +27,9 @@ builds:
       - riscv64
       # - s390x
     goarm:
-      - "5" # use software floating point; for CPUs without a VFP co-processor
+      # - "5" # use software floating point; for CPUs without a VFP co-processor
       - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
-      - "7" # use VFPv3; Cortex-A cores
+      # - "7" # use VFPv3; Cortex-A cores
     goamd64:
       - v1 # baseline: all x86_64 CPUs
       - v2 # CMPXCHG16B, LAHF, SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3 (circa 2009: Intel Nehalem/circa 2013: AMD Jaguar)
@@ -46,8 +46,8 @@ builds:
       -s
       -w
       -X main.Date={{.CommitDate}}
-    #  -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
-    #  -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
+      -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
+      -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 upx:
@@ -162,107 +162,61 @@ release:
 
   skip_upload: false
 
-dockers:
-  - use: buildx
-    dockerfile: docker/Dockerfile-goreleaser
-    goos: linux
-    goarch: amd64
-    image_templates: &image_templates
-      - &ghcr_amd64 "ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-amd64"
-      - &dockerhub_amd64 "lincolnthalles/memos-builds:{{ .Tag }}-amd64"
-    build_flag_templates: ["--platform=linux/amd64"]
-    extra_files: &extra_files [build/frontend/dist, docker/entrypoint.sh]
-  
-  - use: buildx
-    dockerfile: docker/Dockerfile-goreleaser
-    goos: linux
-    goarch: arm
-    goarm: 6
-    image_templates:
-      - &ghcr_arm32v6 "ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-arm32v6"
-      - &dockerhub_arm32v6 "lincolnthalles/memos-builds:{{ .Tag }}-arm32v6"
-    build_flag_templates: ["--platform=linux/arm32/v6"]
-    extra_files: *extra_files
-  
-  - use: buildx
-    dockerfile: docker/Dockerfile-goreleaser
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - &ghcr_arm64 "ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-arm64"
-      - &dockerhub_arm64 "lincolnthalles/memos-builds:{{ .Tag }}-arm64"
-    build_flag_templates: ["--platform=linux/arm64"]
-    extra_files: *extra_files
+# dockers:
+#   - use: buildx
+#     dockerfile: docker/Dockerfile-goreleaser
+#     extra_files: &extra_files [build/frontend/dist, docker/entrypoint.sh]
+#     goos: linux
+#     goarch: amd64
+#     build_flag_templates: ["--platform=linux/amd64"]
+#     image_templates:
+#       - &hub_amd64 lincolnthalles/memos-builds:{{ .Tag }}-amd64
+#       # - &ghcr_amd64 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-amd64
 
-  - use: buildx
-    dockerfile: docker/Dockerfile-goreleaser
-    goos: linux
-    goarch: riscv64
-    image_templates:
-      - &ghcr_riscv64 "ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-riscv64"
-      - &dockerhub_riscv64 "lincolnthalles/memos-builds:{{ .Tag }}-riscv64"
-    build_flag_templates: ["--platform=linux/riscv64"]
-    extra_files: *extra_files
+#   - use: buildx
+#     dockerfile: docker/Dockerfile-goreleaser
+#     extra_files: *extra_files
+#     goos: linux
+#     goarch: arm
+#     goarm: 6
+#     build_flag_templates: ["--platform=linux/arm32/v6"]
+#     image_templates:
+#       - &hub_arm32v6 lincolnthalles/memos-builds:{{ .Tag }}-arm32v6
+#       # - &ghcr_arm32v6 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-arm32v6
 
-docker_manifests:
-  # https://goreleaser.com/customization/docker_manifest/
-  - name_template: ghcr.io/lincolnthalles/memos-builds:latest
-    image_templates:
-      - *dockerhub_amd64
-      - *dockerhub_arm32v6
-      - *dockerhub_arm64
-      - *dockerhub_riscv64
-      - *ghcr_amd64
-      - *ghcr_arm32v6
-      - *ghcr_arm64
-      - *ghcr_riscv64
-  - name_template: ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}
-    image_templates:
-      - *dockerhub_amd64
-      - *dockerhub_arm32v6
-      - *dockerhub_arm64
-      - *dockerhub_riscv64
-      - *ghcr_amd64
-      - *ghcr_arm32v6
-      - *ghcr_arm64
-      - *ghcr_riscv64
-  - name_template: ghcr.io/lincolnthalles/memos-builds:v{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - *dockerhub_amd64
-      - *dockerhub_arm32v6
-      - *dockerhub_arm64
-      - *dockerhub_riscv64
-      - *ghcr_amd64
-      - *ghcr_arm32v6
-      - *ghcr_arm64
-      - *ghcr_riscv64
-  - name_template: lincolnthalles/memos-builds:latest
-    image_templates:
-      - *dockerhub_amd64
-      - *dockerhub_arm32v6
-      - *dockerhub_arm64
-      - *dockerhub_riscv64
-      - *ghcr_amd64
-      - *ghcr_arm32v6
-      - *ghcr_arm64
-      - *ghcr_riscv64
-  - name_template: lincolnthalles/memos-builds:{{ .Tag }}
-    image_templates:
-      - *dockerhub_amd64
-      - *dockerhub_arm32v6
-      - *dockerhub_arm64
-      - *dockerhub_riscv64
-      - *ghcr_amd64
-      - *ghcr_arm32v6
-      - *ghcr_arm64
-      - *ghcr_riscv64
-  - name_template: lincolnthalles/memos-builds:v{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - *dockerhub_amd64
-      - *dockerhub_arm32v6
-      - *dockerhub_arm64
-      - *dockerhub_riscv64
-      - *ghcr_amd64
-      - *ghcr_arm32v6
-      - *ghcr_arm64
-      - *ghcr_riscv64
+#   - use: buildx
+#     dockerfile: docker/Dockerfile-goreleaser
+#     extra_files: *extra_files
+#     goos: linux
+#     goarch: arm64
+#     build_flag_templates: ["--platform=linux/arm64"]
+#     image_templates:
+#       - &hub_arm64 lincolnthalles/memos-builds:{{ .Tag }}-arm64
+#       # - &ghcr_arm64 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-arm64
+
+#   - use: buildx
+#     dockerfile: docker/Dockerfile-goreleaser
+#     extra_files: *extra_files
+#     goos: linux
+#     goarch: riscv64
+#     build_flag_templates: ["--platform=linux/riscv64"]
+#     image_templates:
+#       - &hub_riscv64 lincolnthalles/memos-builds:{{ .Tag }}-riscv64
+#       # - &ghcr_riscv64 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-riscv64
+
+# docker_manifests:
+#   # https://goreleaser.com/customization/docker_manifest/
+#   # - name_template: ghcr.io/lincolnthalles/memos-builds:latest
+#   #   image_templates: &ghcr_images [*ghcr_amd64, *ghcr_arm32v6, *ghcr_arm64, *ghcr_riscv64]
+#   # - name_template: ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}
+#   #   image_templates: *ghcr_images
+#   # - name_template: ghcr.io/lincolnthalles/memos-builds:v{{ .Major }}.{{ .Minor }}
+#   #   image_templates: *ghcr_images
+
+#   - name_template: lincolnthalles/memos-builds:latest
+#     image_templates:
+#       &hub_images [*hub_amd64, *hub_arm32v6, *hub_arm64, *hub_riscv64]
+#   - name_template: lincolnthalles/memos-builds:{{ .Tag }}
+#     image_templates: *hub_images
+#   - name_template: lincolnthalles/memos-builds:v{{ .Major }}.{{ .Minor }}
+#     image_templates: *hub_images

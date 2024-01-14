@@ -1,8 +1,8 @@
 #! Target architectures are limited by the image and its version.
 # FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
-FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
 # FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v1
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
+FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
 # FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
 # FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as target-arm32v5
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
@@ -12,6 +12,12 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} riscv64/alpine:edge as target-risc
 
 # Select appropriate base image.
 FROM target-${TARGETARCH}${TARGETVARIANT}
+
+LABEL org.opencontainers.image.title="Memos"
+LABEL org.opencontainers.image.description="A privacy-first, lightweight note-taking service."
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/lincolnthalles/memos-builds"
+LABEL org.opencontainers.image.url="https://usememos.com"
 
 # Setup container OS
 ARG TARGETPLATFORM TARGETOS TARGETARCH TARGETVARIANT
@@ -24,7 +30,7 @@ RUN <<SH
 			;;
 		Debian)
 			mkdir -p /etc/initramfs-tools/
-			echo 'update_initramfs=no' > tee /etc/initramfs-tools/update-initramfs.conf
+			echo 'update_initramfs=no' > /etc/initramfs-tools/update-initramfs.conf
 			rm -f /var/lib/man-db/auto-update
 
 			apt-get -y update && apt-get --no-install-recommends -y install wget

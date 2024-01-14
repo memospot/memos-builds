@@ -61,7 +61,7 @@ tasks:
     sources:
       - "./**/go.{mod,sum}"
 
-  post-build:rename-to-docker:
+  pre-docker:rename-builds:
     desc: Rename builds to Docker format
     dir: ./build/backend
     sources:
@@ -122,7 +122,7 @@ tasks:
       - build/backend/memos_SHA256SUMS.txt
     cmds:
       - goreleaser release --snapshot --clean --timeout 60m --config .goreleaser-nightly.yaml
-      - task: post-build:rename-to-docker
+      - task: pre-docker:rename-builds
 
   ##### /CI #####
 
@@ -216,11 +216,11 @@ tasks:
           - "pnpm"
         cmd: |
           if [[ -z $(command -v "{{ .ITEM }}") ]]; then
-            echo -e '\e[31m"{{ .ITEM }}" not found.\e[0m'
+            echo '{{.RED}}{{ .ITEM }}" not found.{{.RESET}}'
             echo "Please install it before running tasks."
             exit 1
           fi
-      - echo -e "\e[36mAll task requirements are met.\e[0m\n"
+      - echo -e "{{.CYAN}}All task requirements are met.{{.RESET}}\n"
       - task --list
 
   ##### Git-related #####
@@ -280,6 +280,21 @@ tasks:
       - git commit -m "Remove memos-upstream subtree"
       - git subtree add --prefix=memos-upstream https://github.com/usememos/memos.git main --squash --message="Reset memos-upstream subtree"
 
+  git:retag:
+    desc: |
+      Remove a git tag and push it again.
+      Usage: `task git:retag -- v0.0.0`.
+    summary: |
+      Used in case the CI pipeline fails and some correction is needed.
+
+      Goreleaser demands a tag commit to be verifiable,
+        so the tag must be made right before the build is triggered.
+    cmds:      
+      - git push origin :refs/tags/{{.CLI_ARGS}}
+      - git tag -d {{.CLI_ARGS}}
+      - git tag -a {{.CLI_ARGS}} -m "Tag {{.CLI_ARGS}}"
+      - git push origin {{.CLI_ARGS}}
+  
   git:tag:delete:
     desc: |
       Delete a git tag.

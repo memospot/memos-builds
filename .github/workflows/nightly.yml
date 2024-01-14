@@ -8,6 +8,8 @@ on:
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
+  DOCKER_PLATFORMS: linux/amd64/v2,linux/arm32/v6,linux/arm64,linux/riscv64
+  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm64,linux/riscv64
 
 jobs:
   goreleaser:
@@ -100,12 +102,32 @@ jobs:
           echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
           echo "Current tag set to $VERSION"
 
+      - name: Cache front-end build
+        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
+        with:
+          path: |
+            build/frontend
+            .task/checksum/build-frontend
+          key: ${{ runner.os }}-frontend-${{ env.TAG }}-${{ env.DATE_STRING }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-${{ env.TAG }}-
+
+      - name: Cache back-end build
+        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
+        with:
+          path: |
+            build/backend
+            ./task/checksum/build-nightly-all
+          key: ${{ runner.os }}-backend-${{ env.TAG }}-${{ env.DATE_STRING }}
+          restore-keys: |
+            ${{ runner.os }}-backend-${{ env.TAG }}-
+
       - name: Build
         run: |
-          git commit -am "Committed pending local changes"
+          git commit -am "chore:ci: commit latest changes" || true
           task git:subtree:pull-latest
           # cd ./memos-upstream/web && rm pnpm-lock.yaml && pnpm install
-          # git commit -am "Committed pending local changes"
+          # git commit -am "chore:ci: commit latest changes" || true
           task build:nightly:all
 
       - name: Create pre-release
@@ -127,60 +149,55 @@ jobs:
           draft: true
           prerelease: true
 
-      # Docker
+      ### Docker ###
+      - name: Rename builds to Docker format
+        run: |
+          task pre-docker:rename-builds
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
+        with:
+          platforms: ${{ env.QEMU_PLATFORMS }}
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
+        with:
+          version: latest
+          platforms: ${{ env.DOCKER_PLATFORMS }}
 
-      - name: Log in to Docker Hub
+      - name: Log-in to Docker Hub
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
         with:
           username: lincolnthalles
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Log in to GitHub's Container registry
+      - name: Log-in to GitHub's Container registry
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c
         with:
           images: |
-            lincolnthalles/memos-builds
+            lincolnthalles/memos
             ghcr.io/lincolnthalles/memos-builds
           tags: |
             type=raw,value=nightly
             type=semver,pattern={{version}},value=${{ env.TAG }}
-          labels: |
-            org.opencontainers.image.title=memos-builds
-            org.opencontainers.image.description=Nightly builds of Memos
-            org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.url=https://usememos.com
-            org.opencontainers.image.source=https://github.com/lincolnthalles/memos-builds
-          annotations:
-            org.opencontainers.image.title=memos-builds
-            org.opencontainers.image.description=Nightly builds of Memos
-            org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.url=https://usememos.com
-            org.opencontainers.image.source=https://github.com/lincolnthalles/memos-builds
 
-      - name: Build and Push
+      - name: Build and Push Docker images
         id: docker_build
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56
         with:
           context: ./
           file: ./docker/Dockerfile
-          platforms: linux/amd64,linux/arm32v6,linux/arm64,linux/riscv64
+          platforms: ${{ env.DOCKER_PLATFORMS }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-      # /Docker
-
-      # - name: Push built images
-      #   run: |
-      #     docker push --all-tags ghcr.io/lincolnthalles/memos-builds
-      #     docker push --all-tags lincolnthalles/memos-builds
+      ### /Docker ###

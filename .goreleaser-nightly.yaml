@@ -7,17 +7,14 @@ builds:
     env:
       - CGO_ENABLED=0
       - GO111MODULE=on
-    goos: [darwin, linux, windows]
-    goarch: [amd64, arm, arm64, riscv64]
-    goarm: [6]
-    goamd64: [v1]
-    ignore:
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
-      - goos: windows
-        goarch: "386"
+    targets:
+      linux_amd64_v2
+      linux_arm64
+      linux_arm_6
+      linux_riscv64
+      windows_amd64
+      darwin_amd64
+      darwin_arm64
     flags: >-
       -trimpath
     ldflags: >-
@@ -37,7 +34,6 @@ upx:
 
 archives:
   - format: tar.gz
-    # this template makes the OS and Arch more compatible with `uname` output.
     name_template: >-
       {{ .ProjectName }}-{{ .Tag }}-{{- .Os }}-
       {{- if eq .Arch "amd64" }}x86_64
@@ -60,12 +56,10 @@ archives:
 checksum:
   disable: false
   name_template: "{{ .ProjectName }}_SHA256SUMS.txt"
-  algorithm: sha256 # [sha256] sha512 sha1 crc32 md5 sha224 sha384
+  algorithm: sha256
 
-# Generates a full build, but neither validate anything nor upload it to anywhere.
-# goreleaser --snapshot --skip-publish --rm-dist
 snapshot:
   # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
   name_template: "{{ incpatch .Version }}-dev"
 
-#! Due to Goreleaser OSS limitations, GitHub release is created via Actions for nightly builds. *
+#! Due to Goreleaser OSS limitations for nightly builds, GitHub release is created via GH Actions. *

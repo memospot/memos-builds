@@ -37,6 +37,30 @@ This project hosts builds for [Memos](https://github.com/usememos/memos), a beau
   </p>
 </div>
 
+## Docker
+
+This side-project provides optimized images for `amd64v2`, `armv6`, `arm64` and `riscv64`. If you need support for legacy `amd64v1` CPUs, use the official `neosmemo/memos` image.
+
+
+##### Latest
+
+```sh
+docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
+# or
+docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos ghcr.io/lincolnthalles/memos-builds:latest
+```
+
+##### Nightly
+
+```sh
+docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/memos lincolnthalles/memos:nightly
+# or
+docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/memos ghcr.io/lincolnthalles/memos-builds:nightly
+```
+
+[Docker Hub](https://hub.docker.com/r/lincolnthalles/memos)
+
+
 ## Platform variants
 
 `arm` and `amd64` platforms have multiple builds, with different hardware optimizations. Choose the one that best suits the host CPU.
@@ -61,18 +85,16 @@ This project hosts builds for [Memos](https://github.com/usememos/memos), a beau
 
 ## ⚠ Notes
 
-Most binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
+Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
 
 It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite driver) is not compatible with these targets.
-
-The oldest version of Memos supported by this repository CI is v0.13.2, as CGO was used before that. Supporting legacy versions would require a complex build system, which is not worth the effort.
 
 ## Support
 
 Memos official first-class [support](https://github.com/usememos/memos/issues) is for its Docker container.
 These binaries are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your own discretion.
 
-Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the Docker container.
+Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the official Docker container.
 
 ## Running as a Service
 
