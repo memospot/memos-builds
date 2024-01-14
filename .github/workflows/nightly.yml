@@ -8,8 +8,8 @@ on:
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64
-  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64
+  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64,linux/s390x
+  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
 
 jobs:
   goreleaser:
@@ -148,7 +148,7 @@ jobs:
 
             **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.PREVIOUS_TAG }}...main)**
           tag_name: ${{ env.TAG }}
-          draft: true
+          draft: false
           prerelease: true
 
       ### Docker ###
@@ -189,7 +189,6 @@ jobs:
             ghcr.io/lincolnthalles/memos-builds
           tags: |
             type=raw,value=nightly
-            type=semver,pattern={{version}},value=${{ env.TAG }}
 
       - name: Build and Push Docker images
         id: docker_build

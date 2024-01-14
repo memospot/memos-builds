@@ -130,7 +130,7 @@ release:
     name: memos-builds
 
   # If set to true, will not auto-publish the release.
-  draft: true
+  draft: false
 
   # If set, will create a release discussion in the category specified.
   # Warning: do not use categories in the 'Announcement' format.

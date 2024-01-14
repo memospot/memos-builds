@@ -40,32 +40,48 @@ This project hosts builds for [Memos](https://github.com/usememos/memos), a beau
 ## Docker
 
 This project provides optimized Memos images for the following platforms:
-|      amd64     |     arm32    |     Other     |
+|      amd64     |     arm32    |     other     |
 | -------------- | ------------ | ------------- |
-| linux/amd64    | linux/arm/v5 |   linux/386   |
+|  linux/amd64   | linux/arm/v5 |   linux/386   |
 | linux/amd64/v2 | linux/arm/v6 |  linux/arm64  |
-| linux/amd64/v3 | linux/arm/v7 | linux/riscv64 |
-|                |              | linux/ppc64le |
+| linux/amd64/v3 | linux/arm/v7 | linux/ppc64le |
+|                |              | linux/riscv64 |
+|                |              |  linux/s390x  |
 
-To pull a specific image, append `--platform=<platform>` to the `docker pull` command.
+To pull an image for a specific CPU architecture, append `--platform=<platform>` to the `docker` command. Read more at [Platform variants](#platform-variants).
 
-##### Latest
+### Latest
 
 ```sh
 docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
-# or
-docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos ghcr.io/lincolnthalles/memos-builds:latest
 ```
 
-##### Nightly
+### Nightly
 
 ```sh
 docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/memos lincolnthalles/memos:nightly
-# or
-docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/memos ghcr.io/lincolnthalles/memos-builds:nightly
 ```
 
-[Docker Hub](https://hub.docker.com/r/lincolnthalles/memos)
+To run a throwaway container (no data persistency, removed on stop) in demo mode:
+
+```sh
+docker run -d --rm --name memos-throwaway -p 5232:5230 -e MEMOS_MODE=demo lincolnthalles/memos:nightly
+```
+
+### About images
+
+|  Platform |       Image        |
+| --------- | ------------------ |
+|  arm32v5  | debian:stable-slim |
+|  riscv64  |    alpine:edge     |
+| All other |   alpine:latest    |
+
+- Image packages are auto-upgraded at build time.
+
+- Nightly images are built daily at 00:00 UTC.
+
+- Images are published at the same time to Docker Hub and GitHub Container Registry.
+[Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) | [GitHub Container Registry](https://github.com/lincolnthalles/memos-builds/pkgs/container/memos-builds)
 
 ## Platform variants
 

@@ -7,8 +7,9 @@ FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as targ
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm64v8/alpine:latest as target-arm64
-FROM --platform=${BUILDPLATFORM:-linux/amd64} ppc64le/alpine:edge as target-ppc64le
+FROM --platform=${BUILDPLATFORM:-linux/amd64} ppc64le/alpine:latest as target-ppc64le
 FROM --platform=${BUILDPLATFORM:-linux/amd64} riscv64/alpine:edge as target-riscv64
+FROM --platform=${BUILDPLATFORM:-linux/amd64} s390x/alpine:latest as target-s390x
 
 # Select appropriate base image.
 FROM target-${TARGETARCH}${TARGETVARIANT}
