@@ -267,7 +267,7 @@ tasks:
       Note: requires a clean git state.
     cmds:
       - |
-        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git {{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to 2eba4e2cd4b3be677a703198f597bbe96edb00ee"
+        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git {{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to {{.CLI_ARGS}}"
         git clean -fx memos-upstream
         git add -A
         git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
