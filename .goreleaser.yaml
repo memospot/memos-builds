@@ -159,64 +159,7 @@ release:
   #   Welcome to this new release!
   footer: |
     **[Official Memos upstream changelog](https://github.com/usememos/memos/releases/tag/{{ .Tag }})**
+    [Commit history](https://github.com/usememos/memos/commits/release/{{ trimprefix .Tag "v" }}/)
+    [Compare changes](https://github.com/usememos/memos/compare/release/{{ trimprefix .PreviousTag "v" }}...release/{{ trimprefix .Tag "v" }})
 
   skip_upload: false
-
-# dockers:
-#   - use: buildx
-#     dockerfile: docker/Dockerfile-goreleaser
-#     extra_files: &extra_files [build/frontend/dist, docker/entrypoint.sh]
-#     goos: linux
-#     goarch: amd64
-#     build_flag_templates: ["--platform=linux/amd64"]
-#     image_templates:
-#       - &hub_amd64 lincolnthalles/memos-builds:{{ .Tag }}-amd64
-#       # - &ghcr_amd64 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-amd64
-
-#   - use: buildx
-#     dockerfile: docker/Dockerfile-goreleaser
-#     extra_files: *extra_files
-#     goos: linux
-#     goarch: arm
-#     goarm: 6
-#     build_flag_templates: ["--platform=linux/arm32/v6"]
-#     image_templates:
-#       - &hub_arm32v6 lincolnthalles/memos-builds:{{ .Tag }}-arm32v6
-#       # - &ghcr_arm32v6 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-arm32v6
-
-#   - use: buildx
-#     dockerfile: docker/Dockerfile-goreleaser
-#     extra_files: *extra_files
-#     goos: linux
-#     goarch: arm64
-#     build_flag_templates: ["--platform=linux/arm64"]
-#     image_templates:
-#       - &hub_arm64 lincolnthalles/memos-builds:{{ .Tag }}-arm64
-#       # - &ghcr_arm64 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-arm64
-
-#   - use: buildx
-#     dockerfile: docker/Dockerfile-goreleaser
-#     extra_files: *extra_files
-#     goos: linux
-#     goarch: riscv64
-#     build_flag_templates: ["--platform=linux/riscv64"]
-#     image_templates:
-#       - &hub_riscv64 lincolnthalles/memos-builds:{{ .Tag }}-riscv64
-#       # - &ghcr_riscv64 ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}-riscv64
-
-# docker_manifests:
-#   # https://goreleaser.com/customization/docker_manifest/
-#   # - name_template: ghcr.io/lincolnthalles/memos-builds:latest
-#   #   image_templates: &ghcr_images [*ghcr_amd64, *ghcr_arm32v6, *ghcr_arm64, *ghcr_riscv64]
-#   # - name_template: ghcr.io/lincolnthalles/memos-builds:{{ .Tag }}
-#   #   image_templates: *ghcr_images
-#   # - name_template: ghcr.io/lincolnthalles/memos-builds:v{{ .Major }}.{{ .Minor }}
-#   #   image_templates: *ghcr_images
-
-#   - name_template: lincolnthalles/memos-builds:latest
-#     image_templates:
-#       &hub_images [*hub_amd64, *hub_arm32v6, *hub_arm64, *hub_riscv64]
-#   - name_template: lincolnthalles/memos-builds:{{ .Tag }}
-#     image_templates: *hub_images
-#   - name_template: lincolnthalles/memos-builds:v{{ .Major }}.{{ .Minor }}
-#     image_templates: *hub_images
