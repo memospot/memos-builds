@@ -1,0 +1,35 @@
+#* These settings are intended to create local test builds with `task build:testing:docker`.
+
+project_name: memos
+dist: build/backend
+builds:
+  - dir: ./memos-upstream
+    main: ./bin/memos
+    binary: memos
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    targets:
+      - linux_amd64
+      - linux_arm_5
+      - linux_riscv64
+    flags: >-
+      -trimpath
+    ldflags: >-
+      -s
+      -w
+      -X main.Date={{.CommitDate}}
+      -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
+      -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - format: binary
+
+checksum:
+  disable: true
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-dev"
+
+

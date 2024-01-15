@@ -13,9 +13,14 @@ env:
   DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64,linux/s390x
   QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
 
+  DATE_STRING: set at runtime
+  GIT_TAG: set at runtime
+  GORELEASER_CURRENT_TAG: set at runtime
+  PREVIOUS_TAG: set at runtime
+
 jobs:
   goreleaser:
-    name: Snapshot
+    name: Build
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -69,40 +74,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
-      - name: Setup Git
+      - name: Setup Git and Env vars
         shell: bash
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          echo DATE_STRING=$(date +'%Y%m%d') >> $GITHUB_ENV
-
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0)
-          echo PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
-          echo GORELEASER_PREVIOUS_TAG=$PREVIOUS_TAG >> $GITHUB_ENV
-          echo "Previous tag is $PREVIOUS_TAG"
-
-          if [[ $PREVIOUS_TAG == *"-dev" ]]; then
-            VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
-            echo TAG=$VERSION >> $GITHUB_ENV
-            echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
-            echo "Previous tag is a dev release. Current tag set to $VERSION"
-            exit 0
-          fi
-
-          FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
-
-          if [ -n "$FILE_VERSION" ]; then
-            VERSION=$FILE_VERSION
-          elif [ -n "$PREVIOUS_TAG" ]; then
-            VERSION=$PREVIOUS_TAG
-          else
-            VERSION="v"$(date +%Y.%m.%d)".0"
-          fi
-
-          VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
-          echo TAG=$VERSION >> $GITHUB_ENV
-          echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
-          echo "Current tag set to $VERSION"
+        run: task ci:nightly:setup-git
 
       - name: Cache front-end build
         uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
@@ -111,9 +85,9 @@ jobs:
             build/frontend
             .task/checksum/build-frontend
           key: |
-            nightly-frontend-${{ env.TAG }}-${{ env.DATE_STRING }}
+            nightly-frontend-${{ env.GIT_TAG }}-${{ env.DATE_STRING }}
           restore-keys: |
-            nightly-frontend-${{ env.TAG }}-
+            nightly-frontend-${{ env.GIT_TAG }}-
 
       - name: Cache back-end build
         uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
@@ -122,9 +96,9 @@ jobs:
             build/backend
             ./task/checksum/build-nightly-all
           key: |
-            nightly-backend-${{ env.TAG }}-${{ env.DATE_STRING }}
+            nightly-backend-${{ env.GIT_TAG }}-${{ env.DATE_STRING }}
           restore-keys: |
-            nightly-backend-${{ env.TAG }}-
+            nightly-backend-${{ env.GIT_TAG }}-
 
       - name: Build
         run: |
@@ -146,10 +120,10 @@ jobs:
             This is an *untested* pre-release, built with bleeding-edge upstream Memos code.
             Do *not* use in production.
 
-            Version identifier `${{ env.TAG }}` is auto-generated, based on the previous tag of this repository and the version defined in the upstream Memos codebase at build time. Therefore, pre-release versions are subject to change without notice.
+            Version identifier `${{ env.GIT_TAG }}` is auto-generated, based on the previous tag of this repository and the version defined in the upstream Memos codebase at build time. Therefore, pre-release versions are subject to change without notice.
 
             **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.PREVIOUS_TAG }}...main)**
-          tag_name: ${{ env.TAG }}
+          tag_name: ${{ env.GIT_TAG }}
           draft: false
           prerelease: true
 

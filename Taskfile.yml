@@ -61,6 +61,75 @@ tasks:
     sources:
       - "./**/go.{mod,sum}"
 
+  ci:release:setup-git:
+    desc: Setup Git on CI
+    summary: |
+      Env variables will become available on next step, and are valid for the current job.
+    silent: true
+    cmds:
+      - |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+        echo "DATE_STRING=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+        FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
+
+        GIT_TAG=$(git describe --tags --abbrev=0)
+        if [ -n "$FILE_VERSION" ]; then
+          VERSION=$FILE_VERSION
+        elif [ -n "$GIT_TAG" ]; then
+          VERSION=$GIT_TAG
+        else
+          VERSION=${GITHUB_REF_NAME#release/}
+        fi
+
+        if [ -z "$VERSION" ]; then
+          VERSION="v"$(date +%Y.%m.%d)".0"
+        fi
+
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+        echo "GORELEASER_CURRENT_TAG=$VERSION" >> $GITHUB_ENV
+
+  ci:nightly:setup-git:
+    desc: Setup Git on CI
+    summary: |
+      Env variables will become available on next step, and are valid for the current job.
+    silent: true
+    cmds:
+      - |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+
+        DATE_STRING=$(date +'%Y%m%d')
+        echo "DATE_STRING=$DATE_STRING" >> $GITHUB_ENV
+
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0)
+        echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
+        echo "GORELEASER_PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV        
+
+        if [[ $PREVIOUS_TAG == *"-dev" ]]; then
+          VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
+          echo "GIT_TAG=$VERSION" >> $GITHUB_ENV
+          echo "GORELEASER_CURRENT_TAG=$VERSION" >> $GITHUB_ENV
+          echo "Previous tag is a dev release. Current tag set to $VERSION"
+          exit 0
+        fi
+
+        FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
+
+        if [ -n "$FILE_VERSION" ]; then
+          VERSION=$FILE_VERSION
+        elif [ -n "$PREVIOUS_TAG" ]; then
+          VERSION=$PREVIOUS_TAG
+        else
+          VERSION="v"$(date +%Y.%m.%d)".0"
+        fi
+        VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
+
+        echo "GIT_TAG=$VERSION" >> $GITHUB_ENV
+        echo "GORELEASER_CURRENT_TAG=$VERSION" >> $GITHUB_ENV
+
   pre-docker:rename-builds:
     desc: Rename builds to Docker format
     dir: ./build/backend
@@ -82,14 +151,14 @@ tasks:
               continue
             fi
 
-            already_renamed=$(echo "${dir}" | grep -E "arm32v[5-7]|arm64v8|amd64v[2-4]|i386" || true)
+            already_renamed=$(echo "${dir}" | grep -E "arm32v[5-7]|arm64v8|amd64v[2-4]|_386" || true)
             if [[ -n "${already_renamed}" ]]; then
               continue
             fi
 
             new_name="${dir}"
             new_name="${new_name//amd64_v1/amd64}"
-            new_name="${new_name//_386/_i386}"
+            new_name="${new_name//_i386/_386}"
             new_name=$(echo "${new_name}" | sh -c 'sed -E "s/(amd64_v)([2-4])/amd64v\2/"')
             new_name=$(echo "${new_name}" | sh -c 'sed -E "s/(arm_)([5-7])/arm32v\2/"')
 
@@ -123,7 +192,6 @@ tasks:
     cmds:
       - goreleaser release --snapshot --clean --timeout 60m --config .goreleaser-nightly.yaml
       - task: pre-docker:rename-builds
-
   ##### /CI #####
 
   ##### Local #####
@@ -136,33 +204,50 @@ tasks:
     cmds:
       - goreleaser release --snapshot --clean --single-target --config .goreleaser-nightly.yaml
 
-  build:nightly:docker:
-    desc: Build Docker images for ALL configured OS/Arch, ignores git status
+  build:testing:
+    desc: Build testing binaries, ignores git status
+    summary: This is intended for local testing only.
+    deps: *nightly-deps
+    sources: *nightly-sources
+    generates: [build/backend/memos_*/memos]
+    cmds:
+      - goreleaser release --snapshot --clean --skip-publish --config .goreleaser-testing.yaml
+      - task: pre-docker:rename-builds
+
+  build:testing:docker:
+    desc: Build testing Docker images, ignores git status
+    summary: This is intended for local testing only.
     env:
       DOCKER_BUILDKIT: 1
-    deps:
-      - build:nightly:all
+      DOCKER_CLI_EXPERIMENTAL: enabled
     ignore_error: true
     cmds:
+      - task: build:testing
+      - task: pre-docker:rename-builds
       - for:
           - linux/amd64
-          # - linux/amd64v2
-          # - linux/amd64v3
-          # - linux/arm32v5
-          - linux/arm32v6
-          # - linux/arm32v7
-          - linux/arm64
-          # - linux/i386
+          - linux/arm32v5
           - linux/riscv64
         silent: true
         cmd: |
-          container_name='memos-nightly-{{ .ITEM | replace "/" "-" }}'
+          container_name='memos-testing-{{ .ITEM | replace "/" "-" }}'          
+          docker rm -f ${container_name} || true
+          docker ps -a -q --filter ancestor=${container_name} --format="{{.ID}}" | xargs -r docker rm -f || true
+          docker image rm -f ${container_name} || true
+          docker image prune -f
+          docker volume prune -f
           docker buildx build --tag ${container_name} --file ./docker/Dockerfile . --platform={{ .ITEM }}
+
           if [ $? -ne 0 ]; then
             echo "{{.RED}}>> Docker build failed for {{ .ITEM }} <<{{.RESET}}"
           fi
-          docker rm -f ${container_name} >/dev/null 2>&1 || true
-          docker run -p "0:5230" -d --init --rm --name ${container_name} --platform {{ .ITEM }} ${container_name}
+
+          docker run --detach --init --rm --name ${container_name} \
+            --publish "0:5230" --env MEMOS_MODE=demo \
+            --env TZ=America/Sao_Paulo \
+          #   --volume /usr/share/zoneinfo:/usr/share/zoneinfo:ro \
+            --platform {{ .ITEM }} ${container_name}
+
           if [ $? -ne 0 ]; then
             echo "{{.RED}}>> Failed to run container {{ .ITEM }} <<{{.RESET}}"
           fi
@@ -283,12 +368,12 @@ tasks:
       Goreleaser demands a tag commit to be verifiable,
         so the tag must be made right before the build is triggered.
     ignore_error: true
-    cmds:      
+    cmds:
       - git push origin :refs/tags/{{.CLI_ARGS}}
       - git tag -d {{.CLI_ARGS}}
       - git tag -a {{.CLI_ARGS}} -m "Tag {{.CLI_ARGS}}"
       - git push origin {{.CLI_ARGS}}
-  
+
   git:tag:delete:
     desc: |
       Delete a git tag.

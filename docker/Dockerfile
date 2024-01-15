@@ -1,9 +1,14 @@
-#! Target architectures are limited by the image and its version.
+# Target architectures are limited by the image and its version.
+# 
+# While the BusyBox image works, it doesn't have tzdata, so it's necessary to mount host's zoneinfo 
+# with `--volume /usr/share/zoneinfo:/usr/share/zoneinfo:ro` to use proper time zones.
+
 FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as target-arm32v5
+# FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/busybox:1.34-uclibc as target-arm32v5
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm64v8/alpine:latest as target-arm64
@@ -20,15 +25,22 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/lincolnthalles/memos-builds"
 LABEL org.opencontainers.image.url="https://usememos.com"
 
-# Setup container OS
-ARG TARGETPLATFORM TARGETOS TARGETARCH TARGETVARIANT
+# Setup container OS.
+ARG TARGETPLATFORM TARGETARCH TARGETVARIANT
 RUN <<SH
 	set -eu
+	if ! [ -f /etc/os-release ]; then
+		busybox=$(ls --help 2>&1 | head -1)
+		if [ "$(echo $busybox | cut -d' ' -f1)" = "BusyBox" ]; then
+			echo "PRETTY_NAME=\"$busybox\"" > /etc/os-release
+		fi
+	fi
+
 	RELEASE=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2 | cut -d' ' -f1);
 	case $RELEASE in
 		Alpine)
 			apk upgrade --no-cache
-			apk add --no-cache tzdata ncurses
+			apk add --no-cache tzdata
 			;;
 		Debian)
 			mkdir -p /etc/initramfs-tools/
@@ -41,8 +53,10 @@ RUN <<SH
 			apt-get clean
 			rm -rf /var/lib/apt/lists/*
 			;;
+		BusyBox)
+			;;
 		*)
-			echo "Unsupported OS: $RELEASE"
+			echo "Unsupported image: $RELEASE"
 			exit 1
 			;;
 	esac
@@ -52,9 +66,11 @@ RUN <<SH
 SH
 
 # Find appropriate memos binary and copy it.
-COPY build/backend/memos*linux*${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
+COPY build/backend/memos_linux_${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
+
 # Copy front-end files.
 COPY build/frontend/dist /opt/memos/dist/
+
 # Copy entrypoint script.
 COPY docker/entrypoint.sh /opt/memos/
 
@@ -72,5 +88,4 @@ HEALTHCHECK --start-period=1m --interval=1m --timeout=5s \
 	CMD wget -qO - http://localhost:${MEMOS_PORT}/api/v1/ping || exit 1
 
 WORKDIR /opt/memos
-RUN chmod +x ./entrypoint.sh 
-ENTRYPOINT ["sh", "./entrypoint.sh"]
+ENTRYPOINT [ "sh", "./entrypoint.sh" ]

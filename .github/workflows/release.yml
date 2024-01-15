@@ -13,6 +13,10 @@ env:
   DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64,linux/s390x
   QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
 
+  DATE_STRING: set at runtime
+  GIT_TAG: set at runtime
+  VERSION: set at runtime
+
 jobs:
   frontend:
     name: Build front-end
@@ -42,31 +46,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
 
-      - name: Setup Git
+      - name: Setup Git and Env vars
         shell: bash
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          echo DATE_STRING=$(date +'%Y%m%d') >> $GITHUB_ENV
-
-          FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
-
-          GIT_TAG=$(git describe --tags --abbrev=0)
-          if [ -n "$FILE_VERSION" ]; then
-            VERSION=$FILE_VERSION
-          elif [ -n "$GIT_TAG" ]; then
-            VERSION=$GIT_TAG
-          else
-            VERSION=${GITHUB_REF_NAME#release/}
-          fi
-
-          if [ -z "$VERSION" ]; then
-            VERSION="v"$(date +%Y.%m.%d)".0"
-          fi
-
-          echo TAG=$VERSION >> $GITHUB_ENV
-          echo GIT_TAG=$GIT_TAG >> $GITHUB_ENV
-          echo "Current tag set to $VERSION"
+        run: task ci:release:setup-git
 
       - name: Cache front-end build
         uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
@@ -130,32 +112,9 @@ jobs:
           check-latest: true
           cache-dependency-path: memos-upstream/go.sum
 
-      - name: Setup Git
+      - name: Setup Git and Env vars
         shell: bash
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          echo DATE_STRING=$(date +'%Y%m%d') >> $GITHUB_ENV
-
-          FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
-
-          GIT_TAG=$(git describe --tags --abbrev=0)
-          if [ -n "$FILE_VERSION" ]; then
-            VERSION=$FILE_VERSION
-          elif [ -n "$GIT_TAG" ]; then
-            VERSION=$GIT_TAG
-          else
-            VERSION=${GITHUB_REF_NAME#release/}
-          fi
-
-          if [ -z "$VERSION" ]; then
-            VERSION="v"$(date +%Y.%m.%d)".0"
-          fi
-
-          echo TAG=$VERSION >> $GITHUB_ENV
-          echo GIT_TAG=$GIT_TAG >> $GITHUB_ENV
-          echo GORELEASER_CURRENT_TAG=$VERSION >> $GITHUB_ENV
-          echo "Current tag set to $VERSION"
+        run: task ci:release:setup-git
 
       ### Front-end ###
       - name: Wait for front-end build to finish
@@ -225,8 +184,8 @@ jobs:
             ghcr.io/lincolnthalles/memos-builds
           tags: |
             type=raw,value=latest
-            type=semver,pattern={{version}},value=${{ env.TAG }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ env.TAG }}
+            type=semver,pattern={{version}},value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
 
       - name: Build and Push Docker images
         id: docker_build
