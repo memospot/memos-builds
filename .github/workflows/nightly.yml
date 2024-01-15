@@ -1,9 +1,11 @@
-name: "Nightly Builds"
+name: Nightly Build
 
 on:
   push:
     tags:
       - "v*.*.*-*"
+  schedule:
+    - cron: "0 0 * * *" # Run every day at 00:00 UTC
   workflow_dispatch:
 
 env:
