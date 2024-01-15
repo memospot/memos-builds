@@ -131,6 +131,7 @@ release:
 
   # If set to true, will not auto-publish the release.
   draft: false
+  replace_existing_draft: true
 
   # If set, will create a release discussion in the category specified.
   # Warning: do not use categories in the 'Announcement' format.
@@ -150,7 +151,7 @@ release:
   # What to do with the release notes in case there the release already exists.
   #
   # Valid options: [keep-existing] | append | prepend | replace
-  mode: append
+  mode: replace
 
   # Templates: allowed
   # header: |
@@ -158,8 +159,10 @@ release:
 
   #   Welcome to this new release!
   footer: |
-    **[Official Memos upstream changelog](https://github.com/usememos/memos/releases/tag/{{ .Tag }})**
+    [Official Memos upstream changelog](https://github.com/usememos/memos/releases/tag/{{ .Tag }})
+
     [Commit history](https://github.com/usememos/memos/commits/release/{{ trimprefix .Tag "v" }}/)
+
     [Compare changes](https://github.com/usememos/memos/compare/release/{{ trimprefix .PreviousTag "v" }}...release/{{ trimprefix .Tag "v" }})
 
   skip_upload: false
