@@ -1,6 +1,8 @@
-# memos-builds
+# Memos Anywhere
 
-This project hosts builds for [Memos](https://github.com/usememos/memos), a beautiful, privacy-first, lightweight note-taking service.
+Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, privacy-first, lightweight note-taking service.
+
+Some of these builds are consumed by [Memospot](https://github.com/lincolnthalles/memospot), a self-contained Memos desktop app (Windows, Linux and macOS).
 
 <div align="center" width="100%" style="display: flex; justify-content: center;">
   <p align="center" width="100%">
@@ -48,27 +50,53 @@ This project provides optimized Memos images for the following platforms:
 |                |              | linux/riscv64 |
 |                |              |  linux/s390x  |
 
-To pull an image for a specific CPU architecture, append `--platform=<platform>` to the `docker` command. Read more at [Platform variants](#platform-variants).
+To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants)
 
-### Latest
+### Quick start
+
+#### Docker run (latest)
 
 ```sh
-docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
+docker run --detach --name memos --publish 5230:5230 \
+  --volume ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
 ```
 
-### Nightly
+#### Docker run (nightly)
 
 ```sh
-docker run -d --name memos-nightly -p 5231:5230 -v ~/.memos-nightly/:/var/opt/memos lincolnthalles/memos:nightly
+docker run --detach --name memos-nightly --publish 5231:5230 \
+  --volume ~/.memos-nightly/:/var/opt/memos lincolnthalles/memos:nightly
 ```
 
-To run a throwaway container (no data persistency, removed on stop) in demo mode:
+#### Docker run (throwaway nightly in demo mode)
 
 ```sh
-docker run -d --rm --name memos-throwaway -p 5232:5230 -e MEMOS_MODE=demo lincolnthalles/memos:nightly
+docker run --detach --rm --name memos-throwaway --publish 5232:5230 \
+  --env MEMOS_MODE=demo lincolnthalles/memos:nightly
+```
+
+#### Keeping containers up-to-date
+
+Use [Watchtower](https://containrrr.dev/watchtower/).
+
+```sh
+docker run --detach --name watchtower \
+  --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower
 ```
 
 ### About images
+
+Note that Memos is not yet using consistent versioning. Sometimes, a release gets rolling changes without upgrading patch version. This may lead to some differences to official images.
+
+- Versioned images are ckecked-out to Memos upstream `release/version` branch.
+
+- Nightly images uses whatever is available at Memo's `main` branch at build time.
+
+- Image packages are auto-upgraded at build time.
+
+- Nightly images are built daily at 00:00 UTC.
+
+- Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/lincolnthalles/memos-builds/pkgs/container/memos-builds).
 
 |  Platform |       Image        |
 | --------- | ------------------ |
@@ -76,36 +104,31 @@ docker run -d --rm --name memos-throwaway -p 5232:5230 -e MEMOS_MODE=demo lincol
 |  riscv64  |    alpine:edge     |
 | All other |   alpine:latest    |
 
-- Image packages are auto-upgraded at build time.
-
-- Nightly images are built daily at 00:00 UTC.
-
-- Images are published at the same time to Docker Hub and GitHub Container Registry.
-[Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) | [GitHub Container Registry](https://github.com/lincolnthalles/memos-builds/pkgs/container/memos-builds)
-
 ## Platform variants
 
-`arm` and `amd64` platforms have multiple builds, with different hardware optimizations. Choose the one that best suits the host CPU.
+There are multiple builds for `arm` and `amd64` platforms, with different hardware optimizations. Choose the one that best suits the host CPU.
 
-> Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` CPU, use the ARM64 build.
+Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` CPU, use the ARM64 build.
+
+⚠ Avoid using the `arm32v5` variant unless the host CPU can't handle anything newer. The lack of VFP hinders performance of several applications.
 
 ### amd64
 
-| Suffix | Target CPUs                                       |
-| ------ | ------------------------------------------------- |
-| v1     | Runs on all AMD64/Intel 64 CPUs                   |
-| v2     | Intel Nehalem (1st geN) / AMD Jaguar and newer    |
-| v3     | Intel Haswell (4th gen) / AMD Excavator and newer |
+| Suffix | Target CPUs                                            |
+| ------ | ------------------------------------------------------ |
+| v1     | Runs on all AMD64/Intel 64 CPUs                        |
+| v2     | Intel Nehalem (1st gen from 2009) / AMD Jaguar (2013+) |
+| v3     | Intel Haswell (4th gen) / AMD Excavator (2015+)        |
 
 ### arm
 
-| Suffix | Target CPUs                       |
-| ------ | --------------------------------- |
-| v5     | Older ARM without VFP             |
-| v6     | VFPv1 only: ARM11 or better cores |
-| v7     | VFPv3: Cortex-A cores             |
+| Suffix | Target CPUs                                   |
+| ------ | --------------------------------------------- |
+| v5     | Older ARM without VFP (Vector Floating Point) |
+| v6     | VFPv1 only: ARM11 or better cores             |
+| v7     | VFPv3: Cortex-A cores                         |
 
-## ⚠ Notes
+## Notes
 
 Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
 
@@ -113,8 +136,8 @@ It's currently not possible to build Memos for Windows i386 and any sort of MIPS
 
 ## Support
 
-Memos official first-class [support](https://github.com/usememos/memos/issues) is for its Docker container.
-These binaries are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your own discretion.
+Memos official first-class [support](https://github.com/usememos/memos/issues) is for its [Docker container](https://hub.docker.com/r/neosmemo/memos).
+These binaries and images are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your own discretion.
 
 Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the official Docker container.
 
