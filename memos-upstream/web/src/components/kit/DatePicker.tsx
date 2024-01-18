@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import useClickAway from "react-use/lib/useClickAway";
 import { memoServiceClient } from "@/grpcweb";
 import { DAILY_TIMESTAMP } from "@/helpers/consts";
-import { getDateStampByDate, isFutureDate } from "@/helpers/datetime";
+import { getDateStampByDate, getTimeStampByDate, isFutureDate } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "../Icon";
@@ -36,12 +36,14 @@ const DatePicker: React.FC<DatePickerProps> = (props: DatePickerProps) => {
 
   useEffect(() => {
     (async () => {
-      const { memoCreationStats } = await memoServiceClient.getUserMemosStats({
+      const { stats } = await memoServiceClient.getUserMemosStats({
         name: user.name,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
       const m = new Map();
-      Object.entries(memoCreationStats).forEach(([k]) => {
-        const date = getDateStampByDate(k);
+      Object.entries(stats).forEach(([k]) => {
+        const utcOffsetMilliseconds = new Date().getTimezoneOffset() * 60 * 1000;
+        const date = getDateStampByDate(new Date(getTimeStampByDate(k) + utcOffsetMilliseconds));
         m.set(date, true);
       });
       setCountByDate(m);

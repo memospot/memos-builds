@@ -236,10 +236,18 @@ message GetUserMemosStatsRequest {
   // name is the name of the user to get stats for.
   // Format: users/{username}
   string name = 1;
+
+  // timezone location
+  // Format: uses tz identifier
+  // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  string timezone = 2;
+
+  // Same as ListMemosRequest.filter
+  string filter = 3;
 }
 
 message GetUserMemosStatsResponse {
-  // memo_creation_stats is the stats of memo creation.
-  // key is the year-month-day string. e.g. "2020-01-01". value is the count of memos created.
-  map<string, int32> memo_creation_stats = 1;
+  // stats is the stats of memo creating/updating activities.
+  // key is the year-month-day string. e.g. "2020-01-01".
+  map<string, int32> stats = 1;
 }
