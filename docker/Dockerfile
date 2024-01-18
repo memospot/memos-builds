@@ -1,7 +1,9 @@
 # Target architectures are limited by the image and its version.
 # 
 # While the BusyBox image works, it doesn't have tzdata, so it's necessary to mount host's zoneinfo 
-# with `--volume /usr/share/zoneinfo:/usr/share/zoneinfo:ro` to use proper time zones.
+# with `--volume /usr/share/zoneinfo:/usr/share/zoneinfo:ro` to use proper time zones, OR
+# COPY --from=backend /usr/share/zoneinfo /usr/share/zoneinfo
+# COPY --from=backend /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
@@ -84,7 +86,7 @@ ENV MEMOS_PORT="5230"
 ENV MEMOS_METRIC="false"
 EXPOSE 5230
 
-HEALTHCHECK --start-period=1m --interval=1m --timeout=5s \
+HEALTHCHECK --interval=5m --timeout=10s \
 	CMD wget -qO - http://localhost:${MEMOS_PORT}/api/v1/ping || exit 1
 
 WORKDIR /opt/memos
