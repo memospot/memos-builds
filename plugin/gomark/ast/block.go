@@ -194,3 +194,37 @@ func (*MathBlock) Type() NodeType {
 func (n *MathBlock) Restore() string {
 	return fmt.Sprintf("$$\n%s\n$$", n.Content)
 }
+
+type Table struct {
+	BaseBlock
+
+	Header    []string
+	Delimiter []string
+	Rows      [][]string
+}
+
+func (*Table) Type() NodeType {
+	return TableNode
+}
+
+func (n *Table) Restore() string {
+	var result string
+	for _, header := range n.Header {
+		result += fmt.Sprintf("| %s ", header)
+	}
+	result += "|\n"
+	for _, d := range n.Delimiter {
+		result += fmt.Sprintf("| %s ", d)
+	}
+	result += "|\n"
+	for index, row := range n.Rows {
+		for _, cell := range row {
+			result += fmt.Sprintf("| %s ", cell)
+		}
+		result += "|"
+		if index != len(n.Rows)-1 {
+			result += "\n"
+		}
+	}
+	return result
+}

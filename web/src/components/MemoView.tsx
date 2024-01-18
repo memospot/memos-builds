@@ -1,4 +1,5 @@
 import { Divider, Tooltip } from "@mui/joy";
+import classNames from "classnames";
 import copy from "copy-to-clipboard";
 import { memo, useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
@@ -30,13 +31,13 @@ import "@/less/memo.less";
 interface Props {
   memo: Memo;
   showCreator?: boolean;
-  showParent?: boolean;
   showVisibility?: boolean;
-  showPinnedStyle?: boolean;
+  showPinned?: boolean;
+  className?: string;
 }
 
 const MemoView: React.FC<Props> = (props: Props) => {
-  const { memo } = props;
+  const { memo, className } = props;
   const t = useTranslate();
   const navigateTo = useNavigateTo();
   const { i18n } = useTranslation();
@@ -165,7 +166,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
 
   return (
     <div
-      className={`group memo-wrapper ${"memos-" + memo.id} ${memo.pinned && props.showPinnedStyle ? "pinned" : ""}`}
+      className={classNames("group memo-wrapper", "memos-" + memo.id, memo.pinned && props.showPinned ? "pinned" : "", className)}
       ref={memoContainerRef}
     >
       <div className="memo-top-wrapper mb-1">
@@ -188,7 +189,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
           <span className="text-sm text-gray-400 select-none" onClick={handleGotoMemoDetailPage}>
             {displayTime}
           </span>
-          {props.showPinnedStyle && memo.pinned && (
+          {props.showPinned && memo.pinned && (
             <>
               <Icon.Dot className="w-4 h-auto text-gray-400 dark:text-zinc-400" />
               <Tooltip title={"Pinned"} placement="top">
@@ -216,10 +217,12 @@ const MemoView: React.FC<Props> = (props: Props) => {
               </span>
               <div className="more-action-btns-wrapper">
                 <div className="more-action-btns-container min-w-[6em]">
-                  <span className="btn" onClick={handleTogglePinMemoBtnClick}>
-                    {memo.pinned ? <Icon.BookmarkMinus className="w-4 h-auto mr-2" /> : <Icon.BookmarkPlus className="w-4 h-auto mr-2" />}
-                    {memo.pinned ? t("common.unpin") : t("common.pin")}
-                  </span>
+                  {props.showPinned && (
+                    <span className="btn" onClick={handleTogglePinMemoBtnClick}>
+                      {memo.pinned ? <Icon.BookmarkMinus className="w-4 h-auto mr-2" /> : <Icon.BookmarkPlus className="w-4 h-auto mr-2" />}
+                      {memo.pinned ? t("common.unpin") : t("common.pin")}
+                    </span>
+                  )}
                   <span className="btn" onClick={handleEditMemoClick}>
                     <Icon.Edit3 className="w-4 h-auto mr-2" />
                     {t("common.edit")}

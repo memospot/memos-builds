@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import useLocalStorage from "react-use/lib/useLocalStorage";
 import { memoServiceClient } from "@/grpcweb";
 import { TAB_SPACE_WIDTH, UNKNOWN_ID } from "@/helpers/consts";
+import { isValidUrl } from "@/helpers/utils";
 import { useGlobalStore, useResourceStore } from "@/store/module";
 import { useMemoStore, useUserStore } from "@/store/v1";
 import { MemoRelation, MemoRelation_Type } from "@/types/proto/api/v2/memo_relation_service";
@@ -23,7 +24,7 @@ import TagSelector from "./ActionButton/TagSelector";
 import Editor, { EditorRefActions } from "./Editor";
 import RelationListView from "./RelationListView";
 import ResourceListView from "./ResourceListView";
-import { handleEditorKeydownWithMarkdownShortcuts } from "./handlers";
+import { handleEditorKeydownWithMarkdownShortcuts, hyperlinkHighlightedText } from "./handlers";
 
 interface Props {
   className?: string;
@@ -32,6 +33,7 @@ interface Props {
   memoId?: number;
   parentMemoId?: number;
   relationList?: MemoRelation[];
+  autoFocus?: boolean;
   onConfirm?: (memoId: number) => void;
 }
 
@@ -44,7 +46,7 @@ interface State {
 }
 
 const MemoEditor = (props: Props) => {
-  const { className, editorClassName, cacheKey, memoId, parentMemoId, onConfirm } = props;
+  const { className, editorClassName, cacheKey, memoId, parentMemoId, autoFocus, onConfirm } = props;
   const { i18n } = useTranslation();
   const t = useTranslate();
   const contentCacheKey = `memo-editor-${cacheKey}`;
@@ -74,6 +76,12 @@ const MemoEditor = (props: Props) => {
   useEffect(() => {
     editorRef.current?.setContent(contentCache || "");
   }, []);
+
+  useEffect(() => {
+    if (autoFocus) {
+      handleEditorFocus();
+    }
+  }, [autoFocus]);
 
   useEffect(() => {
     let visibility = userSetting.memoVisibility;
@@ -242,6 +250,13 @@ const MemoEditor = (props: Props) => {
     if (event.clipboardData && event.clipboardData.files.length > 0) {
       event.preventDefault();
       await uploadMultiFiles(event.clipboardData.files);
+    } else if (
+      editorRef.current != null &&
+      editorRef.current.getSelectedContent().length != 0 &&
+      isValidUrl(event.clipboardData.getData("Text"))
+    ) {
+      event.preventDefault();
+      hyperlinkHighlightedText(editorRef.current, event.clipboardData.getData("Text"));
     }
   };
 
@@ -325,7 +340,7 @@ const MemoEditor = (props: Props) => {
       editorRef.current?.setContent("");
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.details);
     }
 
     setState((state) => {
@@ -368,8 +383,8 @@ const MemoEditor = (props: Props) => {
       <Editor ref={editorRef} {...editorConfig} />
       <div className="relative w-full flex flex-row justify-between items-center pt-2" onFocus={(e) => e.stopPropagation()}>
         <div className="flex flex-row justify-start items-center opacity-80">
-          <MarkdownMenu editorRef={editorRef} />
           <TagSelector editorRef={editorRef} />
+          <MarkdownMenu editorRef={editorRef} />
           <IconButton size="sm" onClick={handleUploadFileBtnClick}>
             <Icon.Image className="w-5 h-5 mx-auto" />
           </IconButton>
