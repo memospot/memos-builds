@@ -51,7 +51,7 @@ jobs:
         run: task ci:release:setup-git
 
       - name: Cache front-end build
-        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
         with:
           path: |
             build/frontend
