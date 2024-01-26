@@ -98,11 +98,13 @@ Note that Memos is not yet using consistent versioning. Sometimes, a release get
 
 - Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/lincolnthalles/memos-builds/pkgs/container/memos-builds).
 
-|  Platform |       Image        |
-| --------- | ------------------ |
-|  arm32v5  | debian:stable-slim |
-|  riscv64  |    alpine:edge     |
-| All other |   alpine:latest    |
+|  Platform |        Image        |
+| --------- | ------------------- |
+|  arm32v5  | busybox:1.34-uclibc |
+|  riscv64  |     alpine:edge     |
+| All other |    alpine:latest    |
+
+> Up to v0.19.0, `arm32v5` images were based on debian:stable-slim.
 
 ## Platform variants
 

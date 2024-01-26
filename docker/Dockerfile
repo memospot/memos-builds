@@ -1,16 +1,11 @@
 # Target architectures are limited by the image and its version.
-# 
-# While the BusyBox image works, it doesn't have tzdata, so it's necessary to mount host's zoneinfo 
-# with `--volume /usr/share/zoneinfo:/usr/share/zoneinfo:ro` to use proper time zones, OR
-# COPY --from=backend /usr/share/zoneinfo /usr/share/zoneinfo
-# COPY --from=backend /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
+FROM --platform=${BUILDPLATFORM:-linux/amd64} gcr.io/distroless/static:latest as distroless
 FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
 FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
-FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/debian:stable-slim as target-arm32v5
-# FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/busybox:1.34-uclibc as target-arm32v5
+FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/busybox:1.34-uclibc as target-arm32v5
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
 FROM --platform=${BUILDPLATFORM:-linux/amd64} arm64v8/alpine:latest as target-arm64
@@ -26,8 +21,16 @@ LABEL org.opencontainers.image.description="A privacy-first, lightweight note-ta
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/lincolnthalles/memos-builds"
 LABEL org.opencontainers.image.url="https://usememos.com"
+LABEL org.opencontainers.image.vendor="Lincoln Nogueira"
 
 # Setup container OS.
+
+# Copy tzdata and ca-certificates from Google's distroless image.
+# This is necessary because the BusyBox image doesn't have tzdata, and also avoid
+# running `apk add --no-cache tzdata` in every Alpine build.
+COPY --from=distroless /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=distroless /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
 ARG TARGETPLATFORM TARGETARCH TARGETVARIANT
 RUN <<SH
 	set -eu
@@ -42,7 +45,6 @@ RUN <<SH
 	case $RELEASE in
 		Alpine)
 			apk upgrade --no-cache
-			apk add --no-cache tzdata
 			;;
 		Debian)
 			mkdir -p /etc/initramfs-tools/
@@ -67,7 +69,7 @@ RUN <<SH
 	echo "TARGETPLATFORM=${TARGETPLATFORM}" >> /opt/memos/buildinfo
 SH
 
-# Find appropriate memos binary and copy it.
+# Find appropriate Memos binary and copy it.
 COPY build/backend/memos_linux_${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
 
 # Copy front-end files.
