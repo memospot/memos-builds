@@ -88,7 +88,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup buf
-        uses: bufbuild/buf-setup-action@382440cdb8ec7bc25a68d7b4711163d95f7cc3aa
+        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           version: 1.28.1
