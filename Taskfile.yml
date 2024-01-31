@@ -65,113 +65,24 @@ tasks:
     desc: Setup Git on CI
     summary: |
       Env variables will become available on next step, and are valid for the current job.
-    silent: true
-    cmds:
-      - |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-        echo "DATE_STRING=$(date +'%Y%m%d')" >> $GITHUB_ENV
-
-        FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
-
-        GIT_TAG=$(git describe --tags --abbrev=0)
-        if [ -n "$FILE_VERSION" ]; then
-          VERSION=$FILE_VERSION
-        elif [ -n "$GIT_TAG" ]; then
-          VERSION=$GIT_TAG
-        else
-          VERSION=${GITHUB_REF_NAME#release/}
-        fi
-
-        if [ -z "$VERSION" ]; then
-          VERSION="v"$(date +%Y.%m.%d)".0"
-        fi
-
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
-        echo "GORELEASER_CURRENT_TAG=$VERSION" >> $GITHUB_ENV
+    cmds: [sh scripts/extract_release_tags.sh]
 
   ci:nightly:setup-git:
     desc: Setup Git on CI
     summary: |
       Env variables will become available on next step, and are valid for the current job.
-    silent: true
-    cmds:
-      - |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-
-        DATE_STRING=$(date +'%Y%m%d')
-        echo "DATE_STRING=$DATE_STRING" >> $GITHUB_ENV
-
-        PREVIOUS_TAG=$(git describe --tags --abbrev=0)
-        echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV
-        echo "GORELEASER_PREVIOUS_TAG=$PREVIOUS_TAG" >> $GITHUB_ENV        
-
-        if [[ $PREVIOUS_TAG == *"-dev" ]]; then
-          VERSION=$(echo $PREVIOUS_TAG | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
-          echo "GIT_TAG=$VERSION" >> $GITHUB_ENV
-          echo "GORELEASER_CURRENT_TAG=$VERSION" >> $GITHUB_ENV
-          echo "Previous tag is a dev release. Current tag set to $VERSION"
-          exit 0
-        fi
-
-        FILE_VERSION="v"$(sed -En 's/^var[[:space:]]+Version[[:space:]]+=[[:space:]]+"([[:digit:].]+)"$/\1/p' memos-upstream/server/version/version.go)
-
-        if [ -n "$FILE_VERSION" ]; then
-          VERSION=$FILE_VERSION
-        elif [ -n "$PREVIOUS_TAG" ]; then
-          VERSION=$PREVIOUS_TAG
-        else
-          VERSION="v"$(date +%Y.%m.%d)".0"
-        fi
-        VERSION=$(echo $VERSION | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)"-dev"
-
-        echo "GIT_TAG=$VERSION" >> $GITHUB_ENV
-        echo "GORELEASER_CURRENT_TAG=$VERSION" >> $GITHUB_ENV
+    cmds: [sh scripts/extract_nightly_tags.sh]
 
   pre-docker:rename-builds:
-    desc: Rename builds to Docker format
-    dir: ./build/backend
+    desc: Rename goreleser builds to Docker format
     sources:
-      - ./memos*amd64_v*/memos
-      - ./memos*arm_*/memos
-      - ./memos*arm64/memos
+      - build/backend/memos_linux_amd64_v{1,2,3,4}/memos
+      - build/backend/memos_linux_arm_*/memos
     generates:
-      - ./memos*amd64*/memos
-      - ./memos*arm32v*/memos
-      - ./memos*arm64v8/memos
-    cmds:
-      - silent: true
-        cmd: |
-          set -eu
-          echo "{{.CYAN}}Renaming builds to Docker format...{{.RESET}}"
-          for dir in ./memos*; do
-            if [[ ! -d "${dir}" ]]; then
-              continue
-            fi
-
-            already_renamed=$(echo "${dir}" | grep -E "arm32v[5-7]|arm64v8|amd64v[2-4]|_386" || true)
-            if [[ -n "${already_renamed}" ]]; then
-              continue
-            fi
-
-            new_name="${dir}"
-            new_name="${new_name//amd64_v1/amd64}"
-            new_name="${new_name//_i386/_386}"
-            new_name=$(echo "${new_name}" | sh -c 'sed -E "s/(amd64_v)([2-4])/amd64v\2/"')
-            new_name=$(echo "${new_name}" | sh -c 'sed -E "s/(arm_)([5-7])/arm32v\2/"')
-
-            if [[ "${new_name}" == "${dir}" ]]; then
-              continue
-            fi
-
-            dir=${dir//\\//}
-            new_name=${new_name//\\//}
-
-            echo "Renaming ${dir} to ${new_name}"
-            mv -f "$dir" "$new_name"
-          done
+      - build/backend/memos_linux_amd64/memos
+      - build/backend/memos_linux_amd64v{2,3,4}/memos
+      - build/backend/memos_linux_armv{5,6,7}/memos
+    cmds: [sh scripts/rename_to_docker.sh]
 
   build:nightly:all:
     desc: "[CI] Build binaries for ALL configured OS/Arch, ignores git status"
@@ -225,9 +136,17 @@ tasks:
       - task: build:testing
       - task: pre-docker:rename-builds
       - for:
+          - linux/386
           - linux/amd64
-          - linux/arm32v5
+          - linux/amd64/v2
+          - linux/amd64/v3
+          - linux/armv5 # CI=linux/arm/v5
+          - linux/armv6 # CI=linux/arm/v6
+          - linux/armv7 # CI=linux/arm/v7
+          - linux/arm64
+          - linux/ppc64le
           - linux/riscv64
+          - linux/s390x
         silent: true
         cmd: |
           container_name='memos-testing-{{ .ITEM | replace "/" "-" }}'          

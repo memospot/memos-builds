@@ -10,12 +10,11 @@ on:
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64,linux/s390x
+  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/riscv64,linux/s390x
   QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
-
-  DATE_STRING: set at runtime
-  GIT_TAG: set at runtime
-  VERSION: set at runtime
+  DATE_STRING: set by scripts/extract_release_tags.sh
+  GIT_TAG: set by scripts/extract_release_tags.sh
+  VERSION: set by scripts/extract_release_tags.sh
 
 jobs:
   frontend:
@@ -27,6 +26,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      # setup tools
       - name: Setup Task
         uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
         with:
@@ -45,9 +45,9 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
+      # /setup tools
 
       - name: Setup Git and Env vars
-        shell: bash
         run: task ci:release:setup-git
 
       - name: Cache front-end build
@@ -87,6 +87,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      # setup tools
       - name: Setup buf
         uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
         with:
@@ -111,6 +112,7 @@ jobs:
           go-version: ">=1.21.5"
           check-latest: true
           cache-dependency-path: memos-upstream/go.sum
+      # /setup tools
 
       - name: Setup Git and Env vars
         shell: bash
@@ -146,7 +148,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       ### Docker ###
-      - name: Rename builds to Docker format
+      - name: Rename goreleaser builds to Docker format
         run: |
           task pre-docker:rename-builds
 

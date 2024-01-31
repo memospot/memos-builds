@@ -90,7 +90,7 @@ Note that Memos is not yet using consistent versioning. Sometimes, a release get
 
 - Versioned images are ckecked-out to Memos upstream `release/version` branch.
 
-- Nightly images uses whatever is available at Memo's `main` branch at build time.
+- Nightly images uses whatever is available at Memos's `main` branch at build time.
 
 - Image packages are auto-upgraded at build time.
 
@@ -98,11 +98,11 @@ Note that Memos is not yet using consistent versioning. Sometimes, a release get
 
 - Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/lincolnthalles/memos-builds/pkgs/container/memos-builds).
 
-|  Platform |        Image        |
-| --------- | ------------------- |
-|  arm32v5  | busybox:1.34-uclibc |
-|  riscv64  |     alpine:edge     |
-| All other |    alpine:latest    |
+|  Platform |         Image         |
+| --------- | --------------------- |
+|  arm/v5   | busybox:stable-uclibc |
+|  riscv64  |      alpine:edge      |
+| All other |     alpine:latest     |
 
 > Up to v0.19.0, `arm32v5` images were based on debian:stable-slim.
 
@@ -110,9 +110,9 @@ Note that Memos is not yet using consistent versioning. Sometimes, a release get
 
 There are multiple builds for `arm` and `amd64` platforms, with different hardware optimizations. Choose the one that best suits the host CPU.
 
-Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` CPU, use the ARM64 build.
+Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` or `aarch64` CPU, use the ARM64 build.
 
-⚠ Avoid using the `arm32v5` variant unless the host CPU can't handle anything newer. The lack of VFP hinders performance of several applications.
+⚠ Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders performance of several applications.
 
 ### amd64
 

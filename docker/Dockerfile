@@ -1,19 +1,25 @@
-# Target architectures are limited by the image and its version.
-
+# 	The `--platform` flag is used to specify the target platform in a format supported by the **base image**.
+#
+# 	Platform format is not consistent across images distros and versions (e.g arm/arm32, arm64/arm64v8),
+# and when ommited, it will use whatever is supplied to the `docker buildx build` command, and the build
+# may fail if we are not using the same format as the base image.
+#
+# 	By specifying the platform flag, it's possible to compatibilize different images without changing
+# the build command, which would imply changing the published platforms formats for this image.
 FROM --platform=${BUILDPLATFORM:-linux/amd64} gcr.io/distroless/static:latest as distroless
-FROM --platform=${BUILDPLATFORM:-linux/amd64} i386/alpine:latest as target-386
-FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64
-FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v2
-FROM --platform=${BUILDPLATFORM:-linux/amd64} amd64/alpine:latest as target-amd64v3
-FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v5/busybox:1.34-uclibc as target-arm32v5
-FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v6/alpine:latest as target-arm32v6
-FROM --platform=${BUILDPLATFORM:-linux/amd64} arm32v7/alpine:latest as target-arm32v7
-FROM --platform=${BUILDPLATFORM:-linux/amd64} arm64v8/alpine:latest as target-arm64
-FROM --platform=${BUILDPLATFORM:-linux/amd64} ppc64le/alpine:latest as target-ppc64le
-FROM --platform=${BUILDPLATFORM:-linux/amd64} riscv64/alpine:edge as target-riscv64
-FROM --platform=${BUILDPLATFORM:-linux/amd64} s390x/alpine:latest as target-s390x
+FROM 							alpine:latest 			as target-386
+FROM  							alpine:latest 			as target-amd64
+FROM --platform=amd64  			alpine:latest 			as target-amd64v2
+FROM --platform=amd64			alpine:latest 			as target-amd64v3
+FROM --platform=linux/arm/v5 	busybox:stable-uclibc 	as target-armv5
+FROM --platform=linux/arm/v6 	alpine:latest 			as target-armv6
+FROM --platform=linux/arm/v7 	alpine:latest 			as target-armv7
+FROM  							alpine:latest 			as target-arm64
+FROM  							alpine:latest 			as target-ppc64le
+FROM  							alpine:edge 			as target-riscv64
+FROM  							alpine:latest 			as target-s390x
 
-# Select appropriate base image.
+# Select appropriate base image and setup container OS.
 FROM target-${TARGETARCH}${TARGETVARIANT}
 
 LABEL org.opencontainers.image.title="Memos"
@@ -22,8 +28,6 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/lincolnthalles/memos-builds"
 LABEL org.opencontainers.image.url="https://usememos.com"
 LABEL org.opencontainers.image.vendor="Lincoln Nogueira"
-
-# Setup container OS.
 
 # Copy tzdata and ca-certificates from Google's distroless image.
 # This is necessary because the BusyBox image doesn't have tzdata, and also avoid
@@ -34,6 +38,7 @@ COPY --from=distroless /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ARG TARGETPLATFORM TARGETARCH TARGETVARIANT
 RUN <<SH
 	set -eu
+	# Setup os-release file for BusyBox.
 	if ! [ -f /etc/os-release ]; then
 		busybox=$(ls --help 2>&1 | head -1)
 		if [ "$(echo $busybox | cut -d' ' -f1)" = "BusyBox" ]; then
@@ -70,6 +75,7 @@ RUN <<SH
 SH
 
 # Find appropriate Memos binary and copy it.
+# Binaries are built with goreleaser and then renamed to match this format.
 COPY build/backend/memos_linux_${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
 
 # Copy front-end files.

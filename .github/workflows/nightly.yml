@@ -10,13 +10,13 @@ on:
 
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm32/v5,linux/arm32/v6,linux/arm32/v7,linux/arm64,linux/i386,linux/ppc64le,linux/riscv64,linux/s390x
+  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/riscv64,linux/s390x
   QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
-
-  DATE_STRING: set at runtime
-  GIT_TAG: set at runtime
-  GORELEASER_CURRENT_TAG: set at runtime
-  PREVIOUS_TAG: set at runtime
+  DATE_STRING: set by scripts/extract_nightly_tags.sh
+  GIT_TAG: set by scripts/extract_nightly_tags.sh
+  GORELEASER_CURRENT_TAG: set by scripts/extract_nightly_tags.sh
+  MEMOS_VERSION: set by scripts/extract_nightly_tags.sh
+  PREVIOUS_TAG: set by scripts/extract_nightly_tags.sh
 
 jobs:
   goreleaser:
@@ -31,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      # setup tools
       - name: Setup Task
         uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
         with:
@@ -73,6 +74,7 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
+      # /setup tools
 
       - name: Setup Git and Env vars
         shell: bash
@@ -117,12 +119,16 @@ jobs:
             build/backend/*.txt
 
           body: |
-            This is an *untested* pre-release, built with bleeding-edge upstream Memos code.
+            This is an **untested** pre-release, built with bleeding-edge upstream Memos code.
             Do *not* use in production.
 
-            Version identifier `${{ env.GIT_TAG }}` is auto-generated, based on the previous tag of this repository and the version defined in the upstream Memos codebase at build time. Therefore, pre-release versions are subject to change without notice.
+            *Make sure to run this with a database other than the one you use with stable releases.*
 
-            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.PREVIOUS_TAG }}...main)**
+            Version identifier `${{ env.GIT_TAG }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning are subject to change without notice.
+
+            Release assets may be overwritten by the daily automated builds if the upstream Memos version is still the same.
+
+            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.MEMOS_VERSION }}...main)**
           tag_name: ${{ env.GIT_TAG }}
           draft: false
           prerelease: true
