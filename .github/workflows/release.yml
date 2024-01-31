@@ -61,9 +61,13 @@ jobs:
           restore-keys: |
             frontend-
 
+      - name: Pull ${{env.GIT_TAG}} to Memos subtree  
+        run: |
+          git commit -am "chore:ci: ensure clean git state" || true
+          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
+
       - name: Build front-end
         run: |
-          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
           task build:frontend
 
       - name: Upload front-end build
@@ -132,6 +136,11 @@ jobs:
           name: frontend_${{env.GIT_TAG}}
           path: build/frontend/
       ### /Front-end ###
+
+      - name: Pull ${{env.GIT_TAG}} to Memos subtree  
+        run: |
+          git commit -am "chore:ci: ensure clean git state" || true
+          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
 
       - name: Pre-build requirements
         run: |

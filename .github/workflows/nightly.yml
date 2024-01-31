@@ -102,13 +102,13 @@ jobs:
           restore-keys: |
             nightly-backend-${{ env.GIT_TAG }}-
 
-      - name: Build
+      - name: Pull latest changes to Memos subtree  
         run: |
-          git commit -am "chore:ci: commit latest changes" || true
+          git commit -am "chore:ci: ensure clean git state" || true
           task git:subtree:pull-latest
-          # cd ./memos-upstream/web && rm pnpm-lock.yaml && pnpm install
-          # git commit -am "chore:ci: commit latest changes" || true
-          task build:nightly:all
+
+      - name: Nightly build
+        run: task build:nightly:all
 
       - name: Create pre-release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
