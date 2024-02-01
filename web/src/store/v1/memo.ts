@@ -16,13 +16,13 @@ export const useMemoStore = create(
     setState: (state: State) => set(state),
     getState: () => get(),
     fetchMemos: async (request: Partial<ListMemosRequest>) => {
-      const { memos } = await memoServiceClient.listMemos(request);
+      const { memos, nextPageToken } = await memoServiceClient.listMemos(request);
       const memoMap = get().memoMapById;
       for (const memo of memos) {
         memoMap[memo.id] = memo;
       }
       set({ memoMapById: memoMap });
-      return memos;
+      return { memos, nextPageToken };
     },
     getOrFetchMemoById: async (id: number, options?: { skipCache?: boolean; skipStore?: boolean }) => {
       const memoMap = get().memoMapById;
@@ -104,7 +104,7 @@ export const useMemoStore = create(
       delete memoMap[id];
       set({ memoMapById: memoMap });
     },
-  }))
+  })),
 );
 
 export const useMemoList = () => {

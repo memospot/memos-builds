@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
@@ -130,6 +130,10 @@ func (s *APIV2Service) UpdateUser(ctx context.Context, request *apiv2pb.UpdateUs
 		return nil, status.Errorf(codes.NotFound, "user not found")
 	}
 
+	if s.Profile.Mode == "demo" && user.Username == "memos-demo" {
+		return nil, status.Errorf(codes.PermissionDenied, "unauthorized to update user in demo mode")
+	}
+
 	currentTs := time.Now().Unix()
 	update := &store.UpdateUser{
 		ID:        user.ID,
@@ -195,6 +199,10 @@ func (s *APIV2Service) DeleteUser(ctx context.Context, request *apiv2pb.DeleteUs
 	}
 	if user == nil {
 		return nil, status.Errorf(codes.NotFound, "user not found")
+	}
+
+	if s.Profile.Mode == "demo" && user.Username == "memos-demo" {
+		return nil, status.Errorf(codes.PermissionDenied, "unauthorized to delete this user in demo mode")
 	}
 
 	if err := s.Store.DeleteUser(ctx, &store.DeleteUser{

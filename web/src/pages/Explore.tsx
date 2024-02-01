@@ -1,5 +1,5 @@
 import { Button } from "@mui/joy";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
 import MemoFilter from "@/components/MemoFilter";
@@ -18,11 +18,12 @@ const Explore = () => {
   const memoStore = useMemoStore();
   const memoList = useMemoList();
   const [isRequesting, setIsRequesting] = useState(true);
-  const [isComplete, setIsComplete] = useState(false);
+  const nextPageTokenRef = useRef<string | undefined>(undefined);
   const { tag: tagQuery, text: textQuery } = useFilterWithUrlParams();
   const sortedMemos = memoList.value.sort((a, b) => getTimeStampByDate(b.displayTime) - getTimeStampByDate(a.displayTime));
 
   useEffect(() => {
+    nextPageTokenRef.current = undefined;
     memoList.reset();
     fetchMemos();
   }, [tagQuery, textQuery]);
@@ -41,12 +42,12 @@ const Explore = () => {
     }
     setIsRequesting(true);
     const data = await memoStore.fetchMemos({
+      pageSize: DEFAULT_MEMO_LIMIT,
       filter: filters.join(" && "),
-      limit: DEFAULT_MEMO_LIMIT,
-      offset: memoList.size(),
+      pageToken: nextPageTokenRef.current,
     });
     setIsRequesting(false);
-    setIsComplete(data.length < DEFAULT_MEMO_LIMIT);
+    nextPageTokenRef.current = data.nextPageToken;
   };
 
   return (
@@ -58,10 +59,11 @@ const Explore = () => {
           <MemoView key={`${memo.id}-${memo.displayTime}`} memo={memo} showCreator />
         ))}
         {isRequesting ? (
-          <div className="flex flex-col justify-start items-center w-full my-4">
-            <p className="text-sm text-gray-400 italic">{t("memo.fetching-data")}</p>
+          <div className="flex flex-row justify-center items-center w-full my-4 text-gray-400">
+            <Icon.Loader className="w-4 h-auto animate-spin mr-1" />
+            <p className="text-sm italic">{t("memo.fetching-data")}</p>
           </div>
-        ) : isComplete ? (
+        ) : !nextPageTokenRef.current ? (
           sortedMemos.length === 0 && (
             <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
               <Empty />

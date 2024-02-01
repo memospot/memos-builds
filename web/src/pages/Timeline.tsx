@@ -1,7 +1,7 @@
 import { Button, Divider, IconButton } from "@mui/joy";
 import classNames from "classnames";
 import { sum } from "lodash-es";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import ActivityCalendar from "@/components/ActivityCalendar";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
@@ -53,12 +53,13 @@ const Timeline = () => {
   const [activityStats, setActivityStats] = useState<Record<string, number>>({});
   const [selectedDay, setSelectedDay] = useState<string | undefined>();
   const [isRequesting, setIsRequesting] = useState(true);
-  const [isComplete, setIsComplete] = useState(false);
+  const nextPageTokenRef = useRef<string | undefined>(undefined);
   const { tag: tagQuery, text: textQuery } = useFilterWithUrlParams();
   const sortedMemos = memoList.value.sort((a, b) => getTimeStampByDate(b.displayTime) - getTimeStampByDate(a.displayTime));
   const groupedByMonth = groupByMonth(activityStats, sortedMemos);
 
   useEffect(() => {
+    nextPageTokenRef.current = undefined;
     memoList.reset();
     fetchMemos();
   }, [selectedDay, tagQuery, textQuery]);
@@ -100,17 +101,17 @@ const Timeline = () => {
     if (selectedDay) {
       const selectedDateStamp = getTimeStampByDate(selectedDay) + new Date().getTimezoneOffset() * 60 * 1000;
       filters.push(
-        ...[`display_time_after == ${selectedDateStamp / 1000}`, `display_time_before == ${(selectedDateStamp + DAILY_TIMESTAMP) / 1000}`]
+        ...[`display_time_after == ${selectedDateStamp / 1000}`, `display_time_before == ${(selectedDateStamp + DAILY_TIMESTAMP) / 1000}`],
       );
     }
     setIsRequesting(true);
     const data = await memoStore.fetchMemos({
+      pageSize: DEFAULT_MEMO_LIMIT,
       filter: filters.join(" && "),
-      limit: DEFAULT_MEMO_LIMIT,
-      offset: memoList.size(),
+      pageToken: nextPageTokenRef.current,
     });
     setIsRequesting(false);
-    setIsComplete(data.length < DEFAULT_MEMO_LIMIT);
+    nextPageTokenRef.current = data.nextPageToken;
   };
 
   const handleNewMemo = () => {
@@ -147,9 +148,9 @@ const Timeline = () => {
                   <div className={classNames("flex shrink-0", md ? "flex-col w-40 pr-4 pl-2 pb-8" : "flex-row w-full pl-1 mt-2 mb-2")}>
                     <div className={classNames("w-full flex flex-col", md && "mt-4 mb-2")}>
                       <span className="font-medium text-3xl leading-none mb-1">
-                        {new Date(group.month).toLocaleString(i18n.language, { month: "short" })}
+                        {new Date(group.month).toLocaleString(i18n.language, { month: "short", timeZone: "UTC" })}
                       </span>
-                      <span className="opacity-60">{new Date(group.month).getFullYear()}</span>
+                      <span className="opacity-60">{new Date(group.month).getUTCFullYear()}</span>
                       <span className="text-xs opacity-40">Total: {sum(Object.values(group.data))}</span>
                     </div>
                     <ActivityCalendar month={group.month} data={group.data} onClick={(date) => setSelectedDay(date)} />
@@ -180,10 +181,11 @@ const Timeline = () => {
               </Fragment>
             ))}
             {isRequesting ? (
-              <div className="flex flex-col justify-start items-center w-full my-4">
-                <p className="text-sm text-gray-400 italic">{t("memo.fetching-data")}</p>
+              <div className="flex flex-row justify-center items-center w-full my-4 text-gray-400">
+                <Icon.Loader className="w-4 h-auto animate-spin mr-1" />
+                <p className="text-sm italic">{t("memo.fetching-data")}</p>
               </div>
-            ) : isComplete ? (
+            ) : !nextPageTokenRef.current ? (
               sortedMemos.length === 0 && (
                 <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
                   <Empty />
