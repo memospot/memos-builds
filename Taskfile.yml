@@ -61,17 +61,20 @@ tasks:
     sources:
       - "./**/go.{mod,sum}"
 
-  ci:release:setup-git:
+  ci:setup-git:
     desc: Setup Git on CI
     summary: |
-      Env variables will become available on next step, and are valid for the current job.
-    cmds: [sh scripts/extract_release_tags.sh]
+      Setup git user and email, if not already set.
+      Subtree pulling needs a configured git.
+    cmds: [python scripts/ci.py --setup-git]
 
-  ci:nightly:setup-git:
-    desc: Setup Git on CI
-    summary: |
-      Env variables will become available on next step, and are valid for the current job.
-    cmds: [sh scripts/extract_nightly_tags.sh]
+  ci:setup-nightly-env:
+    desc: Setup Nightly env vars
+    cmds: [python scripts/ci.py --setup-env --nightly]
+  
+  ci:setup-release-env:
+    desc: Setup Release env vars
+    cmds: [python scripts/ci.py --setup-env]
 
   pre-docker:rename-builds:
     desc: Rename goreleser builds to Docker format
@@ -82,7 +85,7 @@ tasks:
       - build/backend/memos_linux_amd64/memos
       - build/backend/memos_linux_amd64v{2,3,4}/memos
       - build/backend/memos_linux_armv{5,6,7}/memos
-    cmds: [sh scripts/rename_to_docker.sh]
+    cmds: [python scripts/rename_to_docker.py]
 
   build:nightly:all:
     desc: "[CI] Build binaries for ALL configured OS/Arch, ignores git status"

@@ -3,6 +3,10 @@ build/
 .pnpm-store/
 node_modules/
 
+__pycache__/
+.ruff_cache/
+.GITHUB_ENV
+
 # Frontend
 memos-upstream/server/frontend
 !memos-upstream/server/frontend.go

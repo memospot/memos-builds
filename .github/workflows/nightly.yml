@@ -11,12 +11,12 @@ on:
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
   DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/riscv64,linux/s390x
-  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
-  DATE_STRING: set by scripts/extract_nightly_tags.sh
-  GIT_TAG: set by scripts/extract_nightly_tags.sh
-  GORELEASER_CURRENT_TAG: set by scripts/extract_nightly_tags.sh
-  MEMOS_VERSION: set by scripts/extract_nightly_tags.sh
-  PREVIOUS_TAG: set by scripts/extract_nightly_tags.sh
+  DATE_STRING: set by scripts/ci.py
+  GIT_TAG: set by scripts/ci.py
+  GORELEASER_CURRENT_TAG: set by scripts/ci.py
+  MEMOS_VERSION: set by scripts/ci.py
+  PREVIOUS_TAG: set by scripts/ci.py
+  NIGHTLY_VERSION: set by scripts/ci.py
 
 jobs:
   goreleaser:
@@ -76,9 +76,10 @@ jobs:
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
       # /setup tools
 
-      - name: Setup Git and Env vars
-        shell: bash
-        run: task ci:nightly:setup-git
+      - name: Setup Git user and email
+        run: task ci:setup-git
+      - name: Setup Nightly env vars
+        run: task ci:setup-nightly-env
 
       - name: Cache front-end build
         uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
@@ -102,10 +103,14 @@ jobs:
           restore-keys: |
             nightly-backend-${{ env.GIT_TAG }}-
 
-      - name: Pull latest changes to Memos subtree  
+      - name: Pull latest changes to Memos subtree
         run: |
           git commit -am "chore:ci: ensure clean git state" || true
           task git:subtree:pull-latest
+
+      # In case something changed in the subtree.
+      - name: Update Nightly env vars
+        run: task ci:setup-nightly-env
 
       - name: Nightly build
         run: task build:nightly:all
@@ -124,12 +129,12 @@ jobs:
 
             *Make sure to run this with a database other than the one you use with stable releases.*
 
-            Version identifier `${{ env.GIT_TAG }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning are subject to change without notice.
+            Version identifier `${{ env.NIGHTLY_VERSION }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning are subject to change without notice.
 
             Release assets may be overwritten by the daily automated builds if the upstream Memos version is still the same.
 
             **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.MEMOS_VERSION }}...main)**
-          tag_name: ${{ env.GIT_TAG }}
+          tag_name: ${{ env.NIGHTLY_VERSION }}
           draft: false
           prerelease: true
 
@@ -140,8 +145,6 @@ jobs:
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
-        with:
-          platforms: ${{ env.QEMU_PLATFORMS }}
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226

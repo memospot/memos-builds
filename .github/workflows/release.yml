@@ -11,10 +11,9 @@ on:
 env:
   DOCKER_CLI_EXPERIMENTAL: enabled
   DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/riscv64,linux/s390x
-  QEMU_PLATFORMS: linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/riscv64,linux/s390x
-  DATE_STRING: set by scripts/extract_release_tags.sh
-  GIT_TAG: set by scripts/extract_release_tags.sh
-  VERSION: set by scripts/extract_release_tags.sh
+  DATE_STRING: set by scripts/ci.py
+  GIT_TAG: set by scripts/ci.py
+  VERSION: set by scripts/ci.py
 
 jobs:
   frontend:
@@ -47,9 +46,6 @@ jobs:
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
       # /setup tools
 
-      - name: Setup Git and Env vars
-        run: task ci:release:setup-git
-
       - name: Cache front-end build
         uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
         with:
@@ -61,7 +57,12 @@ jobs:
           restore-keys: |
             frontend-
 
-      - name: Pull ${{env.GIT_TAG}} to Memos subtree  
+      - name: Setup Git user and email
+        run: task ci:setup-git
+      - name: Setup Release env vars
+        run: task ci:setup-release-env
+
+      - name: Pull ${{env.GIT_TAG}} to Memos subtree
         run: |
           git commit -am "chore:ci: ensure clean git state" || true
           task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
@@ -118,9 +119,10 @@ jobs:
           cache-dependency-path: memos-upstream/go.sum
       # /setup tools
 
-      - name: Setup Git and Env vars
-        shell: bash
-        run: task ci:release:setup-git
+      - name: Setup Git user and email
+        run: task ci:setup-git
+      - name: Setup Release env vars
+        run: task ci:setup-release-env
 
       ### Front-end ###
       - name: Wait for front-end build to finish
@@ -137,10 +139,14 @@ jobs:
           path: build/frontend/
       ### /Front-end ###
 
-      - name: Pull ${{env.GIT_TAG}} to Memos subtree  
+      - name: Pull ${{env.GIT_TAG}} to Memos subtree
         run: |
           git commit -am "chore:ci: ensure clean git state" || true
           task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
+
+      # In case something changed in the subtree.
+      - name: Update Release env vars
+        run: task ci:setup-release-env
 
       - name: Pre-build requirements
         run: |
@@ -163,8 +169,6 @@ jobs:
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
-        with:
-          platforms: ${{ env.QEMU_PLATFORMS }}
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
