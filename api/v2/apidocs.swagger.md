@@ -103,6 +103,10 @@ GetAuthStatus returns the current auth status of the user.
 ### /api/v2/inboxes
 
 #### GET
+##### Summary
+
+ListInboxes lists inboxes for a user.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -119,6 +123,10 @@ GetAuthStatus returns the current auth status of the user.
 ### /v2/inboxes
 
 #### PATCH
+##### Summary
+
+UpdateInbox updates an inbox.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -135,6 +143,10 @@ GetAuthStatus returns the current auth status of the user.
 ### /v2/{name}
 
 #### DELETE
+##### Summary
+
+DeleteInbox deletes an inbox.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -434,6 +446,10 @@ ExportMemos exports memos.
 ### /api/v2/resources
 
 #### GET
+##### Summary
+
+ListResources lists all resources.
+
 ##### Responses
 
 | Code | Description | Schema |
@@ -442,6 +458,10 @@ ExportMemos exports memos.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### POST
+##### Summary
+
+CreateResource creates a new resource.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -461,6 +481,10 @@ ExportMemos exports memos.
 ### /api/v2/resources/{id}
 
 #### GET
+##### Summary
+
+GetResource returns a resource by id.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -475,6 +499,10 @@ ExportMemos exports memos.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### DELETE
+##### Summary
+
+DeleteResource deletes a resource by id.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -491,6 +519,10 @@ ExportMemos exports memos.
 ### /api/v2/resources/{name}
 
 #### GET
+##### Summary
+
+GetResourceByName returns a resource by name.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -507,6 +539,10 @@ ExportMemos exports memos.
 ### /api/v2/resources/{resource.id}
 
 #### PATCH
+##### Summary
+
+UpdateResource updates a resource.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -527,6 +563,10 @@ ExportMemos exports memos.
 ### /api/v2/tags
 
 #### GET
+##### Summary
+
+ListTags lists tags.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -541,6 +581,10 @@ ExportMemos exports memos.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### DELETE
+##### Summary
+
+DeleteTag deletes a tag.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -556,6 +600,10 @@ ExportMemos exports memos.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### POST
+##### Summary
+
+UpsertTag upserts a tag.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -572,6 +620,10 @@ ExportMemos exports memos.
 ### /api/v2/tags/suggestion
 
 #### GET
+##### Summary
+
+GetTagSuggestions gets tag suggestions from the user's memos.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -585,9 +637,28 @@ ExportMemos exports memos.
 | 200 | A successful response. | [v2GetTagSuggestionsResponse](#v2gettagsuggestionsresponse) |
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
+### /api/v2/tags:batchUpsert
+
+#### POST
+##### Summary
+
+BatchUpsertTag upserts multiple tags.
+
+##### Responses
+
+| Code | Description | Schema |
+| ---- | ----------- | ------ |
+| 200 | A successful response. | [v2BatchUpsertTagResponse](#v2batchupserttagresponse) |
+| default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
+
 ### /api/v2/tags:rename
 
 #### PATCH
+##### Summary
+
+RenameTag renames a tag.
+All related memos will be updated.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -721,6 +792,10 @@ DeleteUserAccessToken deletes an access token for a user.
 ### /api/v2/{name}/setting
 
 #### GET
+##### Summary
+
+GetUserSetting gets the setting of a user.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -737,6 +812,10 @@ DeleteUserAccessToken deletes an access token for a user.
 ### /api/v2/{setting.name}
 
 #### PATCH
+##### Summary
+
+UpdateUserSetting updates the setting of a user.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -798,6 +877,10 @@ CreateUser creates a new user.
 ### /api/v2/webhooks
 
 #### GET
+##### Summary
+
+ListWebhooks returns a list of webhooks.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -812,6 +895,10 @@ CreateUser creates a new user.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### POST
+##### Summary
+
+CreateWebhook creates a new webhook.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -828,6 +915,10 @@ CreateUser creates a new user.
 ### /api/v2/webhooks/{id}
 
 #### GET
+##### Summary
+
+GetWebhook returns a webhook by id.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -842,6 +933,10 @@ CreateUser creates a new user.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### DELETE
+##### Summary
+
+DeleteWebhook deletes a webhook by id.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -858,6 +953,10 @@ CreateUser creates a new user.
 ### /api/v2/webhooks/{webhook.id}
 
 #### PATCH
+##### Summary
+
+UpdateWebhook updates a webhook.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -878,6 +977,10 @@ CreateUser creates a new user.
 ### /api/v2/workspace/profile
 
 #### GET
+##### Summary
+
+GetWorkspaceProfile returns the workspace profile.
+
 ##### Responses
 
 | Code | Description | Schema |
@@ -886,6 +989,10 @@ CreateUser creates a new user.
 | default | An unexpected error response. | [googlerpcStatus](#googlerpcstatus) |
 
 #### PATCH
+##### Summary
+
+UpdateWorkspaceProfile updates the workspace profile.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -905,6 +1012,10 @@ CreateUser creates a new user.
 ### /v2/activities
 
 #### GET
+##### Summary
+
+GetActivity returns the activity with the given id.
+
 ##### Parameters
 
 | Name | Located in | Description | Required | Schema |
@@ -1032,6 +1143,12 @@ CreateUser creates a new user.
 | level | string |  | No |
 | createTime | dateTime |  | No |
 | payload | [apiv2ActivityPayload](#apiv2activitypayload) |  | No |
+
+#### v2BatchUpsertTagResponse
+
+| Name | Type | Description | Required |
+| ---- | ---- | ----------- | -------- |
+| v2BatchUpsertTagResponse | object |  |  |
 
 #### v2CreateMemoCommentResponse
 
@@ -1424,6 +1541,12 @@ CreateUser creates a new user.
 | Name | Type | Description | Required |
 | ---- | ---- | ----------- | -------- |
 | workspaceProfile | [v2WorkspaceProfile](#v2workspaceprofile) |  | No |
+
+#### v2UpsertTagRequest
+
+| Name | Type | Description | Required |
+| ---- | ---- | ----------- | -------- |
+| name | string |  | No |
 
 #### v2UpsertTagResponse
 

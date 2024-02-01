@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	TagService_UpsertTag_FullMethodName         = "/memos.api.v2.TagService/UpsertTag"
+	TagService_BatchUpsertTag_FullMethodName    = "/memos.api.v2.TagService/BatchUpsertTag"
 	TagService_ListTags_FullMethodName          = "/memos.api.v2.TagService/ListTags"
 	TagService_RenameTag_FullMethodName         = "/memos.api.v2.TagService/RenameTag"
 	TagService_DeleteTag_FullMethodName         = "/memos.api.v2.TagService/DeleteTag"
@@ -30,10 +31,18 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TagServiceClient interface {
+	// UpsertTag upserts a tag.
 	UpsertTag(ctx context.Context, in *UpsertTagRequest, opts ...grpc.CallOption) (*UpsertTagResponse, error)
+	// BatchUpsertTag upserts multiple tags.
+	BatchUpsertTag(ctx context.Context, in *BatchUpsertTagRequest, opts ...grpc.CallOption) (*BatchUpsertTagResponse, error)
+	// ListTags lists tags.
 	ListTags(ctx context.Context, in *ListTagsRequest, opts ...grpc.CallOption) (*ListTagsResponse, error)
+	// RenameTag renames a tag.
+	// All related memos will be updated.
 	RenameTag(ctx context.Context, in *RenameTagRequest, opts ...grpc.CallOption) (*RenameTagResponse, error)
+	// DeleteTag deletes a tag.
 	DeleteTag(ctx context.Context, in *DeleteTagRequest, opts ...grpc.CallOption) (*DeleteTagResponse, error)
+	// GetTagSuggestions gets tag suggestions from the user's memos.
 	GetTagSuggestions(ctx context.Context, in *GetTagSuggestionsRequest, opts ...grpc.CallOption) (*GetTagSuggestionsResponse, error)
 }
 
@@ -48,6 +57,15 @@ func NewTagServiceClient(cc grpc.ClientConnInterface) TagServiceClient {
 func (c *tagServiceClient) UpsertTag(ctx context.Context, in *UpsertTagRequest, opts ...grpc.CallOption) (*UpsertTagResponse, error) {
 	out := new(UpsertTagResponse)
 	err := c.cc.Invoke(ctx, TagService_UpsertTag_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tagServiceClient) BatchUpsertTag(ctx context.Context, in *BatchUpsertTagRequest, opts ...grpc.CallOption) (*BatchUpsertTagResponse, error) {
+	out := new(BatchUpsertTagResponse)
+	err := c.cc.Invoke(ctx, TagService_BatchUpsertTag_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,10 +112,18 @@ func (c *tagServiceClient) GetTagSuggestions(ctx context.Context, in *GetTagSugg
 // All implementations must embed UnimplementedTagServiceServer
 // for forward compatibility
 type TagServiceServer interface {
+	// UpsertTag upserts a tag.
 	UpsertTag(context.Context, *UpsertTagRequest) (*UpsertTagResponse, error)
+	// BatchUpsertTag upserts multiple tags.
+	BatchUpsertTag(context.Context, *BatchUpsertTagRequest) (*BatchUpsertTagResponse, error)
+	// ListTags lists tags.
 	ListTags(context.Context, *ListTagsRequest) (*ListTagsResponse, error)
+	// RenameTag renames a tag.
+	// All related memos will be updated.
 	RenameTag(context.Context, *RenameTagRequest) (*RenameTagResponse, error)
+	// DeleteTag deletes a tag.
 	DeleteTag(context.Context, *DeleteTagRequest) (*DeleteTagResponse, error)
+	// GetTagSuggestions gets tag suggestions from the user's memos.
 	GetTagSuggestions(context.Context, *GetTagSuggestionsRequest) (*GetTagSuggestionsResponse, error)
 	mustEmbedUnimplementedTagServiceServer()
 }
@@ -108,6 +134,9 @@ type UnimplementedTagServiceServer struct {
 
 func (UnimplementedTagServiceServer) UpsertTag(context.Context, *UpsertTagRequest) (*UpsertTagResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpsertTag not implemented")
+}
+func (UnimplementedTagServiceServer) BatchUpsertTag(context.Context, *BatchUpsertTagRequest) (*BatchUpsertTagResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchUpsertTag not implemented")
 }
 func (UnimplementedTagServiceServer) ListTags(context.Context, *ListTagsRequest) (*ListTagsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTags not implemented")
@@ -148,6 +177,24 @@ func _TagService_UpsertTag_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TagServiceServer).UpsertTag(ctx, req.(*UpsertTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TagService_BatchUpsertTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchUpsertTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TagServiceServer).BatchUpsertTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TagService_BatchUpsertTag_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TagServiceServer).BatchUpsertTag(ctx, req.(*BatchUpsertTagRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -234,6 +281,10 @@ var TagService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpsertTag",
 			Handler:    _TagService_UpsertTag_Handler,
+		},
+		{
+			MethodName: "BatchUpsertTag",
+			Handler:    _TagService_BatchUpsertTag_Handler,
 		},
 		{
 			MethodName: "ListTags",

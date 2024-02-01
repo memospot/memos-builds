@@ -32,10 +32,9 @@ const App = () => {
       } catch (error) {
         // Do nothing.
       }
-      setLoading(false);
     };
 
-    initialState();
+    Promise.all([initialState()]).then(() => setLoading(false));
   }, []);
 
   useEffect(() => {
