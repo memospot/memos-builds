@@ -7,6 +7,7 @@ export const availableLocales = [
   "ar",
   "de",
   "en",
+  "en-GB",
   "es",
   "fr",
   "hi",
@@ -58,4 +59,4 @@ for (const locale of availableLocales) {
 }
 
 export default i18n;
-export type TLocale = typeof availableLocales[number];
+export type TLocale = (typeof availableLocales)[number];

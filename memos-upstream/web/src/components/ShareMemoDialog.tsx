@@ -3,10 +3,11 @@ import copy from "copy-to-clipboard";
 import React, { useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { getDateTimeString } from "@/helpers/datetime";
+import { downloadFileFromUrl } from "@/helpers/utils";
 import useLoading from "@/hooks/useLoading";
 import toImage from "@/labs/html2image";
 import { useUserStore, extractUsernameFromName } from "@/store/v1";
-import { Memo } from "@/types/proto/api/v2/memo_service";
+import { Memo, Visibility } from "@/types/proto/api/v2/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
@@ -51,6 +52,7 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
       .then((url) => {
         downloadFileFromUrl(url, `memos-${getDateTimeString(Date.now())}.png`);
         downloadingImageState.setFinish();
+        URL.revokeObjectURL(url);
       })
       .catch((err) => {
         console.error(err);
@@ -59,19 +61,18 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
 
   const handleDownloadTextFileBtnClick = () => {
     const blob = new Blob([memo.content], { type: "text/plain;charset=utf-8" });
-    downloadFileFromUrl(URL.createObjectURL(blob), `memos-${getDateTimeString(Date.now())}.md`);
-  };
-
-  const downloadFileFromUrl = (url: string, filename: string) => {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
+    const url = URL.createObjectURL(blob);
+    downloadFileFromUrl(url, `memos-${getDateTimeString(Date.now())}.md`);
+    URL.revokeObjectURL(url);
   };
 
   const handleCopyLinkBtnClick = () => {
     copy(`${window.location.origin}/m/${memo.name}`);
-    toast.success(t("message.succeed-copy-link"));
+    if (memo.visibility !== Visibility.PUBLIC) {
+      toast.success(t("message.succeed-copy-link-not-public"));
+    } else {
+      toast.success(t("message.succeed-copy-link"));
+    }
   };
 
   if (loadingState.isLoading) {
@@ -112,7 +113,7 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
           >
             <span className="w-full px-6 pt-5 pb-2 text-sm text-gray-500">{getDateTimeString(memo.displayTime)}</span>
             <div className="w-full px-6 text-base pb-4">
-              <MemoContent memoId={memo.id} nodes={memo.nodes} readonly={true} disableFilter />
+              <MemoContent memoId={memo.id} content={memo.content} readonly={true} disableFilter />
               <MemoResourceListView resources={memo.resources} />
             </div>
             <div className="flex flex-row justify-between items-center w-full bg-gray-100 dark:bg-zinc-900 py-4 px-6">
@@ -140,6 +141,6 @@ export default function showShareMemoDialog(memo: Memo): void {
       dialogName: "share-memo-dialog",
     },
     ShareMemoDialog,
-    { memo }
+    { memo },
   );
 }

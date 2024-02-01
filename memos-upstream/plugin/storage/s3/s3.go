@@ -2,11 +2,11 @@ package s3
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3config "github.com/aws/aws-sdk-go-v2/config"
@@ -14,7 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/pkg/errors"
 )
+
+const LinkLifetime = 24 * time.Hour
 
 type Config struct {
 	AccessKey string
@@ -24,6 +27,7 @@ type Config struct {
 	Region    string
 	URLPrefix string
 	URLSuffix string
+	PreSign   bool
 }
 
 type Client struct {
@@ -73,7 +77,7 @@ func (client *Client) UploadFile(ctx context.Context, filename string, fileType 
 		ContentType: aws.String(fileType),
 	}
 	// Set ACL according to if url prefix is set.
-	if client.Config.URLPrefix == "" {
+	if client.Config.URLPrefix == "" && !client.Config.PreSign {
 		putInput.ACL = types.ObjectCannedACL(*aws.String("public-read"))
 	}
 	uploadOutput, err := uploader.Upload(ctx, &putInput)
@@ -93,5 +97,52 @@ func (client *Client) UploadFile(ctx context.Context, filename string, fileType 
 	if link == "" {
 		return "", errors.New("failed to get file link")
 	}
+	if client.Config.PreSign {
+		return client.PreSignLink(ctx, link)
+	}
 	return link, nil
+}
+
+// PreSignLink generates a pre-signed URL for the given sourceLink.
+// If the link does not belong to the configured storage endpoint, it is returned as-is.
+// If the link belongs to the storage, the function generates a pre-signed URL using the AWS S3 client.
+func (client *Client) PreSignLink(ctx context.Context, sourceLink string) (string, error) {
+	u, err := url.Parse(sourceLink)
+	if err != nil {
+		return "", errors.Wrapf(err, "parse URL")
+	}
+	// if link doesn't belong to storage, then return as-is.
+	// the empty hostname is corner-case for AWS native endpoint.
+	endpointURL, err := url.Parse(client.Config.EndPoint)
+	if err != nil {
+		return "", errors.Wrapf(err, "parse Endpoint URL")
+	}
+	endpointHost := endpointURL.Hostname()
+	if client.Config.Bucket != "" && !strings.Contains(endpointHost, client.Config.Bucket) {
+		endpointHost = fmt.Sprintf("%s.%s", client.Config.Bucket, endpointHost)
+	}
+	if client.Config.EndPoint != "" && !strings.Contains(endpointHost, u.Hostname()) {
+		return sourceLink, nil
+	}
+
+	filename := u.Path
+	if prefixLen := len(client.Config.URLPrefix); len(filename) >= prefixLen {
+		filename = filename[prefixLen:]
+	}
+	if suffixLen := len(client.Config.URLSuffix); len(filename) >= suffixLen {
+		filename = filename[:len(filename)-suffixLen]
+	}
+	filename = strings.Trim(filename, "/")
+	if strings.HasPrefix(filename, client.Config.Bucket) {
+		filename = strings.Trim(filename[len(client.Config.Bucket):], "/")
+	}
+
+	req, err := awss3.NewPresignClient(client.Client).PresignGetObject(ctx, &awss3.GetObjectInput{
+		Bucket: aws.String(client.Config.Bucket),
+		Key:    aws.String(filename),
+	}, awss3.WithPresignExpires(LinkLifetime))
+	if err != nil {
+		return "", errors.Wrapf(err, "pre-sign link")
+	}
+	return req.URL, nil
 }

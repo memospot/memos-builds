@@ -72,7 +72,7 @@ const Archived = () => {
           id: memo.id,
           rowStatus: RowStatus.ACTIVE,
         },
-        ["row_status"]
+        ["row_status"],
       );
       setArchivedMemos((prev) => prev.filter((m) => m.id !== memo.id));
       toast(t("message.restored-successfully"));
@@ -125,7 +125,7 @@ const Archived = () => {
                     </Tooltip>
                   </div>
                 </div>
-                <MemoContent memoId={memo.id} nodes={memo.nodes} readonly={true} />
+                <MemoContent memoId={memo.id} content={memo.content} readonly={true} />
               </div>
             ))
           )}

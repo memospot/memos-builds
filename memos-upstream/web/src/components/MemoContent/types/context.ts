@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { Node } from "@/types/proto/api/v2/markdown_service";
+import { Node } from "@/types/node";
 
 interface Context {
   nodes: Node[];

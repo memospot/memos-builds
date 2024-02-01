@@ -46,7 +46,8 @@ func (v Visibility) String() string {
 }
 
 type Memo struct {
-	ID int32 `json:"id"`
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
 
 	// Standard fields
 	RowStatus RowStatus `json:"rowStatus"`
@@ -276,7 +277,7 @@ func (s *APIV1Service) CreateMemo(c echo.Context) error {
 	}
 
 	// Find disable public memos system setting.
-	disablePublicMemosSystemSetting, err := s.Store.GetSystemSetting(ctx, &store.FindSystemSetting{
+	disablePublicMemosSystemSetting, err := s.Store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
 		Name: SystemSettingDisablePublicMemosName.String(),
 	})
 	if err != nil {
@@ -713,7 +714,7 @@ func (s *APIV1Service) UpdateMemo(c echo.Context) error {
 		visibility := store.Visibility(patchMemoRequest.Visibility.String())
 		updateMemoMessage.Visibility = &visibility
 		// Find disable public memos system setting.
-		disablePublicMemosSystemSetting, err := s.Store.GetSystemSetting(ctx, &store.FindSystemSetting{
+		disablePublicMemosSystemSetting, err := s.Store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
 			Name: SystemSettingDisablePublicMemosName.String(),
 		})
 		if err != nil {
@@ -832,6 +833,7 @@ func (s *APIV1Service) UpdateMemo(c echo.Context) error {
 func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Memo) (*Memo, error) {
 	memoMessage := &Memo{
 		ID:         memo.ID,
+		Name:       memo.ResourceName,
 		RowStatus:  RowStatus(memo.RowStatus.String()),
 		CreatorID:  memo.CreatorID,
 		CreatedTs:  memo.CreatedTs,
@@ -903,7 +905,7 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 }
 
 func (s *APIV1Service) getMemoDisplayWithUpdatedTsSettingValue(ctx context.Context) (bool, error) {
-	memoDisplayWithUpdatedTsSetting, err := s.Store.GetSystemSetting(ctx, &store.FindSystemSetting{
+	memoDisplayWithUpdatedTsSetting, err := s.Store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
 		Name: SystemSettingMemoDisplayWithUpdatedTsName.String(),
 	})
 	if err != nil {

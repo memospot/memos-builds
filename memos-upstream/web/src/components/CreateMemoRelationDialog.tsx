@@ -1,8 +1,9 @@
-import { Autocomplete, AutocompleteOption, Button, Chip, IconButton } from "@mui/joy";
+import { Autocomplete, AutocompleteOption, Button, Checkbox, Chip, IconButton } from "@mui/joy";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
 import useDebounce from "react-use/lib/useDebounce";
 import { memoServiceClient } from "@/grpcweb";
+import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
 import { getDateTimeString } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { Memo } from "@/types/proto/api/v2/memo_service";
@@ -11,18 +12,18 @@ import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
 
 interface Props extends DialogProps {
-  onCancel?: () => void;
-  onConfirm?: (memoIdList: number[]) => void;
+  onConfirm: (memoIdList: number[], embedded?: boolean) => void;
 }
 
 const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
-  const { destroy, onCancel, onConfirm } = props;
+  const { destroy, onConfirm } = props;
   const t = useTranslate();
   const user = useCurrentUser();
   const [searchText, setSearchText] = useState<string>("");
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [fetchedMemos, setFetchedMemos] = useState<Memo[]>([]);
   const [selectedMemos, setSelectedMemos] = useState<Memo[]>([]);
+  const [embedded, setEmbedded] = useState<boolean>(false);
   const filteredMemos = fetchedMemos.filter((memo) => !selectedMemos.includes(memo));
 
   useDebounce(
@@ -34,7 +35,7 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
           filters.push(`content_search == [${JSON.stringify(searchText)}]`);
         }
         const { memos } = await memoServiceClient.listMemos({
-          limit: 10,
+          pageSize: DEFAULT_MEMO_LIMIT,
           filter: filters.length > 0 ? filters.join(" && ") : undefined,
         });
         setFetchedMemos(memos);
@@ -45,7 +46,7 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
       setIsFetching(false);
     },
     300,
-    [searchText]
+    [searchText],
   );
 
   const getHighlightedContent = (content: string) => {
@@ -73,16 +74,14 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
   };
 
   const handleCloseDialog = () => {
-    if (onCancel) {
-      onCancel();
-    }
     destroy();
   };
 
   const handleConfirmBtnClick = async () => {
-    if (onConfirm) {
-      onConfirm(selectedMemos.map((memo) => memo.id));
-    }
+    onConfirm(
+      selectedMemos.map((memo) => memo.id),
+      embedded,
+    );
     destroy();
   };
 
@@ -133,6 +132,9 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
           }
           onChange={(_, value) => setSelectedMemos(value)}
         />
+        <div className="mt-3">
+          <Checkbox label={"Use as Embedded Content"} checked={embedded} onChange={(e) => setEmbedded(e.target.checked)} />
+        </div>
         <div className="mt-4 w-full flex flex-row justify-end items-center space-x-1">
           <Button variant="plain" color="neutral" onClick={handleCloseDialog}>
             {t("common.cancel")}
@@ -153,7 +155,7 @@ function showCreateMemoRelationDialog(props: Omit<Props, "destroy" | "hide">) {
       dialogName: "create-memo-relation-dialog",
     },
     CreateMemoRelationDialog,
-    props
+    props,
   );
 }
 
