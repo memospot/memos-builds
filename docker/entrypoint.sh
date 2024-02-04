@@ -5,32 +5,27 @@ MAIN=/opt/memos/memos
 
 set -eu
 ln -snf /usr/share/zoneinfo/$TZ /etc/localtime || true
-echo $TZ > /etc/timezone
+printf "$TZ\n" > /etc/timezone
 
-machinearch=$(uname -m)
 release=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)
 platform=$(cat /opt/memos/buildinfo | grep TARGETPLATFORM | cut -d'=' -f2)
-checksum=$(sha256sum ${MAIN} | cut -d' ' -f1)
+machinearch=$(uname -m)
 bindate=$(stat -c %y ${MAIN} | cut -d'.' -f1)
-baseimage=$(echo $release | cut -d' ' -f1)
+checksum=$(sha256sum ${MAIN} | cut -d' ' -f1)
 
-# Wrap echo with `-e` flag in all images but Debian
-print () { echo -e $@ ; }
-if [ "${baseimage}" = "Debian" ]; then
-    print () { echo $@ ; }
-fi
+cyan="\033[36m"
+green="\033[32m"
+magenta="\033[35m"
+yellow="\033[33m"
+reset="\033[0m"
 
-reset="\e\033[0m"
-green="\e[32m"
-magenta="\e[35m"
-
-print "${magenta}Timezone:          ${green}$TZ${reset}"
-print "${magenta}Base image:        ${green}$release${reset}"
-print "${magenta}Target platform:   ${green}$platform${reset}"
-print "${magenta}Host Architecture: ${green}$machinearch${reset}"
-echo ""
-print "${magenta}Main binary date:     ${green}$bindate${reset}"
-print "${magenta}Main binary checksum: ${green}$checksum${reset}"
-echo ""
+printf "${magenta}Timezone:          ${green}$TZ${reset}\n"
+printf "${magenta}Base image:        ${green}$release${reset}\n"
+printf "${yellow}Target platform:   ${green}$platform${reset}\n"
+printf "${yellow}Host Architecture: ${green}$machinearch${reset}\n"
+printf "\n"
+printf "${cyan}Main binary date:     ${green}$bindate${reset}\n"
+printf "${cyan}Main binary checksum: ${green}$checksum${reset}\n"
+printf "\n"
 
 exec ${MAIN}
