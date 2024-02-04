@@ -1,15 +1,18 @@
 ### Project-specific ###
 build/
-.pnpm-store/
 node_modules/
 
+# ci scripts
 __pycache__/
 .ruff_cache/
 .GITHUB_ENV
 
+# Task
+.task
+
 # Frontend
-memos-upstream/server/frontend
-!memos-upstream/server/frontend.go
+# memos-upstream/server/frontend
+# !memos-upstream/server/frontend.go
 
 # Air (hot reload) generated
 .air
@@ -18,24 +21,20 @@ bin/air
 # temp folder
 tmp
 
-# Task
-.task
-
 # Logs
 logs/
 *.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
 
 # OS-generated files #
 .DS_Store
 thumbs.db
 ehthumbs.db
 desktop.ini
+
+### Visual Studio Code ###
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
 ### Jetbrains ###
 .fleet
@@ -56,11 +55,6 @@ desktop.ini
 [._]sw[a-p]
 Session.vim
 Sessionx.vim
-
-### Visual Studio Code ###
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
 
 # Ignore all local history of files
 .history
