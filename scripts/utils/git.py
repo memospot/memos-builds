@@ -277,7 +277,8 @@ def subtree_pull(prefix: str, repo: str, branch: str) -> None:
             repo,
             branch,
             "--squash",
-            rf'--message="chore:ci: pull {prefix} from {repo}"',
+            "--message",
+            f"chore:ci: pull {branch} from {repo}",
         ),
         check=True,
     )
