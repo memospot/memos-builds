@@ -268,6 +268,13 @@ def subtree_pull(prefix: str, repo: str, branch: str) -> None:
     if err is not None:
         raise ValueError(err)
 
+    # Find and remove all "v" prefixes after last slash.
+    if branch.startswith("heads/release/"):
+        branch = branch.rsplit("/", 1)[-1].lstrip("v")
+    # Ensure a single "v" prefix.
+    if branch.startswith("tags/"):
+        branch = "v" + branch.rsplit("/", 1)[-1].lstrip("v")
+
     run(
         (
             "git",

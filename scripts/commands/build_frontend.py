@@ -8,7 +8,6 @@ from utils.exec import Exec
 
 FRONTEND_BUILD_COMMANDS = (
     ("pnpm", "install", "--frozen-lockfile"),
-    ("pnpm", "type-gen"),
     ("pnpm", "build"),
 )
 

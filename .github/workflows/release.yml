@@ -10,14 +10,14 @@ on:
     inputs:
       memos-tag:
         description: |
-          Upstream tag to build. Prefixed with "v".
-          * The action will fail if a matching tag already exists.
+          Upstream tag to build.
+          The action will fail if a matching tag already exists on this repository.
         required: false
         type: string
       memos-release:
         description: |
-          Upstream release to build. Do NOT prefix with "v".
-          * The action will fail if a matching release already exists.
+          Upstream release to build.
+          The action will fail if a matching tag already exists on this repository.
         required: false
         type: string
 
@@ -66,6 +66,12 @@ jobs:
           repo: go-task/task
           cache: enable
           tag: "v3.34.1"
+
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          version: 1.29.0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@d882d12c64e032187b2edb46d3a0d003b7a43598
@@ -144,7 +150,7 @@ jobs:
         uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          version: 1.28.1
+          version: 1.29.0
 
       - name: Setup UPX
         uses: crazy-max/ghaction-upx@0fc45e912669ba9e8fa2b430e97c8da2a632e29b
@@ -193,7 +199,7 @@ jobs:
       - name: go.mod tidy
         run: task build:backend-tidy
       - name: Generate protobuf-related code
-        run: cd ./memos/proto && buf generate
+        run: task build:buf
 
       - name: Build and release with Goreleaser
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8

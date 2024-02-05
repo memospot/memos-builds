@@ -23,6 +23,7 @@ tasks:
   build:frontend:
     desc: Build front-end
     dir: ./memos
+    deps: [build:buf]
     sources:
       - proto/**/*.{proto,yaml,lock}
       - web/src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp}
@@ -42,9 +43,15 @@ tasks:
     cmds: [go mod tidy -go=1.21]
     sources: ["./**/go.{mod,sum}"]
 
+  build:buf:
+    desc: Generate protobuf-related code
+    dir: ./memos/proto
+    cmds: [buf generate]
+    sources: ["./**/*.{proto,yaml}"]
+
   build:backend-nightly:
     desc: "[CI] Build nightly binaries for ALL configured OS/Arch, ignores git status"
-    deps: [build:backend-tidy]
+    deps: [build:buf, build:backend-tidy]
     sources: &nightly-sources
       - .goreleaser.yaml
       - memos/**/*.go
@@ -196,7 +203,7 @@ tasks:
     silent: true
     cmds: ["python scripts/ci.py pull-subtree --branch={{.CLI_ARGS}}"]
 
-  git:subtree:pull-latest:
+  git:subtree:pull-main:
     desc: Pull latest changes from usememos/memos:main to subtree
     cmds: [python scripts/ci.py pull-subtree --branch=main]
 
