@@ -22,7 +22,7 @@ tasks:
 
   build:frontend:
     desc: Build front-end
-    dir: ./memos-upstream
+    dir: ./memos
     sources:
       - proto/**/*.{proto,yaml,lock}
       - web/src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp}
@@ -38,7 +38,7 @@ tasks:
 
   build:backend-tidy:
     desc: Tidy go.mod
-    dir: ./memos-upstream
+    dir: ./memos
     cmds: [go mod tidy -go=1.21]
     sources: ["./**/go.{mod,sum}"]
 
@@ -47,9 +47,9 @@ tasks:
     deps: [build:backend-tidy]
     sources: &nightly-sources
       - .goreleaser.yaml
-      - memos-upstream/**/*.go
-      - memos-upstream/**/go.{mod,sum}
-      - memos-upstream/proto/**/*
+      - memos/**/*.go
+      - memos/**/go.{mod,sum}
+      - memos/proto/**/*
     generates: &nightly-generates
       - build/backend/memos_*/memos
       - build/backend/*.{zip,tar.gz}
@@ -146,10 +146,10 @@ tasks:
     cmds:
       - for:
           - "./build"
-          - "./memos-upstream/web/node_modules"
-          - "./memos-upstream/web/dist"
-          - "./memos-upstream/server/frontend/dist"
-          - "./memos-upstream/server/frontend/dist.bak"
+          - "./memos/web/node_modules"
+          - "./memos/web/dist"
+          - "./memos/server/frontend/dist"
+          - "./memos/server/frontend/dist.bak"
         cmd: rm -rf "{{ .ITEM }}"
       - docker builder prune -f
       - docker buildx prune -f
@@ -192,7 +192,7 @@ tasks:
       Usage: `task git:subtree:pull -- 1234567890`.
       Notes:
         - requires a clean git state.
-        - `memos-upstream` folder will be reset.
+        - `memos` folder will be reset.
     silent: true
     cmds: ["python scripts/ci.py pull-subtree --branch={{.CLI_ARGS}}"]
 

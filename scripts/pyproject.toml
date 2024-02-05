@@ -98,7 +98,7 @@ exclude = [
     '.vscode',
     'build',
     'dist',
-    'memos-upstream',
+    'memos',
     'node_modules',
     'venv',
 ]

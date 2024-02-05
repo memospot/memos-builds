@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
+          cache-dependency-path: "memos/web/pnpm-lock.yaml"
       # /setup deps
 
       - name: Pull latest changes from usememos/memos:main to subtree
@@ -134,7 +134,7 @@ jobs:
         with:
           go-version: "1.21"
           check-latest: true
-          cache-dependency-path: memos-upstream/go.sum
+          cache-dependency-path: memos/go.sum
 
       - name: Setup Goreleaser
         uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a

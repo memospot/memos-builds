@@ -180,34 +180,6 @@ MEMOS_MODE=prod MEMOS_DATA=. MEMOS_PORT=5230 ./memos
 
 ⚠ As stated at [Termux Wiki](https://wiki.termux.com/wiki/Internal_and_external_storage), all data under Termux home directory will be deleted if you uninstall the app.
 
-## Star History
+## Supporting
 
-<picture>
-  <source
-    media="(prefers-color-scheme: dark)"
-    srcset="
-      https://api.star-history.com/svg?repos=lincolnthalles/memos-builds&type=Date&theme=dark
-    "
-  />
-  <source
-    media="(prefers-color-scheme: light)"
-    srcset="
-      https://api.star-history.com/svg?repos=lincolnthalles/memos-builds&type=Date
-    "
-  />
-  <img
-    alt="Star History Chart"
-    src="https://api.star-history.com/svg?repos=lincolnthalles/memos-builds&type=Date"
-  />
-</picture>
-
-## Support
-
-If you like this project, don't forget to [⭐star](https://github.com/lincolnthalles/memos-builds) it and consider supporting my work:
-
-<p align="center" width="100%">
-
-  <a href="https://www.buymeacoffee.com/lincolnthalles">
-    <img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" />
-  </a>
-</p>
+If you like this project, don't forget to [⭐star](https://github.com/lincolnthalles/memos-builds) it and consider sponsoring it.

@@ -62,7 +62,8 @@ def setup_env(*, nightly: bool = False) -> None:
         github.add_to_env("GORELEASER_CURRENT_TAG", nightly_version)
     else:
         github.add_to_env("BUILD_VERSION", version)
-        github.add_to_env("GORELEASER_PREVIOUS_TAG", git_previous_tag)
         github.add_to_env("GORELEASER_CURRENT_TAG", version)
+        if memos.validate_semver(git_previous_tag) and git_previous_tag != version:
+            github.add_to_env("GORELEASER_PREVIOUS_TAG", git_previous_tag)
 
     print(f"{GREEN}>> Build environment setup complete <<\n", RESET)

@@ -1,12 +1,13 @@
 """
 Memos utility functions.
 """
+
 import re
 from contextlib import suppress
 from pathlib import Path
 
 # Where to find the version file. Relative to the repository root.
-VERSION_FILE = "memos-upstream/server/version/version.go"
+VERSION_FILE = "memos/server/version/version.go"
 VERSION_REGEX = re.compile(r'^var\s+Version\s*=\s*"v?([0-9.]+)"$', re.MULTILINE)
 DEVVERSION_REGEX = re.compile(r'^var\s+DevVersion\s*=\s*"v?([0-9.]+)"$', re.MULTILINE)
 SEMVER_REGEX = re.compile(r"^v?\d+\.\d+\.\d+(-\w+)?$")

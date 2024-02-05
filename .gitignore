@@ -11,8 +11,8 @@ __pycache__/
 .task
 
 # Frontend
-# memos-upstream/server/frontend
-# !memos-upstream/server/frontend.go
+# memos/server/frontend
+# !memos/server/frontend.go
 
 # Air (hot reload) generated
 .air

@@ -77,7 +77,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
+          cache-dependency-path: "memos/web/pnpm-lock.yaml"
       # /setup deps
 
       # When running the workflow manually, allows to build a specific tag or release.
@@ -156,7 +156,7 @@ jobs:
         with:
           go-version: ">=1.21.5"
           check-latest: true
-          cache-dependency-path: memos-upstream/go.sum
+          cache-dependency-path: memos/go.sum
       # /setup deps
 
       # When running the workflow manually, allows to build a specific tag or release.
@@ -193,7 +193,7 @@ jobs:
       - name: go.mod tidy
         run: task build:backend-tidy
       - name: Generate protobuf-related code
-        run: cd ./memos-upstream/proto && buf generate
+        run: cd ./memos/proto && buf generate
 
       - name: Build and release with Goreleaser
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8

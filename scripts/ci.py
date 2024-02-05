@@ -40,8 +40,8 @@ if __name__ == "__main__":
     parser.add_argument("positional", nargs="?", help="Optional value to pass to action.")
 
     # build-frontend
-    parser.add_argument("--source", default="memos-upstream/web", help="Front-end root folder.")
-    parser.add_argument("--dist", default="memos-upstream/web/dist", help="Usually 'web/dist'.")
+    parser.add_argument("--source", default="memos/web", help="Front-end root folder.")
+    parser.add_argument("--dist", default="memos/web/dist", help="Usually 'web/dist'.")
     parser.add_argument(
         "--final", default="build/frontend", help="Where to move the final build."
     )
@@ -82,7 +82,7 @@ if __name__ == "__main__":
             git.setup()  # Ensure git is set up to prevent CI issues.
             git.commit_any_changes()
 
-            prefix = "memos-upstream"
+            prefix = "memos"
             branch = args.branch or args.positional
             if not branch:
                 exit("Missing required argument: --branch")
