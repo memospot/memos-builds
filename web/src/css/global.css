@@ -1,0 +1,7 @@
+body {
+  @apply text-base w-full min-h-[100svh] bg-zinc-100 dark:bg-zinc-900;
+}
+
+#root {
+  @apply relative w-full min-h-full;
+}

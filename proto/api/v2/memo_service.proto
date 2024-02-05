@@ -1,0 +1,285 @@
+syntax = "proto3";
+
+package memos.api.v2;
+
+import "api/v2/common.proto";
+import "api/v2/memo_relation_service.proto";
+import "api/v2/resource_service.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "gen/api/v2";
+
+service MemoService {
+  // CreateMemo creates a memo.
+  rpc CreateMemo(CreateMemoRequest) returns (CreateMemoResponse) {
+    option (google.api.http) = {
+      post: "/api/v2/memos"
+      body: "*"
+    };
+  }
+  // ListMemos lists memos with pagination and filter.
+  rpc ListMemos(ListMemosRequest) returns (ListMemosResponse) {
+    option (google.api.http) = {get: "/api/v2/memos"};
+  }
+  // GetMemo gets a memo by id.
+  rpc GetMemo(GetMemoRequest) returns (GetMemoResponse) {
+    option (google.api.http) = {get: "/api/v2/memos/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+  // GetMemoByName gets a memo by name.
+  rpc GetMemoByName(GetMemoByNameRequest) returns (GetMemoByNameResponse) {
+    option (google.api.http) = {get: "/api/v2/memos/{name}"};
+    option (google.api.method_signature) = "name";
+  }
+  // UpdateMemo updates a memo.
+  rpc UpdateMemo(UpdateMemoRequest) returns (UpdateMemoResponse) {
+    option (google.api.http) = {
+      patch: "/api/v2/memos/{id}"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id, update_mask";
+  }
+  // DeleteMemo deletes a memo by id.
+  rpc DeleteMemo(DeleteMemoRequest) returns (DeleteMemoResponse) {
+    option (google.api.http) = {delete: "/api/v2/memos/{id}"};
+    option (google.api.method_signature) = "id";
+  }
+  // SetMemoResources sets resources for a memo.
+  rpc SetMemoResources(SetMemoResourcesRequest) returns (SetMemoResourcesResponse) {
+    option (google.api.http) = {
+      post: "/api/v2/memos/{id}/resources"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+  // ListMemoResources lists resources for a memo.
+  rpc ListMemoResources(ListMemoResourcesRequest) returns (ListMemoResourcesResponse) {
+    option (google.api.http) = {get: "/api/v2/memos/{id}/resources"};
+    option (google.api.method_signature) = "id";
+  }
+  // SetMemoRelations sets relations for a memo.
+  rpc SetMemoRelations(SetMemoRelationsRequest) returns (SetMemoRelationsResponse) {
+    option (google.api.http) = {
+      post: "/api/v2/memos/{id}/relations"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  }
+  // ListMemoRelations lists relations for a memo.
+  rpc ListMemoRelations(ListMemoRelationsRequest) returns (ListMemoRelationsResponse) {
+    option (google.api.http) = {get: "/api/v2/memos/{id}/relations"};
+    option (google.api.method_signature) = "id";
+  }
+  // CreateMemoComment creates a comment for a memo.
+  rpc CreateMemoComment(CreateMemoCommentRequest) returns (CreateMemoCommentResponse) {
+    option (google.api.http) = {post: "/api/v2/memos/{id}/comments"};
+    option (google.api.method_signature) = "id";
+  }
+  // ListMemoComments lists comments for a memo.
+  rpc ListMemoComments(ListMemoCommentsRequest) returns (ListMemoCommentsResponse) {
+    option (google.api.http) = {get: "/api/v2/memos/{id}/comments"};
+    option (google.api.method_signature) = "id";
+  }
+  // ExportMemos exports memos.
+  rpc ExportMemos(ExportMemosRequest) returns (ExportMemosResponse) {
+    option (google.api.http) = {post: "/api/v2/memos:export"};
+  }
+  // GetUserMemosStats gets stats of memos for a user.
+  rpc GetUserMemosStats(GetUserMemosStatsRequest) returns (GetUserMemosStatsResponse) {
+    option (google.api.http) = {get: "/api/v2/memos/stats"};
+    option (google.api.method_signature) = "username";
+  }
+}
+
+enum Visibility {
+  VISIBILITY_UNSPECIFIED = 0;
+
+  PRIVATE = 1;
+
+  PROTECTED = 2;
+
+  PUBLIC = 3;
+}
+
+message Memo {
+  // id is the system generated unique identifier.
+  int32 id = 1;
+
+  // name is the user provided name.
+  string name = 2;
+
+  RowStatus row_status = 3;
+
+  // The name of the creator.
+  // Format: users/{username}
+  string creator = 4;
+
+  int32 creator_id = 5;
+
+  google.protobuf.Timestamp create_time = 6;
+
+  google.protobuf.Timestamp update_time = 7;
+
+  google.protobuf.Timestamp display_time = 8;
+
+  string content = 9;
+
+  Visibility visibility = 10;
+
+  bool pinned = 11;
+
+  optional int32 parent_id = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  repeated Resource resources = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  repeated MemoRelation relations = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message CreateMemoRequest {
+  string content = 1;
+
+  Visibility visibility = 2;
+}
+
+message CreateMemoResponse {
+  Memo memo = 1;
+}
+
+message ListMemosRequest {
+  // The maximum number of memos to return.
+  int32 page_size = 1;
+
+  // A page token, received from a previous `ListMemos` call.
+  // Provide this to retrieve the subsequent page.
+  string page_token = 2;
+
+  // Filter is used to filter memos returned in the list.
+  // Format: "creator == users/{username} && visibilities == ['PUBLIC', 'PROTECTED']"
+  string filter = 3;
+}
+
+message ListMemosResponse {
+  repeated Memo memos = 1;
+
+  // A token, which can be sent as `page_token` to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2;
+}
+
+message GetMemoRequest {
+  int32 id = 1;
+}
+
+message GetMemoResponse {
+  Memo memo = 1;
+}
+
+message GetMemoByNameRequest {
+  string name = 1;
+}
+
+message GetMemoByNameResponse {
+  Memo memo = 1;
+}
+
+message UpdateMemoRequest {
+  int32 id = 1;
+
+  Memo memo = 2;
+
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateMemoResponse {
+  Memo memo = 1;
+}
+
+message DeleteMemoRequest {
+  int32 id = 1;
+}
+
+message DeleteMemoResponse {}
+
+message SetMemoResourcesRequest {
+  int32 id = 1;
+
+  repeated Resource resources = 2;
+}
+
+message SetMemoResourcesResponse {}
+
+message ListMemoResourcesRequest {
+  int32 id = 1;
+}
+
+message ListMemoResourcesResponse {
+  repeated Resource resources = 1;
+}
+
+message SetMemoRelationsRequest {
+  int32 id = 1;
+
+  repeated MemoRelation relations = 2;
+}
+
+message SetMemoRelationsResponse {}
+
+message ListMemoRelationsRequest {
+  int32 id = 1;
+}
+
+message ListMemoRelationsResponse {
+  repeated MemoRelation relations = 1;
+}
+
+message CreateMemoCommentRequest {
+  // id is the memo id to create comment for.
+  int32 id = 1;
+
+  CreateMemoRequest create = 2;
+}
+
+message CreateMemoCommentResponse {
+  Memo memo = 1;
+}
+
+message ListMemoCommentsRequest {
+  int32 id = 1;
+}
+
+message ListMemoCommentsResponse {
+  repeated Memo memos = 1;
+}
+
+message GetUserMemosStatsRequest {
+  // name is the name of the user to get stats for.
+  // Format: users/{username}
+  string name = 1;
+
+  // timezone location
+  // Format: uses tz identifier
+  // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  string timezone = 2;
+
+  // Same as ListMemosRequest.filter
+  string filter = 3;
+}
+
+message GetUserMemosStatsResponse {
+  // stats is the stats of memo creating/updating activities.
+  // key is the year-month-day string. e.g. "2020-01-01".
+  map<string, int32> stats = 1;
+}
+
+message ExportMemosRequest {
+  // Same as ListMemosRequest.filter
+  string filter = 1;
+}
+
+message ExportMemosResponse {
+  bytes content = 1;
+}
