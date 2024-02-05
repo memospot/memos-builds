@@ -8,94 +8,45 @@
 
 version: "3"
 env:
-  RED:
-    sh: tput -T xterm-256color setaf 1
-  GREEN:
-    sh: tput -T xterm-256color setaf 2
-  CYAN:
-    sh: tput -T xterm-256color setaf 6
-  RESET:
-    sh: tput -T xterm-256color sgr0
+  CYAN: \033[96m
+  GREEN: \033[92m
+  RED: \033[91m
+  RESET: \033[0m
+  DARK_RED: \033[31m
+  DARK_YELLOW: \033[33m
 
 tasks:
   ##### CI #####
+  # ci:setup-nightly-env: python scripts/ci.py setup-env --nightly
+  # ci:setup-release-env: python scripts/ci.py setup-env
+
   build:frontend:
     desc: Build front-end
-    dir: ./memos-upstream/web
-    vars:
-      SRC: ./dist
-      DST: ../../build/frontend
+    dir: ./memos-upstream
     sources:
-      - ../proto/**/*.{proto,go,yaml,lock}
-      - src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp}
-      - src/*.{ts,js,json,html}
-      - pnpm-lock.yaml
-    generates:
-      - "{{.DST}}/dist/**/*"
+      - proto/**/*.{proto,yaml,lock}
+      - web/src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp}
+      - web/src/*.{ts,js,json,html}
+      - web/pnpm-lock.yaml
+    generates: ["../build/frontend/dist/**/*"]
     cmds:
-      - silent: true
-        cmd: |
-          echo "{{.CYAN}}Cleaning up leftovers...{{.RESET}}"
-          rm -rf "{{.SRC}}"
-          rm -rf "{{.DST}}/{{.SRC}}"
-          mkdir -p "{{.DST}}"
-
-      - pnpm i --frozen-lockfile
-      - pnpm type-gen
-      - pnpm build
-      - silent: true
-        cmd: |
-          echo "Moving front-end build..."
-          mv -f "{{.SRC}}" "{{.DST}}"
-          if ! [ -d "{{.DST}}" ]; then
-            echo "{{.RED}}>> Front-end build failed! <<{{.RESET}}"
-            exit 1
-          fi
-          echo "{{.GREEN}}>> Front-end build succeeded. <<{{.RESET}}"
+      - >-
+        python ../scripts/ci.py build-frontend
+        --source=./web
+        --dist=./web/dist
+        --final=../build/frontend
 
   build:backend-tidy:
-    desc: Tidy backend dependencies
+    desc: Tidy go.mod
     dir: ./memos-upstream
-    cmds:
-      - go mod tidy -go=1.21
-    sources:
-      - "./**/go.{mod,sum}"
+    cmds: [go mod tidy -go=1.21]
+    sources: ["./**/go.{mod,sum}"]
 
-  ci:setup-git:
-    desc: Setup Git on CI
-    summary: |
-      Setup git user and email, if not already set.
-      Subtree pulling needs a configured git.
-    cmds: [python scripts/ci.py --setup-git]
-
-  ci:setup-nightly-env:
-    desc: Setup Nightly env vars
-    cmds: [python scripts/ci.py --setup-env --nightly]
-  
-  ci:setup-release-env:
-    desc: Setup Release env vars
-    cmds: [python scripts/ci.py --setup-env]
-
-  pre-docker:rename-builds:
-    desc: Rename goreleser builds to Docker format
-    sources:
-      - build/backend/memos_linux_amd64_v{1,2,3,4}/memos
-      - build/backend/memos_linux_arm_*/memos
-    generates:
-      - build/backend/memos_linux_amd64/memos
-      - build/backend/memos_linux_amd64v{2,3,4}/memos
-      - build/backend/memos_linux_armv{5,6,7}/memos
-    cmds: [python scripts/rename_to_docker.py]
-
-  build:nightly:all:
-    desc: "[CI] Build binaries for ALL configured OS/Arch, ignores git status"
-    summary: &nightly-summary |
-      Snapshot builds bumps the patch version and appends -dev to the version string.
-    deps: &nightly-deps
-      - build:backend-tidy
-      - build:frontend
+  build:backend-nightly:
+    desc: "[CI] Build nightly binaries for ALL configured OS/Arch, ignores git status"
+    deps: [build:backend-tidy]
     sources: &nightly-sources
-      - .goreleaser-nightly.yaml
+      - .goreleaser.yaml
       - memos-upstream/**/*.go
       - memos-upstream/**/go.{mod,sum}
       - memos-upstream/proto/**/*
@@ -104,40 +55,40 @@ tasks:
       - build/backend/*.{zip,tar.gz}
       - build/backend/memos_SHA256SUMS.txt
     cmds:
-      - goreleaser release --snapshot --clean --timeout 60m --config .goreleaser-nightly.yaml
-      - task: pre-docker:rename-builds
+      - goreleaser release --snapshot --clean --timeout 60m --config .goreleaser.yaml
+
   ##### /CI #####
 
   ##### Local #####
-  build:nightly:
-    desc: Build binaries for current OS/Arch, ignores git status
-    summary: *nightly-summary
-    deps: *nightly-deps
+  build:nightly:single:
+    desc: Build a single nightly binary for current OS/Arch, ignores git status.
+    deps: &backend-deps [build:backend-tidy, build:frontend]
     sources: *nightly-sources
     generates: *nightly-generates
     cmds:
-      - goreleaser release --snapshot --clean --single-target --config .goreleaser-nightly.yaml
+      - goreleaser build --snapshot --clean --single-target --config .goreleaser.yaml
+
+  build:nightly:
+    desc: "[CI] Build nightly binaries for all configured OS/Arch, ignores git status"
+    deps: [build:frontend, build:backend-nightly]
 
   build:testing:
-    desc: Build testing binaries, ignores git status
-    summary: This is intended for local testing only.
-    deps: *nightly-deps
+    desc: Build Docker-targeted binaries, ignores git status.
+    deps: *backend-deps
     sources: *nightly-sources
-    generates: [build/backend/memos_*/memos]
+    generates: [build/backend/memos_linux_*/memos]
     cmds:
       - goreleaser release --snapshot --clean --skip-publish --config .goreleaser-testing.yaml
-      - task: pre-docker:rename-builds
+      - python scripts/ci.py rename-to-docker
 
   build:testing:docker:
-    desc: Build testing Docker images, ignores git status
-    summary: This is intended for local testing only.
+    desc: Build local testing images.
     env:
       DOCKER_BUILDKIT: 1
       DOCKER_CLI_EXPERIMENTAL: enabled
     ignore_error: true
+    deps: [build:testing]
     cmds:
-      - task: build:testing
-      - task: pre-docker:rename-builds
       - for:
           - linux/386
           - linux/amd64
@@ -152,7 +103,7 @@ tasks:
           - linux/s390x
         silent: true
         cmd: |
-          container_name='memos-testing-{{ .ITEM | replace "/" "-" }}'          
+          container_name='memos-testing-{{ .ITEM | replace "/" "-" }}'
           docker rm -f ${container_name} || true
           docker ps -a -q --filter ancestor=${container_name} --format="{{.ID}}" | xargs -r docker rm -f || true
           docker image rm -f ${container_name} || true
@@ -177,24 +128,18 @@ tasks:
 
   build:
     desc: Build without publishing
-    summary: |
-      Requires a clean git state.
-    deps:
-      - build:backend-tidy
-      - build:frontend
-    cmds:
-      - goreleaser release --clean --skip=publish --timeout 60m
+    summary: Requires a clean git state.
+    deps: [build:backend-tidy, build:frontend]
+    cmds: [goreleaser release --clean --skip=publish --timeout 60m]
 
   release:
     desc: Release binaries to GitHub
     summary: |
-      Requires GITHUB_TOKEN environment variable to be set.
-      This token must have `write:packages` permission.
-    deps:
-      - build:backend-tidy
-      - build:frontend
-    cmds:
-      - goreleaser release --clean --timeout 60m
+      - Requires GITHUB_TOKEN environment variable to be set. The token must have `write:packages` permission.
+      - A git tag must be created right before running this task.
+      - Git must be clean.
+    deps: [build:backend-tidy, build:frontend]
+    cmds: [goreleaser release --clean --timeout 60m]
 
   clean:
     desc: Clean-up all build artifacts
@@ -212,23 +157,20 @@ tasks:
       - docker image prune -f
 
   ##### /Local #####
+
   default:
     silent: true
     cmds:
-      - for:
-          - "sh"
-          - "go"
-          - "goreleaser"
-          - "node"
-          - "pnpm"
+      - for: ["buf", "go", "goreleaser", "node", "pnpm", "python"]
         cmd: |
+          printf "Looking for {{.CYAN}}{{ .ITEM }}{{.RESET}}... \n"
           if [[ -z $(command -v "{{ .ITEM }}") ]]; then
-            echo '{{.RED}}{{ .ITEM }}" not found.{{.RESET}}'
-            echo "Please install it before running tasks."
+            printf "{{.DARK_YELLOW}}{{ .ITEM }}{{.DARK_RED}} not found.{{.RESET}}\n"
+            printf "Please install it before running tasks.\n"
             exit 1
           fi
-      - echo -e "{{.CYAN}}All task requirements are met.{{.RESET}}\n"
-      - task --list
+      - printf "{{.GREEN}}All basic requirements for this project are met.{{.RESET}}\n"
+      - printf 'Use "task --list" to see available tasks.\n'
 
   ##### Git-related #####
   git:reset:
@@ -248,37 +190,33 @@ tasks:
     desc: |
       Pull a specific commit from Memos upstream.
       Usage: `task git:subtree:pull -- 1234567890`.
-      Notes: 
+      Notes:
         - requires a clean git state.
         - `memos-upstream` folder will be reset.
     silent: true
-    cmds:
-      - |
-        git subtree pull --prefix=memos-upstream https://github.com/usememos/memos.git {{.CLI_ARGS}} --squash --message="chore:ci: checkout memos-upstream to {{.CLI_ARGS}}"
-        git clean -fx memos-upstream
-        git add -A
-        git commit -am "chore:ci: clean leftovers from memos-upstream subtree" || true
+    cmds: ["python scripts/ci.py pull-subtree --branch={{.CLI_ARGS}}"]
 
   git:subtree:pull-latest:
-    desc: |
-      Pull latest commit from Memos upstream.
-      Usage: `task git:subtree:pull-latest`.
-    cmds:
-      - task git:subtree:pull -- main
+    desc: Pull latest changes from usememos/memos:main to subtree
+    cmds: [python scripts/ci.py pull-subtree --branch=main]
 
   git:subtree:pull-tag:
     desc: |
-      Pull a specific tag from Memos upstream.
+      Pull a specific tag from usememos/memos.
       Usage: `task git:subtree:pull-tag -- v0.0.0`.
     cmds:
-      - task git:subtree:pull -- tags/v{{trimPrefix "v" .CLI_ARGS}}
+      - |
+        tag="v{{print .CLI_ARGS | trimPrefix "v" }}"
+        python scripts/ci.py pull-subtree --branch=tags/${tag}
 
   git:subtree:pull-release:
     desc: |
-      Pull a specific release from Memos upstream.
-      Usage: `task git:subtree:pull-release -- v0.0.0`.
+      Pull a specific release from usememos/memos.
+      Usage: `task git:subtree:pull-release -- 0.0.0`.
     cmds:
-      - task git:subtree:pull -- heads/release/{{trimPrefix "v" .CLI_ARGS}}
+      - |
+        tag="{{print .CLI_ARGS | trimPrefix "v" }}"
+        python scripts/ci.py pull-subtree --branch=heads/release/${tag}
 
   git:retag:
     desc: |
@@ -291,30 +229,18 @@ tasks:
         so the tag must be made right before the build is triggered.
     ignore_error: true
     cmds:
-      - git push origin :refs/tags/{{.CLI_ARGS}}
-      - git tag -d {{.CLI_ARGS}}
-      - git tag -a {{.CLI_ARGS}} -m "Tag {{.CLI_ARGS}}"
-      - git push origin {{.CLI_ARGS}}
-
-  git:tag:delete:
-    desc: |
-      Delete a git tag.
-      Usage: `task git:tag:delete -- v0.0.0`.
-    summary: |
-      Used in case the CI pipeline fails and some correction is needed.
-
-      Goreleaser demands a tag commit to be verifiable (due to gomod.proxy=true setting),
-        so the tag must be made right before the build is triggered.
-    cmds:
-      - git push origin :refs/tags/{{.CLI_ARGS}}
-      - git tag -d {{.CLI_ARGS}}
+      - |
+        tag="v{{print .CLI_ARGS | trimPrefix "v" }}"
+        git push origin :refs/tags/${tag}
+        git tag -d ${tag}
+        git tag -a ${tag} -m "Tag ${tag}"
+        git push origin ${tag}
 
   git:tag:push:
     desc: |
       Checkout subtree to supplied release and push a new tag to origin.
       Usage: `task git:tag:push -- v0.0.0`.
-    summary: |
-      This will trigger the GitHub Action to build and release the binaries.
+    summary: This will trigger the GitHub Action to build and release the binaries.
     cmds:
       - task git:subtree:pull-release -- {{.CLI_ARGS}}
       - task git:retag -- {{.CLI_ARGS}}

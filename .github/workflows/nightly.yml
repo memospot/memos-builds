@@ -9,59 +9,51 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/riscv64,linux/s390x
-  DATE_STRING: set by scripts/ci.py
-  GIT_TAG: set by scripts/ci.py
-  GORELEASER_CURRENT_TAG: set by scripts/ci.py
-  MEMOS_VERSION: set by scripts/ci.py
-  PREVIOUS_TAG: set by scripts/ci.py
-  NIGHTLY_VERSION: set by scripts/ci.py
+  DOCKER_PLATFORMS: |
+    linux/386
+    linux/amd64
+    linux/amd64/v2
+    linux/amd64/v3
+    linux/arm/v5
+    linux/arm/v6
+    linux/arm/v7
+    linux/arm64
+    linux/ppc64le
+    linux/riscv64
+    linux/s390x
+  QEMU_PLATFORMS: |
+    linux/386
+    linux/amd64
+    linux/arm/v6
+    linux/arm/v7
+    linux/arm64
+    linux/ppc64le
+    linux/riscv64
+    linux/s390x
+  # Variables set by scripts/ci.py
+  GORELEASER_PREVIOUS_TAG: "[not set]"
+  GORELEASER_CURRENT_TAG: "[not set]"
+  BUILD_VERSION: "[not set]"
+  CACHE_KEY: "[not set]"
+  MEMOS_VERSION: "[not set]"
 
 jobs:
-  goreleaser:
-    name: Build
+  front-end:
+    name: Build front-end
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           fetch-depth: 0
 
-      # setup tools
+      # setup deps
       - name: Setup Task
         uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
         with:
           repo: go-task/task
           cache: enable
-          tag: "v3.33.1"
-
-      - name: Setup Goreleaser
-        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
-        with:
-          repo: goreleaser/goreleaser
-          cache: enable
-          tag: "v1.23.0"
-
-      - name: Setup buf
-        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup UPX
-        uses: crazy-max/ghaction-upx@0fc45e912669ba9e8fa2b430e97c8da2a632e29b
-        with:
-          install-only: true
-
-      - name: Setup Go
-        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
-        with:
-          go-version: ">=1.21.5"
-          check-latest: true
-          cache-dependency-path: memos-upstream/go.sum
+          tag: "v3.34.1"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@d882d12c64e032187b2edb46d3a0d003b7a43598
@@ -74,12 +66,12 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
-      # /setup tools
+      # /setup deps
 
-      - name: Setup Git user and email
-        run: task ci:setup-git
-      - name: Setup Nightly env vars
-        run: task ci:setup-nightly-env
+      - name: Pull latest changes from usememos/memos:main to subtree
+        run: python scripts/ci.py pull-subtree --branch=main
+      - name: Setup environment variables
+        run: python scripts/ci.py setup-env --nightly
 
       - name: Cache front-end build
         uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
@@ -88,32 +80,102 @@ jobs:
             build/frontend
             .task/checksum/build-frontend
           key: |
-            nightly-frontend-${{ env.GIT_TAG }}-${{ env.DATE_STRING }}
+            frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
           restore-keys: |
-            nightly-frontend-${{ env.GIT_TAG }}-
+            frontend-${{env.BUILD_VERSION}}-
+
+      - name: Build front-end
+        run: task build:frontend
+
+      - name: Upload front-end artifact
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8
+        with:
+          name: frontend_${{env.BUILD_VERSION}}
+          compression-level: 9
+          if-no-files-found: error
+          path: |
+            build/frontend/
+            .task/checksum/build-frontend
+
+  goreleaser:
+    name: Build
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read # required by wait action
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+        with:
+          fetch-depth: 0
+
+      # setup deps
+      - name: Setup Task
+        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
+        with:
+          repo: go-task/task
+          cache: enable
+          tag: "v3.34.1"
+
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          version: 1.28.1
+
+      - name: Setup UPX
+        uses: crazy-max/ghaction-upx@0fc45e912669ba9e8fa2b430e97c8da2a632e29b
+        with:
+          install-only: true
+
+      - name: Setup Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
+        with:
+          go-version: "1.21"
+          check-latest: true
+          cache-dependency-path: memos-upstream/go.sum
+
+      - name: Setup Goreleaser
+        uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
+        with:
+          repo: goreleaser/goreleaser
+          cache: enable
+          tag: "v1.23.0"
+      # /setup deps
+
+      - name: Pull latest changes from usememos/memos:main to subtree
+        run: python scripts/ci.py pull-subtree --branch=main
+      - name: Setup environment variables
+        run: python scripts/ci.py setup-env --nightly
+
+      ### Front-end ###
+      - name: Wait for the front-end build to finish
+        uses: yogeshlonkar/wait-for-jobs@62dd636cfcd6eefad75887c78f1e1c291a8d13d2
+        with:
+          jobs: "Build front-end"
+          interval: "2000"
+          ttl: "10"
+
+      - name: Download front-end artifact
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
+        with:
+          name: frontend_${{env.BUILD_VERSION}}
+      ### /Front-end ###
 
       - name: Cache back-end build
         uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
         with:
           path: |
             build/backend
-            ./task/checksum/build-nightly-all
+            ./task/checksum/build-backend-nightly
           key: |
-            nightly-backend-${{ env.GIT_TAG }}-${{ env.DATE_STRING }}
+            nightly-backend-${{ env.BUILD_VERSION }}-${{ env.CACHE_KEY }}
           restore-keys: |
-            nightly-backend-${{ env.GIT_TAG }}-
-
-      - name: Pull latest changes to Memos subtree
-        run: |
-          git commit -am "chore:ci: ensure clean git state" || true
-          task git:subtree:pull-latest
-
-      # In case something changed in the subtree.
-      - name: Update Nightly env vars
-        run: task ci:setup-nightly-env
+            nightly-backend-${{ env.BUILD_VERSION }}-
 
       - name: Nightly build
-        run: task build:nightly:all
+        run: task build:backend-nightly
 
       - name: Create pre-release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
@@ -122,34 +184,35 @@ jobs:
             build/backend/*.tar.gz
             build/backend/*.zip
             build/backend/*.txt
-
           body: |
             This is an **untested** pre-release, built with bleeding-edge upstream Memos code.
             Do *not* use in production.
 
             *Make sure to run this with a database other than the one you use with stable releases.*
 
-            Version identifier `${{ env.NIGHTLY_VERSION }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning are subject to change without notice.
+            Version identifier `${{ env.BUILD_VERSION }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning are subject to change without notice.
 
-            Release assets may be overwritten by the daily automated builds if the upstream Memos version is still the same.
+            Release assets may be overwritten by the daily automated builds if the upstream Memos version hasn't changed.
 
             **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.MEMOS_VERSION }}...main)**
-          tag_name: ${{ env.NIGHTLY_VERSION }}
+          tag_name: ${{ env.BUILD_VERSION }}
           draft: false
           prerelease: true
 
       ### Docker ###
-      - name: Rename builds to Docker format
-        run: |
-          task pre-docker:rename-builds
+      - name: Rename goreleaser builds to the format expected by current Dockerfile
+        run: python scripts/ci.py rename-to-docker
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
+        with:
+          platforms: ${{ env.QEMU_PLATFORMS }}
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
         with:
           version: latest
+          install: true
           platforms: ${{ env.DOCKER_PLATFORMS }}
 
       - name: Log-in to Docker Hub
@@ -176,7 +239,6 @@ jobs:
             type=raw,value=nightly
 
       - name: Build and Push Docker images
-        id: docker_build
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56
         with:
           context: ./

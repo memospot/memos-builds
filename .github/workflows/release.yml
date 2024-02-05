@@ -7,16 +7,50 @@ on:
     tags-ignore:
       - "v*.*.*-*"
   workflow_dispatch:
+    inputs:
+      memos-tag:
+        description: |
+          Upstream tag to build. Prefixed with "v".
+          * The action will fail if a matching tag already exists.
+        required: false
+        type: string
+      memos-release:
+        description: |
+          Upstream release to build. Do NOT prefix with "v".
+          * The action will fail if a matching release already exists.
+        required: false
+        type: string
 
 env:
-  DOCKER_CLI_EXPERIMENTAL: enabled
-  DOCKER_PLATFORMS: linux/amd64,linux/amd64/v2,linux/amd64/v3,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386,linux/ppc64le,linux/riscv64,linux/s390x
-  DATE_STRING: set by scripts/ci.py
-  GIT_TAG: set by scripts/ci.py
-  VERSION: set by scripts/ci.py
+  DOCKER_PLATFORMS: |
+    linux/386
+    linux/amd64
+    linux/amd64/v2
+    linux/amd64/v3
+    linux/arm/v5
+    linux/arm/v6
+    linux/arm/v7
+    linux/arm64
+    linux/ppc64le
+    linux/riscv64
+    linux/s390x
+  QEMU_PLATFORMS: |
+    linux/386
+    linux/amd64
+    linux/arm/v6
+    linux/arm/v7
+    linux/arm64
+    linux/ppc64le
+    linux/riscv64
+    linux/s390x
+  # Variables set by scripts/ci.py
+  GORELEASER_PREVIOUS_TAG: "[not set]"
+  GORELEASER_CURRENT_TAG: "[not set]"
+  BUILD_VERSION: "[not set]"
+  CACHE_KEY: "[not set]"
 
 jobs:
-  frontend:
+  front-end:
     name: Build front-end
     runs-on: ubuntu-22.04
     steps:
@@ -25,13 +59,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # setup tools
+      # setup deps
       - name: Setup Task
         uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
         with:
           repo: go-task/task
           cache: enable
-          tag: "v3.33.1"
+          tag: "v3.34.1"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@d882d12c64e032187b2edb46d3a0d003b7a43598
@@ -44,7 +78,21 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: "memos-upstream/web/pnpm-lock.yaml"
-      # /setup tools
+      # /setup deps
+
+      # When running the workflow manually, allows to build a specific tag or release.
+      # If the build is triggered by other events, will build whatever is already commited to the subtree.
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-release == '' && github.event.inputs.memos-tag != ''  }}
+        name: Pull usememos/memos:tags/${{ inputs.memos-tag }} to subtree
+        run: python scripts/ci.py pull-subtree --branch=tags/${{ inputs.memos-tag }}
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-tag == '' && github.event.inputs.memos-release != '' }}
+        name: Pull usememos/memos:releases/${{ inputs.memos-release }} to subtree
+        run: python scripts/ci.py pull-subtree --branch=heads/release/${{ inputs.memos-release }}
+
+
+      # Run after subtree pull, in case version.go changed.
+      - name: Setup environment variables
+        run: python scripts/ci.py setup-env
 
       - name: Cache front-end build
         uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2
@@ -53,36 +101,28 @@ jobs:
             build/frontend
             .task/checksum/build-frontend
           key: |
-            frontend-${{ env.DATE_STRING }}
+            frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
           restore-keys: |
-            frontend-
-
-      - name: Setup Git user and email
-        run: task ci:setup-git
-      - name: Setup Release env vars
-        run: task ci:setup-release-env
-
-      - name: Pull ${{env.GIT_TAG}} to Memos subtree
-        run: |
-          git commit -am "chore:ci: ensure clean git state" || true
-          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
+            frontend-${{env.BUILD_VERSION}}-
 
       - name: Build front-end
-        run: |
-          task build:frontend
+        run: task build:frontend
 
-      - name: Upload front-end build
+      - name: Upload front-end artifact
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8
         with:
-          name: frontend_${{env.GIT_TAG}}
-          path: build/frontend/
+          name: frontend_${{env.BUILD_VERSION}}
+          compression-level: 9
           if-no-files-found: error
+          path: |
+            build/frontend/
+            .task/checksum/build-frontend
 
   goreleaser:
     name: Build back-end and Release
     runs-on: ubuntu-22.04
     permissions:
-      actions: read
+      actions: read # required by wait action
       contents: write
       discussions: write
       packages: write
@@ -92,19 +132,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      # setup tools
-      - name: Setup buf
-        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          version: 1.28.1
-
+      # setup deps
       - name: Setup Task
         uses: jaxxstorm/action-install-gh-release@c5ead9a448b4660cf1e7866ee22e4dc56538031a
         with:
           repo: go-task/task
           cache: enable
-          tag: "v3.33.1"
+          tag: "v3.34.1"
+
+      - name: Setup buf
+        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          version: 1.28.1
 
       - name: Setup UPX
         uses: crazy-max/ghaction-upx@0fc45e912669ba9e8fa2b430e97c8da2a632e29b
@@ -117,41 +157,43 @@ jobs:
           go-version: ">=1.21.5"
           check-latest: true
           cache-dependency-path: memos-upstream/go.sum
-      # /setup tools
+      # /setup deps
 
-      - name: Setup Git user and email
-        run: task ci:setup-git
-      - name: Setup Release env vars
-        run: task ci:setup-release-env
+      # When running the workflow manually, allows to build a specific tag or release.
+      # If the build is triggered by other events, will build whatever is already commited to the subtree.
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-release == '' && github.event.inputs.memos-tag != ''  }}
+        name: Pull usememos/memos:tags/${{ inputs.memos-tag }} to subtree
+        run: |
+          python scripts/ci.py pull-subtree --branch=tags/${{ inputs.memos-tag }}
+          python scripts/ci.py retag --tag=v${{ inputs.memos-tag }} --push
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-tag == '' && github.event.inputs.memos-release != '' }}
+        name: Pull usememos/memos:releases/${{ inputs.memos-release }} to subtree
+        run: |
+          python scripts/ci.py pull-subtree --branch=heads/release/${{ inputs.memos-release }}
+          python scripts/ci.py retag --tag=${{ inputs.memos-release }} --push
+
+      # Run after subtree pull, in case version.go changed.
+      - name: Setup environment variables
+        run: python scripts/ci.py setup-env
 
       ### Front-end ###
-      - name: Wait for front-end build to finish
+      - name: Wait for the front-end build to finish
         uses: yogeshlonkar/wait-for-jobs@62dd636cfcd6eefad75887c78f1e1c291a8d13d2
         with:
           jobs: "Build front-end"
           interval: "2000"
           ttl: "10"
 
-      - name: Download front-end build
+      - name: Download front-end artifact
         uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
         with:
-          name: frontend_${{env.GIT_TAG}}
-          path: build/frontend/
+          name: frontend_${{env.BUILD_VERSION}}
       ### /Front-end ###
 
-      - name: Pull ${{env.GIT_TAG}} to Memos subtree
-        run: |
-          git commit -am "chore:ci: ensure clean git state" || true
-          task git:subtree:pull-tag -- "${{env.GIT_TAG}}" || true
-
-      # In case something changed in the subtree.
-      - name: Update Release env vars
-        run: task ci:setup-release-env
-
-      - name: Pre-build requirements
-        run: |
-          task build:backend-tidy
-          cd ./memos-upstream/proto && buf generate
+      - name: go.mod tidy
+        run: task build:backend-tidy
+      - name: Generate protobuf-related code
+        run: cd ./memos-upstream/proto && buf generate
 
       - name: Build and release with Goreleaser
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8
@@ -163,12 +205,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       ### Docker ###
-      - name: Rename goreleaser builds to Docker format
-        run: |
-          task pre-docker:rename-builds
+      - name: Rename goreleaser builds to the format expected by current Dockerfile
+        run: python scripts/ci.py rename-to-docker
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
+        with:
+          platforms: ${{ env.QEMU_PLATFORMS }}
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
@@ -199,8 +242,8 @@ jobs:
             ghcr.io/lincolnthalles/memos-builds
           tags: |
             type=raw,value=latest
-            type=semver,pattern={{version}},value=${{ env.VERSION }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ env.VERSION }}
+            type=semver,pattern={{version}},value=${{ env.BUILD_VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.BUILD_VERSION }}
 
       - name: Build and Push Docker images
         id: docker_build

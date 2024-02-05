@@ -47,7 +47,6 @@ builds:
       -w
       -X main.Date={{.CommitDate}}
       -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
-      -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 upx:
@@ -103,7 +102,7 @@ gomod:
   # This will only be effective if running against a tag. Snapshots will ignore this setting.
   # Notice: for this to work your `build.main` must be a package, not a `.go` file.
   # Can only be enabled on an unaltered repo, since the tag commit must be verifiable and goreleaser demands a clean git state.
-  proxy: true
+  proxy: false
 
   # If proxy is true, use these environment variables when running `go mod`
   # commands (namely, `go mod tidy`).
@@ -123,6 +122,8 @@ checksum:
 snapshot:
   # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
   name_template: "{{ incpatch .Version }}-dev"
+
+#! Due to Goreleaser OSS limitations, nightly releases are created via GH Actions. *
 
 release:
   github:
