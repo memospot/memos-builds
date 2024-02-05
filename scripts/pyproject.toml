@@ -76,6 +76,7 @@ ignore = [
     'PLR0915', # Too many statements
     'PLR2004', # Magic value used in comparison
     'C901',    # Function is too complex
+    'S602',    # `subprocess` call with `shell=True` identified, security issue
     'S603',    # subprocess call - check for execution of untrusted input
     'S607',    # start process with a partial path
 ]
