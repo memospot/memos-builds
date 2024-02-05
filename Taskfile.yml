@@ -85,7 +85,7 @@ tasks:
     sources: *nightly-sources
     generates: [build/backend/memos_linux_*/memos]
     cmds:
-      - goreleaser release --snapshot --clean --skip-publish --config .goreleaser-testing.yaml
+      - goreleaser release --snapshot --clean --skip=publish --config .goreleaser-testing.yaml
       - python scripts/ci.py rename-to-docker
 
   build:testing:docker:
