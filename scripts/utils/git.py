@@ -275,6 +275,10 @@ def subtree_pull(prefix: str, repo: str, branch: str) -> None:
     if branch.startswith("tags/"):
         branch = "v" + branch.rsplit("/", 1)[-1].lstrip("v")
 
+    # Remove domain and .git.
+    repo_name = "/".join(repo.split("/")[3:]).removesuffix(".git") if "//" in repo else repo
+    message = f"chore:ci: pull {branch} from {repo_name}"
+
     run(
         (
             "git",
@@ -285,7 +289,7 @@ def subtree_pull(prefix: str, repo: str, branch: str) -> None:
             branch,
             "--squash",
             "--message",
-            f"chore:ci: pull {branch} from {repo}",
+            message,
         ),
         check=True,
     )
