@@ -32,9 +32,9 @@ def setup_env(*, nightly: bool = False) -> None:
             break
 
     print(f"{MAGENTA}Discovered versions:{RESET}")
-    print(f"> version.go: {CYAN}{file_version}{RESET}")
-    print(f"> Git tag: {CYAN}{git_tag}{RESET}")
-    print(f"> GitHub Ref: {CYAN}{ref_version}{RESET}")
+    print(f"{BOLD} `version.go`: {RESET}{CYAN}{file_version}{RESET}")
+    print(f"{BOLD} Git tag: {RESET}{CYAN}{git_tag}{RESET}")
+    print(f"{BOLD} GitHub Ref: {RESET}{CYAN}{ref_version}{RESET}")
     print(f"Selected {GREEN}{version}{RESET} as {MAGENTA}BUILD_VERSION{RESET}")
 
     date_string = now.strftime("%Y%m%d")

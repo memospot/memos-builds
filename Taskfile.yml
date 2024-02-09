@@ -39,7 +39,7 @@ tasks:
   build:backend-tidy:
     desc: Tidy go.mod
     dir: ./memos
-    cmds: [go mod tidy -go=1.21]
+    cmds: [go mod tidy -go=1.22]
     sources: ["./**/go.{mod,sum}"]
 
   build:buf:
