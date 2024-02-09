@@ -44,7 +44,6 @@ env:
     linux/riscv64
     linux/s390x
   # Variables set by scripts/ci.py
-  GORELEASER_PREVIOUS_TAG: "[not set]"
   GORELEASER_CURRENT_TAG: "[not set]"
   BUILD_VERSION: "[not set]"
   CACHE_KEY: "[not set]"
