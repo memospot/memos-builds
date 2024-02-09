@@ -111,7 +111,7 @@ def get_current_tag() -> str:
 
 def get_previous_tag(*, dev: bool = False) -> str:
     """
-    Get the previous tag. Excludes tags ending with -dev.
+    Get the previous tag. Excludes tags ending with -pre.
 
     Returns
     -------
@@ -124,7 +124,7 @@ def get_previous_tag(*, dev: bool = False) -> str:
         If subprocess call fails.
     """
     command = ["git", "describe", "--tags", "--abbrev=0"]
-    command.append("--match=*-dev" if dev else "--exclude=*-dev")
+    command.append("--match=*-pre" if dev else "--exclude=*-pre")
 
     return check_output(command).decode().strip()
 
@@ -269,11 +269,13 @@ def subtree_pull(prefix: str, repo: str, branch: str) -> None:
         raise ValueError(err)
 
     # Find and remove all "v" prefixes after last slash.
-    if branch.startswith("heads/release/"):
-        branch = branch.rsplit("/", 1)[-1].lstrip("v")
+    ref_release = "heads/release/"
+    if branch.startswith(ref_release):
+        branch = ref_release + branch.rsplit("/", 1)[-1].lstrip("v")
     # Ensure a single "v" prefix.
-    if branch.startswith("tags/"):
-        branch = "v" + branch.rsplit("/", 1)[-1].lstrip("v")
+    ref_tag = "tags/"
+    if branch.startswith(ref_tag):
+        branch = ref_tag + "v" + branch.rsplit("/", 1)[-1].lstrip("v")
 
     # Remove domain and .git.
     repo_name = "/".join(repo.split("/")[3:]).removesuffix(".git") if "//" in repo else repo

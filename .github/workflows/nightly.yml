@@ -55,12 +55,6 @@ jobs:
           cache: enable
           tag: "v3.34.1"
 
-      - name: Setup buf
-        uses: bufbuild/buf-setup-action@88db93f5d74ffa329bb43e42aa95cd822697d214
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          version: 1.29.0
-
       - name: Setup pnpm
         uses: pnpm/action-setup@d882d12c64e032187b2edb46d3a0d003b7a43598
         with:
@@ -138,7 +132,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
         with:
-          go-version: "1.21"
+          go-version: ">=1.22"
           check-latest: true
           cache-dependency-path: memos/go.sum
 
@@ -147,7 +141,7 @@ jobs:
         with:
           repo: goreleaser/goreleaser
           cache: enable
-          tag: "v1.23.0"
+          tag: "v1.24.0"
       # /setup deps
 
       - name: Pull latest changes from usememos/memos:main to subtree

@@ -6,6 +6,8 @@ import re
 from contextlib import suppress
 from pathlib import Path
 
+from utils import semver
+
 # Where to find the version file. Relative to the repository root.
 VERSION_FILE = "memos/server/version/version.go"
 VERSION_REGEX = re.compile(r'^var\s+Version\s*=\s*"v?([0-9.]+)"$', re.MULTILINE)
@@ -17,9 +19,9 @@ def _get_version_from_file(version_file: str | Path, pattern: re.Pattern[str]) -
     with suppress(FileNotFoundError), open(version_file) as file:
         content = file.read()
         match = pattern.search(content)
-        version = match.group(1) if match else ""
-        if validate_semver(version):
-            return version if version[0] == "v" else f"v{version}"
+        version = match.group(1).lstrip("v") if match else ""
+        if semver.is_valid(f"v{version}"):
+            return f"v{version}"
     return ""
 
 
@@ -54,11 +56,3 @@ def get_dev_version(file: str | Path = "") -> str:
         The development version string.
     """
     return _get_version_from_file(file or VERSION_FILE, DEVVERSION_REGEX)
-
-
-def validate_semver(version: str) -> bool:
-    """
-    Validate a semantic version string.
-    """
-    match = SEMVER_REGEX.match(version)
-    return match is not None and match.string == version

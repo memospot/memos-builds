@@ -45,6 +45,4 @@ checksum:
   disable: true
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-dev"
-
-
+  name_template: "{{ incpatch .Version }}-pre"

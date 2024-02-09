@@ -23,7 +23,6 @@ tasks:
   build:frontend:
     desc: Build front-end
     dir: ./memos
-    deps: [build:buf]
     sources:
       - proto/**/*.{proto,yaml,lock}
       - web/src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp}
@@ -235,7 +234,7 @@ tasks:
       Goreleaser demands a tag commit to be verifiable,
         so the tag must be made right before the build is triggered.
     ignore_error: true
-    cmds: ["python scripts/ci.py retag --tag={{.CLI_ARGS}}"]
+    cmds: ["python scripts/ci.py retag --tag={{.CLI_ARGS}} --push"]
 
   git:tag:push:
     desc: |
