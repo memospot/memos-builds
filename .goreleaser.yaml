@@ -82,7 +82,7 @@ archives:
         dst: dist
 
 changelog:
-  skip: true
+  disable: true
   sort: asc
   use: github
   filters:
