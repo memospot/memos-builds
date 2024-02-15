@@ -1,6 +1,6 @@
 # Memos Service Guide
 
-This guide will help you setup Memos as a service on Linux.
+This guide will help you set up Memos as a service on Linux.
 
 ⚠ These instructions are untested. Please submit a PR if you find any issues.
 
@@ -84,8 +84,8 @@ respawn_max="0"
 start_stop_daemon_args="--background --make-pidfile --pidfile /run/memos.pid --chuid memos:memos"
 
 depend() {
- after network-online 
- use network-online 
+ after network-online
+ use network-online
 }
 
 EOF
@@ -105,7 +105,7 @@ cat /var/log/messages | grep memos
 
 ## Memos configuration
 
-Memos supports configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
+Memos support configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
 
 Currently, Memos supports the following environment variables:
 

@@ -1,8 +1,8 @@
 # Memos Anywhere
 
-Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, privacy-first, lightweight note-taking service.
+Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
 
-Some of these builds are consumed by [Memospot](https://github.com/lincolnthalles/memospot), a self-contained Memos desktop app (Windows, Linux and macOS).
+Some of these builds are utilized by [Memospot](https://github.com/lincolnthalles/memospot), an independent desktop app for Memos available on macOS, Linux, and Windows.
 
 <div align="center" width="100%" style="display: flex; justify-content: center;">
   <p align="center" width="100%">
@@ -86,11 +86,11 @@ docker run --detach --name watchtower \
 
 ### About images
 
-Note that Memos is not yet using consistent versioning. Sometimes, a release gets rolling changes without upgrading patch version. This may lead to some differences to official images.
+Please be aware that Memos does not currently follow a consistent versioning process. This means that sometimes a new release may include changes without updating the patch version. As a result, extra effort may be required to keep builds up to date, and there may be differences when compared to official images.
 
-- Versioned images are ckecked-out to Memos upstream `release/version` branch.
+- Versioned images are checked out to Memos's upstream `release/version` branch.
 
-- Nightly images uses whatever is available at Memos's `main` branch at build time.
+- Nightly images use whatever is available at Memos's `main` branch at build time.
 
 - Image packages are auto-upgraded at build time.
 
@@ -112,7 +112,7 @@ There are multiple builds for `arm` and `amd64` platforms, with different hardwa
 
 Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` or `aarch64` CPU, use the ARM64 build.
 
-⚠ Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders performance of several applications.
+⚠ Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders the performance of several applications.
 
 ### amd64
 
@@ -132,7 +132,7 @@ Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architectu
 
 ## Notes
 
-Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger false-positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
+Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger false positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
 
 It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite driver) is not compatible with these targets.
 
@@ -145,7 +145,7 @@ Please do not open issues on the official Memos repository regarding these build
 
 ## Running as a Service
 
-You should manually setup a system service to start Memos on boot.
+You should manually set up a system service to start Memos on boot.
 
 [Memos Service Guide](docs/service.md)
 
@@ -157,7 +157,7 @@ To run Memos using [Termux](https://play.google.com/store/apps/details?id=com.te
 
 - Download a Linux build suiting device CPU architecture (most modern devices are `arm64`)
 
-- Extract downloaded file and copy the `memos` binary to internal storage
+- Extract the downloaded file and copy the `memos` binary to internal storage
 
 Run this on Termux:
 
@@ -178,7 +178,7 @@ MEMOS_MODE=prod MEMOS_DATA=. MEMOS_PORT=5230 ./memos
 # and on local network at http://<device-ip>:5230
 ```
 
-⚠ As stated at [Termux Wiki](https://wiki.termux.com/wiki/Internal_and_external_storage), all data under Termux home directory will be deleted if you uninstall the app.
+⚠ As stated at [Termux Wiki](https://wiki.termux.com/wiki/Internal_and_external_storage), all data under Termux's home directory will be deleted if you uninstall the app.
 
 ## Supporting
 

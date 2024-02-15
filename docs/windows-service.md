@@ -1,11 +1,11 @@
 # Memos Windows Service Guide
 
 While Memos is designed to run on Docker, you may also run Memos as a Windows service.
-It will run under SYSTEM account and start automatically at system boot.
+It will run under the `SYSTEM` account and start automatically at system boot.
 
 ## ⚠ Notes
 
-All service management methods requires admin privileges.
+All service management methods require admin privileges.
 For convenience, use [gsudo](https://gerardog.github.io/gsudo/docs/install), or open a new PowerShell terminal as admin:
 
 ```powershell
@@ -14,7 +14,7 @@ Start-Process powershell -Verb RunAs
 
 This guide makes the following assumptions:
 
-- You are using powershell.
+- You are using Powershell.
 - `memos.exe` exists in `C:\ProgramData\memos` directory.
 - Memos is configured to store its data in `C:\ProgramData\memos` directory.
 
@@ -33,7 +33,7 @@ Choose one of the following methods to install Memos as a service.
 
 NSSM is a lightweight service wrapper. It uses very little memory and CPU time, and it is stable and reliable.
 
-The downside is that it doen't support configuration files, so you have to use the command line to configure the service.
+The downside is that it doesn't support configuration files, so you have to use the command line to configure the service.
 
 You may download and extract `nssm.exe` in the same directory as `memos.exe`, or add its directory to your system PATH. Prefer the latest 64-bit version of `nssm.exe`.
 
@@ -117,11 +117,11 @@ net start memos
 net stop memos
 ```
 
-If the service installation was successful, the service will appear in the Windows Services Manager `services.msc` labeled as `Memos Service`.
+If the service installation was successful, the service would appear in the Windows Services Manager `services.msc` labeled as `Memos Service`.
 
 ## Memos configuration
 
-Memos supports configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
+Memos support configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
 
 Currently, Memos supports the following environment variables:
 
