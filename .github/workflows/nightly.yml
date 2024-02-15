@@ -186,11 +186,11 @@ jobs:
             build/backend/*.txt
           body: |
             This is an **untested** pre-release, built with bleeding-edge upstream Memos code.
-            Do *not* use in production.
+            It is strongly recommended that you do *not* use it in production.
 
-            *Make sure to run this with a database other than the one you use with stable releases.*
+            *Ensure that you use a different database than the one you use for stable releases.*
 
-            Version identifier `${{ env.BUILD_VERSION }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning are subject to change without notice.
+            Version identifier `${{ env.BUILD_VERSION }}` is auto-generated, based on what is set at Memos upstream on `version.go` file. Therefore, pre-release versioning is subject to change without notice.
 
             Release assets may be overwritten by the daily automated builds if the upstream Memos version hasn't changed.
 

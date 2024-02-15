@@ -160,10 +160,11 @@ release:
 
   #   Welcome to this new release!
   footer: |
-    [Official Memos upstream changelog](https://github.com/usememos/memos/releases/tag/{{ .Tag }})
-
     [Commit history](https://github.com/usememos/memos/commits/release/{{ trimprefix .Tag "v" }}/)
 
     [Compare changes](https://github.com/usememos/memos/compare/release/{{ trimprefix .PreviousTag "v" }}...release/{{ trimprefix .Tag "v" }})
+
+    [Official Memos upstream changelog¹](https://github.com/usememos/memos/releases/tag/{{ .Tag }})
+    > ¹ Only available for tagged releases.
 
   skip_upload: false
