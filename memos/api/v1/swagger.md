@@ -112,7 +112,7 @@ Get a list of identity providers
 
 | Code | Description | Schema |
 | ---- | ----------- | ------ |
-| 200 | List of available identity providers | [ [github_com_usememos_memos_api_v1.IdentityProvider](#github_com_usememos_memos_api_v1identityprovider) ] |
+| 200 | List of available identity providers | [ [api_v1.IdentityProvider](#api_v1identityprovider) ] |
 | 500 | Failed to find identity provider list \| Failed to find user |  |
 
 #### POST
@@ -124,7 +124,7 @@ Create Identity Provider
 
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ------ |
-| body | body | Identity provider information | Yes | [github_com_usememos_memos_api_v1.CreateIdentityProviderRequest](#github_com_usememos_memos_api_v1createidentityproviderrequest) |
+| body | body | Identity provider information | Yes | [api_v1.CreateIdentityProviderRequest](#api_v1createidentityproviderrequest) |
 
 ##### Responses
 
@@ -188,7 +188,7 @@ Update an identity provider by ID
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ------ |
 | idpId | path | Identity Provider ID | Yes | integer |
-| body | body | Patched identity provider information | Yes | [github_com_usememos_memos_api_v1.UpdateIdentityProviderRequest](#github_com_usememos_memos_api_v1updateidentityproviderrequest) |
+| body | body | Patched identity provider information | Yes | [api_v1.UpdateIdentityProviderRequest](#api_v1updateidentityproviderrequest) |
 
 ##### Responses
 
@@ -655,7 +655,7 @@ Create storage
 
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ------ |
-| body | body | Request object. | Yes | [api_v1.CreateStorageRequest](#api_v1createstoragerequest) |
+| body | body | Request object. | Yes | [github_com_usememos_memos_api_v1.CreateStorageRequest](#github_com_usememos_memos_api_v1createstoragerequest) |
 
 ##### Responses
 
@@ -698,7 +698,7 @@ Update a storage
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ------ |
 | storageId | path | Storage ID | Yes | integer |
-| patch | body | Patch request | Yes | [api_v1.UpdateStorageRequest](#api_v1updatestoragerequest) |
+| patch | body | Patch request | Yes | [github_com_usememos_memos_api_v1.UpdateStorageRequest](#github_com_usememos_memos_api_v1updatestoragerequest) |
 
 ##### Responses
 
@@ -738,13 +738,12 @@ Create system setting
 
 ##### Responses
 
-| Code | Description | Schema |
-| ---- | ----------- | ------ |
-| 200 | Created system setting | [store.SystemSetting](#storesystemsetting) |
-| 400 | Malformatted post system setting request \| invalid system setting |  |
-| 401 | Missing user in session \| Unauthorized |  |
-| 403 | Cannot disable passwords if no SSO identity provider is configured. |  |
-| 500 | Failed to find user \| Failed to upsert system setting |  |
+| Code | Description |
+| ---- | ----------- |
+| 400 | Malformatted post system setting request \| invalid system setting |
+| 401 | Missing user in session \| Unauthorized |
+| 403 | Cannot disable passwords if no SSO identity provider is configured. |
+| 500 | Failed to find user \| Failed to upsert system setting |
 
 ---
 ### /api/v1/tag
@@ -843,7 +842,7 @@ Create a user
 
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ------ |
-| body | body | Request object | Yes | [github_com_usememos_memos_api_v1.CreateUserRequest](#github_com_usememos_memos_api_v1createuserrequest) |
+| body | body | Request object | Yes | [api_v1.CreateUserRequest](#api_v1createuserrequest) |
 
 ##### Responses
 
@@ -908,7 +907,7 @@ Update a user
 | Name | Located in | Description | Required | Schema |
 | ---- | ---------- | ----------- | -------- | ------ |
 | id | path | User ID | Yes | string |
-| patch | body | Patch request | Yes | [github_com_usememos_memos_api_v1.UpdateUserRequest](#github_com_usememos_memos_api_v1updateuserrequest) |
+| patch | body | Patch request | Yes | [api_v1.UpdateUserRequest](#api_v1updateuserrequest) |
 
 ##### Responses
 
@@ -1032,7 +1031,6 @@ Get GetImage from URL
 | ---- | ---- | ----------- | -------- |
 | appearance | string | Appearance is the server default appearance. | No |
 | description | string | Description is the server description. | No |
-| externalUrl | string | ExternalURL is the external url of server. e.g. https://usermemos.com | No |
 | locale | string | Locale is the server default locale. | No |
 | logoUrl | string | LogoURL is the url of logo image. | No |
 | name | string | Name is the server name, default is `memos` | No |
@@ -1328,7 +1326,6 @@ Get GetImage from URL
 | ---- | ---- | ----------- | -------- |
 | appearance | string | Appearance is the server default appearance. | No |
 | description | string | Description is the server description. | No |
-| externalUrl | string | ExternalURL is the external url of server. e.g. https://usermemos.com | No |
 | locale | string | Locale is the server default locale. | No |
 | logoUrl | string | LogoURL is the url of logo image. | No |
 | name | string | Name is the server name, default is `memos` | No |
@@ -1688,14 +1685,6 @@ Get GetImage from URL
 | id | integer |  | No |
 | name | string |  | No |
 | type | string |  | No |
-
-#### store.SystemSetting
-
-| Name | Type | Description | Required |
-| ---- | ---- | ----------- | -------- |
-| description | string |  | No |
-| name | string |  | No |
-| value | string |  | No |
 
 #### store.User
 

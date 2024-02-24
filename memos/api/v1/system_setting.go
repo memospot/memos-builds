@@ -19,18 +19,10 @@ const (
 	SystemSettingServerIDName SystemSettingName = "server-id"
 	// SystemSettingSecretSessionName is the name of secret session.
 	SystemSettingSecretSessionName SystemSettingName = "secret-session"
-	// SystemSettingAllowSignUpName is the name of allow signup setting.
-	SystemSettingAllowSignUpName SystemSettingName = "allow-signup"
-	// SystemSettingDisablePasswordLoginName is the name of disable password login setting.
-	SystemSettingDisablePasswordLoginName SystemSettingName = "disable-password-login"
 	// SystemSettingDisablePublicMemosName is the name of disable public memos setting.
 	SystemSettingDisablePublicMemosName SystemSettingName = "disable-public-memos"
 	// SystemSettingMaxUploadSizeMiBName is the name of max upload size setting.
 	SystemSettingMaxUploadSizeMiBName SystemSettingName = "max-upload-size-mib"
-	// SystemSettingAdditionalStyleName is the name of additional style.
-	SystemSettingAdditionalStyleName SystemSettingName = "additional-style"
-	// SystemSettingAdditionalScriptName is the name of additional script.
-	SystemSettingAdditionalScriptName SystemSettingName = "additional-script"
 	// SystemSettingCustomizedProfileName is the name of customized server profile.
 	SystemSettingCustomizedProfileName SystemSettingName = "customized-profile"
 	// SystemSettingStorageServiceIDName is the name of storage service ID.
@@ -41,8 +33,6 @@ const (
 	SystemSettingTelegramBotTokenName SystemSettingName = "telegram-bot-token"
 	// SystemSettingMemoDisplayWithUpdatedTsName is the name of memo display with updated ts.
 	SystemSettingMemoDisplayWithUpdatedTsName SystemSettingName = "memo-display-with-updated-ts"
-	// SystemSettingInstanceURLName is the name of instance url setting.
-	SystemSettingInstanceURLName SystemSettingName = "instance-url"
 )
 const systemSettingUnmarshalError = `failed to unmarshal value from system setting "%v"`
 
@@ -58,8 +48,6 @@ type CustomizedProfile struct {
 	Locale string `json:"locale"`
 	// Appearance is the server default appearance.
 	Appearance string `json:"appearance"`
-	// ExternalURL is the external url of server. e.g. https://usermemos.com
-	ExternalURL string `json:"externalUrl"`
 }
 
 func (key SystemSettingName) String() string {
@@ -129,7 +117,6 @@ func (s *APIV1Service) GetSystemSettingList(c echo.Context) error {
 //	@Accept		json
 //	@Produce	json
 //	@Param		body	body		UpsertSystemSettingRequest	true	"Request object."
-//	@Success	200		{object}	store.SystemSetting			"Created system setting"
 //	@Failure	400		{object}	nil							"Malformatted post system setting request | invalid system setting"
 //	@Failure	401		{object}	nil							"Missing user in session | Unauthorized"
 //	@Failure	403		{object}	nil							"Cannot disable passwords if no SSO identity provider is configured."
@@ -159,30 +146,6 @@ func (s *APIV1Service) CreateSystemSetting(c echo.Context) error {
 	if err := systemSettingUpsert.Validate(); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid system setting").SetInternal(err)
 	}
-	if s.Profile.Mode == "demo" {
-		switch systemSettingUpsert.Name {
-		case SystemSettingAdditionalStyleName:
-			return echo.NewHTTPError(http.StatusForbidden, "additional style is not allowed in demo mode")
-		case SystemSettingAdditionalScriptName:
-			return echo.NewHTTPError(http.StatusForbidden, "additional script is not allowed in demo mode")
-		case SystemSettingDisablePasswordLoginName:
-			return echo.NewHTTPError(http.StatusForbidden, "disabling password login is not allowed in demo mode")
-		}
-	}
-	if systemSettingUpsert.Name == SystemSettingDisablePasswordLoginName {
-		var disablePasswordLogin bool
-		if err := json.Unmarshal([]byte(systemSettingUpsert.Value), &disablePasswordLogin); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "invalid system setting").SetInternal(err)
-		}
-
-		identityProviderList, err := s.Store.ListIdentityProviders(ctx, &store.FindIdentityProvider{})
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to upsert system setting").SetInternal(err)
-		}
-		if disablePasswordLogin && len(identityProviderList) == 0 {
-			return echo.NewHTTPError(http.StatusForbidden, "Cannot disable passwords if no SSO identity provider is configured.")
-		}
-	}
 
 	systemSetting, err := s.Store.UpsertWorkspaceSetting(ctx, &store.WorkspaceSetting{
 		Name:        systemSettingUpsert.Name.String(),
@@ -199,16 +162,6 @@ func (upsert UpsertSystemSettingRequest) Validate() error {
 	switch settingName := upsert.Name; settingName {
 	case SystemSettingServerIDName:
 		return errors.Errorf("updating %v is not allowed", settingName)
-	case SystemSettingAllowSignUpName:
-		var value bool
-		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return errors.Errorf(systemSettingUnmarshalError, settingName)
-		}
-	case SystemSettingDisablePasswordLoginName:
-		var value bool
-		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return errors.Errorf(systemSettingUnmarshalError, settingName)
-		}
 	case SystemSettingDisablePublicMemosName:
 		var value bool
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
@@ -219,24 +172,13 @@ func (upsert UpsertSystemSettingRequest) Validate() error {
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
 			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	case SystemSettingAdditionalStyleName:
-		var value string
-		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return errors.Errorf(systemSettingUnmarshalError, settingName)
-		}
-	case SystemSettingAdditionalScriptName:
-		var value string
-		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
-			return errors.Errorf(systemSettingUnmarshalError, settingName)
-		}
 	case SystemSettingCustomizedProfileName:
 		customizedProfile := CustomizedProfile{
-			Name:        "memos",
+			Name:        "Memos",
 			LogoURL:     "",
 			Description: "",
 			Locale:      "en",
 			Appearance:  "system",
-			ExternalURL: "",
 		}
 		if err := json.Unmarshal([]byte(upsert.Value), &customizedProfile); err != nil {
 			return errors.Errorf(systemSettingUnmarshalError, settingName)
@@ -292,7 +234,6 @@ func (upsert UpsertSystemSettingRequest) Validate() error {
 		if err := json.Unmarshal([]byte(upsert.Value), &value); err != nil {
 			return errors.Errorf(systemSettingUnmarshalError, settingName)
 		}
-	case SystemSettingInstanceURLName:
 	default:
 		return errors.New("invalid system setting name")
 	}

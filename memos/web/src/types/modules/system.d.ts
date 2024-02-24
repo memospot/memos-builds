@@ -9,19 +9,15 @@ interface CustomizedProfile {
   description: string;
   locale: Locale;
   appearance: Appearance;
-  externalUrl: string;
 }
 
 interface SystemStatus {
   host?: User;
   profile: Profile;
   // System settings
-  allowSignUp: boolean;
   disablePasswordLogin: boolean;
   disablePublicMemos: boolean;
   maxUploadSizeMiB: number;
-  additionalStyle: string;
-  additionalScript: string;
   customizedProfile: CustomizedProfile;
   storageServiceId: number;
   localStoragePath: string;

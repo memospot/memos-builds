@@ -70,9 +70,6 @@ definitions:
       description:
         description: Description is the server description.
         type: string
-      externalUrl:
-        description: ExternalURL is the external url of server. e.g. https://usermemos.com
-        type: string
       locale:
         description: Locale is the server default locale.
         type: string
@@ -261,34 +258,24 @@ definitions:
     enum:
     - server-id
     - secret-session
-    - allow-signup
-    - disable-password-login
     - disable-public-memos
     - max-upload-size-mib
-    - additional-style
-    - additional-script
     - customized-profile
     - storage-service-id
     - local-storage-path
     - telegram-bot-token
     - memo-display-with-updated-ts
-    - instance-url
     type: string
     x-enum-varnames:
     - SystemSettingServerIDName
     - SystemSettingSecretSessionName
-    - SystemSettingAllowSignUpName
-    - SystemSettingDisablePasswordLoginName
     - SystemSettingDisablePublicMemosName
     - SystemSettingMaxUploadSizeMiBName
-    - SystemSettingAdditionalStyleName
-    - SystemSettingAdditionalScriptName
     - SystemSettingCustomizedProfileName
     - SystemSettingStorageServiceIDName
     - SystemSettingLocalStoragePathName
     - SystemSettingTelegramBotTokenName
     - SystemSettingMemoDisplayWithUpdatedTsName
-    - SystemSettingInstanceURLName
   api_v1.SystemStatus:
     properties:
       additionalScript:
@@ -502,9 +489,6 @@ definitions:
       description:
         description: Description is the server description.
         type: string
-      externalUrl:
-        description: ExternalURL is the external url of server. e.g. https://usermemos.com
-        type: string
       locale:
         description: Locale is the server default locale.
         type: string
@@ -693,34 +677,24 @@ definitions:
     enum:
     - server-id
     - secret-session
-    - allow-signup
-    - disable-password-login
     - disable-public-memos
     - max-upload-size-mib
-    - additional-style
-    - additional-script
     - customized-profile
     - storage-service-id
     - local-storage-path
     - telegram-bot-token
     - memo-display-with-updated-ts
-    - instance-url
     type: string
     x-enum-varnames:
     - SystemSettingServerIDName
     - SystemSettingSecretSessionName
-    - SystemSettingAllowSignUpName
-    - SystemSettingDisablePasswordLoginName
     - SystemSettingDisablePublicMemosName
     - SystemSettingMaxUploadSizeMiBName
-    - SystemSettingAdditionalStyleName
-    - SystemSettingAdditionalScriptName
     - SystemSettingCustomizedProfileName
     - SystemSettingStorageServiceIDName
     - SystemSettingLocalStoragePathName
     - SystemSettingTelegramBotTokenName
     - SystemSettingMemoDisplayWithUpdatedTsName
-    - SystemSettingInstanceURLName
   github_com_usememos_memos_api_v1.SystemStatus:
     properties:
       additionalScript:
@@ -1029,15 +1003,6 @@ definitions:
       type:
         type: string
     type: object
-  store.SystemSetting:
-    properties:
-      description:
-        type: string
-      name:
-        type: string
-      value:
-        type: string
-    type: object
   store.User:
     properties:
       avatarURL:
@@ -1211,7 +1176,7 @@ paths:
           description: List of available identity providers
           schema:
             items:
-              $ref: '#/definitions/github_com_usememos_memos_api_v1.IdentityProvider'
+              $ref: '#/definitions/api_v1.IdentityProvider'
             type: array
         "500":
           description: Failed to find identity provider list | Failed to find user
@@ -1227,7 +1192,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/github_com_usememos_memos_api_v1.CreateIdentityProviderRequest'
+          $ref: '#/definitions/api_v1.CreateIdentityProviderRequest'
       produces:
       - application/json
       responses:
@@ -1312,7 +1277,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/github_com_usememos_memos_api_v1.UpdateIdentityProviderRequest'
+          $ref: '#/definitions/api_v1.UpdateIdentityProviderRequest'
       produces:
       - application/json
       responses:
@@ -1902,7 +1867,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/api_v1.CreateStorageRequest'
+          $ref: '#/definitions/github_com_usememos_memos_api_v1.CreateStorageRequest'
       produces:
       - application/json
       responses:
@@ -1957,7 +1922,7 @@ paths:
         name: patch
         required: true
         schema:
-          $ref: '#/definitions/api_v1.UpdateStorageRequest'
+          $ref: '#/definitions/github_com_usememos_memos_api_v1.UpdateStorageRequest'
       produces:
       - application/json
       responses:
@@ -2007,10 +1972,6 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: Created system setting
-          schema:
-            $ref: '#/definitions/store.SystemSetting'
         "400":
           description: Malformatted post system setting request | invalid system setting
         "401":
@@ -2152,7 +2113,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/github_com_usememos_memos_api_v1.CreateUserRequest'
+          $ref: '#/definitions/api_v1.CreateUserRequest'
       produces:
       - application/json
       responses:
@@ -2234,7 +2195,7 @@ paths:
         name: patch
         required: true
         schema:
-          $ref: '#/definitions/github_com_usememos_memos_api_v1.UpdateUserRequest'
+          $ref: '#/definitions/api_v1.UpdateUserRequest'
       produces:
       - application/json
       responses:
