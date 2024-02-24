@@ -5,9 +5,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
 
-	"github.com/usememos/memos/internal/log"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
 )
@@ -18,18 +16,12 @@ type SystemStatus struct {
 	DBSize  int64           `json:"dbSize"`
 
 	// System settings
-	// Allow sign up.
-	AllowSignUp bool `json:"allowSignUp"`
 	// Disable password login.
 	DisablePasswordLogin bool `json:"disablePasswordLogin"`
 	// Disable public memos.
 	DisablePublicMemos bool `json:"disablePublicMemos"`
 	// Max upload size.
 	MaxUploadSizeMiB int `json:"maxUploadSizeMiB"`
-	// Additional style.
-	AdditionalStyle string `json:"additionalStyle"`
-	// Additional script.
-	AdditionalScript string `json:"additionalScript"`
 	// Customized server profile, including server name and external url.
 	CustomizedProfile CustomizedProfile `json:"customizedProfile"`
 	// Storage service ID.
@@ -74,8 +66,6 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 			Mode:    s.Profile.Mode,
 			Version: s.Profile.Version,
 		},
-		// Allow sign up by default.
-		AllowSignUp:      true,
 		MaxUploadSizeMiB: 32,
 		CustomizedProfile: CustomizedProfile{
 			Name:       "Memos",
@@ -97,12 +87,18 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 		systemStatus.Host = &User{ID: hostUser.ID}
 	}
 
+	workspaceGeneralSetting, err := s.Store.GetWorkspaceGeneralSetting(ctx)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find workspace general setting").SetInternal(err)
+	}
+	systemStatus.DisablePasswordLogin = workspaceGeneralSetting.DisallowPasswordLogin
+
 	systemSettingList, err := s.Store.ListWorkspaceSettings(ctx, &store.FindWorkspaceSetting{})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting list").SetInternal(err)
 	}
 	for _, systemSetting := range systemSettingList {
-		if systemSetting.Name == SystemSettingServerIDName.String() || systemSetting.Name == SystemSettingSecretSessionName.String() || systemSetting.Name == SystemSettingTelegramBotTokenName.String() || systemSetting.Name == SystemSettingInstanceURLName.String() {
+		if systemSetting.Name == SystemSettingServerIDName.String() || systemSetting.Name == SystemSettingSecretSessionName.String() || systemSetting.Name == SystemSettingTelegramBotTokenName.String() {
 			continue
 		}
 
@@ -114,18 +110,10 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 		}
 
 		switch systemSetting.Name {
-		case SystemSettingAllowSignUpName.String():
-			systemStatus.AllowSignUp = baseValue.(bool)
-		case SystemSettingDisablePasswordLoginName.String():
-			systemStatus.DisablePasswordLogin = baseValue.(bool)
 		case SystemSettingDisablePublicMemosName.String():
 			systemStatus.DisablePublicMemos = baseValue.(bool)
 		case SystemSettingMaxUploadSizeMiBName.String():
 			systemStatus.MaxUploadSizeMiB = int(baseValue.(float64))
-		case SystemSettingAdditionalStyleName.String():
-			systemStatus.AdditionalStyle = baseValue.(string)
-		case SystemSettingAdditionalScriptName.String():
-			systemStatus.AdditionalScript = baseValue.(string)
 		case SystemSettingCustomizedProfileName.String():
 			customizedProfile := CustomizedProfile{}
 			if err := json.Unmarshal([]byte(systemSetting.Value), &customizedProfile); err != nil {
@@ -139,7 +127,7 @@ func (s *APIV1Service) GetSystemStatus(c echo.Context) error {
 		case SystemSettingMemoDisplayWithUpdatedTsName.String():
 			systemStatus.MemoDisplayWithUpdatedTs = baseValue.(bool)
 		default:
-			log.Warn("Unknown system setting name", zap.String("setting name", systemSetting.Name))
+			// Skip unknown system setting.
 		}
 	}
 

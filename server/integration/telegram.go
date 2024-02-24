@@ -16,7 +16,6 @@ import (
 	"github.com/usememos/memos/plugin/telegram"
 	"github.com/usememos/memos/plugin/webhook"
 	storepb "github.com/usememos/memos/proto/gen/store"
-	"github.com/usememos/memos/server/service/metric"
 	"github.com/usememos/memos/store"
 )
 
@@ -29,7 +28,12 @@ func NewTelegramHandler(store *store.Store) *TelegramHandler {
 }
 
 func (t *TelegramHandler) BotToken(ctx context.Context) string {
-	return t.store.GetWorkspaceSettingWithDefaultValue(ctx, apiv1.SystemSettingTelegramBotTokenName.String(), "")
+	if setting, err := t.store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
+		Name: apiv1.SystemSettingTelegramBotTokenName.String(),
+	}); err == nil && setting != nil {
+		return setting.Value
+	}
+	return ""
 }
 
 const (
@@ -226,7 +230,6 @@ func (t *TelegramHandler) dispatchMemoRelatedWebhook(ctx context.Context, memo s
 	if err != nil {
 		return err
 	}
-	metric.Enqueue("webhook dispatch")
 	for _, hook := range webhooks {
 		payload := t.convertMemoToWebhookPayload(ctx, memo)
 		payload.ActivityType = activityType

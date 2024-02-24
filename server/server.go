@@ -18,7 +18,6 @@ import (
 	"github.com/usememos/memos/server/frontend"
 	"github.com/usememos/memos/server/integration"
 	"github.com/usememos/memos/server/profile"
-	"github.com/usememos/memos/server/service/metric"
 	versionchecker "github.com/usememos/memos/server/service/version_checker"
 	"github.com/usememos/memos/store"
 )
@@ -59,7 +58,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	e.Use(CORSMiddleware())
 
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Skipper: timeoutSkipper,
+		Skipper: grpcRequestSkipper,
 		Timeout: 30 * time.Second,
 	}))
 
@@ -69,9 +68,11 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	}
 	s.ID = serverID
 
-	// Register frontend service.
-	frontendService := frontend.NewFrontendService(profile, store)
-	frontendService.Serve(ctx, e)
+	// Only serve frontend when it's enabled.
+	if profile.Frontend {
+		frontendService := frontend.NewFrontendService(profile, store)
+		frontendService.Serve(ctx, e)
+	}
 
 	secret := "usememos"
 	if profile.Mode == "prod" {
@@ -104,8 +105,6 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 func (s *Server) Start(ctx context.Context) error {
 	go versionchecker.NewVersionChecker(s.Store, s.Profile).Start(ctx)
 	go s.telegramBot.Start(ctx)
-
-	metric.Enqueue("server start")
 	return s.e.Start(fmt.Sprintf("%s:%d", s.Profile.Addr, s.Profile.Port))
 }
 
@@ -170,15 +169,6 @@ func (s *Server) getSystemSecretSessionName(ctx context.Context) (string, error)
 
 func grpcRequestSkipper(c echo.Context) bool {
 	return strings.HasPrefix(c.Request().URL.Path, "/memos.api.v2.")
-}
-
-func timeoutSkipper(c echo.Context) bool {
-	if grpcRequestSkipper(c) {
-		return true
-	}
-
-	// Skip timeout for blob upload which is frequently timed out.
-	return c.Request().Method == http.MethodPost && c.Request().URL.Path == "/api/v1/resource/blob"
 }
 
 func CORSMiddleware() echo.MiddlewareFunc {

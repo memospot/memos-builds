@@ -13,11 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/usememos/memos/internal/jobs"
-
 	"github.com/usememos/memos/internal/log"
 	"github.com/usememos/memos/server"
 	_profile "github.com/usememos/memos/server/profile"
-	"github.com/usememos/memos/server/service/metric"
 	"github.com/usememos/memos/store"
 	"github.com/usememos/memos/store/db"
 )
@@ -34,14 +32,14 @@ const (
 )
 
 var (
-	profile      *_profile.Profile
-	mode         string
-	addr         string
-	port         int
-	data         string
-	driver       string
-	dsn          string
-	enableMetric bool
+	profile       *_profile.Profile
+	mode          string
+	addr          string
+	port          int
+	data          string
+	driver        string
+	dsn           string
+	serveFrontend bool
 
 	rootCmd = &cobra.Command{
 		Use:   "memos",
@@ -61,16 +59,17 @@ var (
 			}
 
 			storeInstance := store.New(dbDriver, profile)
+			if err := storeInstance.MigrateManually(ctx); err != nil {
+				cancel()
+				log.Error("failed to migrate manually", zap.Error(err))
+				return
+			}
+
 			s, err := server.NewServer(ctx, profile, storeInstance)
 			if err != nil {
 				cancel()
 				log.Error("failed to create server", zap.Error(err))
 				return
-			}
-
-			if profile.Metric {
-				// nolint
-				metric.NewMetricClient(s.ID, *profile)
 			}
 
 			c := make(chan os.Signal, 1)
@@ -117,7 +116,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "", "data directory")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "", "", "database driver")
 	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "database source name(aka. DSN)")
-	rootCmd.PersistentFlags().BoolVarP(&enableMetric, "metric", "", true, "allow metric collection")
+	rootCmd.PersistentFlags().BoolVarP(&serveFrontend, "frontend", "", true, "serve frontend files")
 
 	err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
 	if err != nil {
@@ -143,7 +142,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("metric", rootCmd.PersistentFlags().Lookup("metric"))
+	err = viper.BindPFlag("frontend", rootCmd.PersistentFlags().Lookup("frontend"))
 	if err != nil {
 		panic(err)
 	}
@@ -152,7 +151,7 @@ func init() {
 	viper.SetDefault("driver", "sqlite")
 	viper.SetDefault("addr", "")
 	viper.SetDefault("port", 8081)
-	viper.SetDefault("metric", true)
+	viper.SetDefault("frontend", true)
 	viper.SetEnvPrefix("memos")
 }
 
@@ -165,17 +164,18 @@ func initConfig() {
 		return
 	}
 
-	println("---")
-	println("Server profile")
-	println("data:", profile.Data)
-	println("dsn:", profile.DSN)
-	println("addr:", profile.Addr)
-	println("port:", profile.Port)
-	println("mode:", profile.Mode)
-	println("driver:", profile.Driver)
-	println("version:", profile.Version)
-	println("metric:", profile.Metric)
-	println("---")
+	fmt.Printf(`---
+Server profile
+version: %s
+data: %s
+dsn: %s
+addr: %s
+port: %d
+mode: %s
+driver: %s
+frontend: %t
+---
+`, profile.Version, profile.Data, profile.DSN, profile.Addr, profile.Port, profile.Mode, profile.Driver, profile.Frontend)
 }
 
 func printGreetings() {
@@ -185,11 +185,12 @@ func printGreetings() {
 	} else {
 		fmt.Printf("Version %s has been started on address '%s' and port %d\n", profile.Version, profile.Addr, profile.Port)
 	}
-	println("---")
-	println("See more in:")
-	fmt.Printf("👉Website: %s\n", "https://usememos.com")
-	fmt.Printf("👉GitHub: %s\n", "https://github.com/usememos/memos")
-	println("---")
+	fmt.Printf(`---
+See more in:
+👉Website: %s
+👉GitHub: %s
+---
+`, "https://usememos.com", "https://github.com/usememos/memos")
 }
 
 func main() {

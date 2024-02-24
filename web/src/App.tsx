@@ -1,22 +1,26 @@
 import { useColorScheme } from "@mui/joy";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import storage from "./helpers/storage";
 import { getSystemColorScheme } from "./helpers/utils";
 import useNavigateTo from "./hooks/useNavigateTo";
 import { useGlobalStore } from "./store/module";
-import { useUserStore } from "./store/v1";
+import { useUserStore, useWorkspaceSettingStore } from "./store/v1";
+import { WorkspaceGeneralSetting, WorkspaceSettingKey } from "./types/proto/store/workspace_setting";
 
 const App = () => {
   const { i18n } = useTranslation();
   const navigateTo = useNavigateTo();
   const { mode, setMode } = useColorScheme();
   const globalStore = useGlobalStore();
+  const workspaceSettingStore = useWorkspaceSettingStore();
   const userStore = useUserStore();
-  const [loading, setLoading] = useState(true);
   const { appearance, locale, systemStatus } = globalStore.state;
   const userSetting = userStore.userSetting;
+  const workspaceGeneralSetting =
+    workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.WORKSPACE_SETTING_GENERAL).generalSetting ||
+    WorkspaceGeneralSetting.fromPartial({});
 
   // Redirect to sign up page if no host.
   useEffect(() => {
@@ -24,18 +28,6 @@ const App = () => {
       navigateTo("/auth/signup");
     }
   }, [systemStatus.host]);
-
-  useEffect(() => {
-    const initialState = async () => {
-      try {
-        await userStore.fetchCurrentUser();
-      } catch (error) {
-        // Do nothing.
-      }
-    };
-
-    Promise.all([initialState()]).then(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -58,21 +50,21 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (systemStatus.additionalStyle) {
+    if (workspaceGeneralSetting.additionalStyle) {
       const styleEl = document.createElement("style");
-      styleEl.innerHTML = systemStatus.additionalStyle;
+      styleEl.innerHTML = workspaceGeneralSetting.additionalStyle;
       styleEl.setAttribute("type", "text/css");
       document.body.insertAdjacentElement("beforeend", styleEl);
     }
-  }, [systemStatus.additionalStyle]);
+  }, [workspaceGeneralSetting.additionalStyle]);
 
   useEffect(() => {
-    if (systemStatus.additionalScript) {
+    if (workspaceGeneralSetting.additionalScript) {
       const scriptEl = document.createElement("script");
-      scriptEl.innerHTML = systemStatus.additionalScript;
+      scriptEl.innerHTML = workspaceGeneralSetting.additionalScript;
       document.head.appendChild(scriptEl);
     }
-  }, [systemStatus.additionalScript]);
+  }, [workspaceGeneralSetting.additionalScript]);
 
   // Dynamic update metadata with customized profile.
   useEffect(() => {
@@ -126,7 +118,7 @@ const App = () => {
     }
   }, [mode]);
 
-  return loading ? null : <Outlet />;
+  return <Outlet />;
 };
 
 export default App;
