@@ -198,7 +198,7 @@ strictSetInference = true
 # Black Code Formatter Configuration
 [tool.black]
 line-length = 96
-target-version = ['py311']
+target-version = ['py310']
 include = '\.pyi?$'
 # If `exclude` is not set, Black will automatically ignore files and directories in existing .gitignore files.
 # Use `extend-exclude` to add additional files and directories to those found in .gitignore files.
