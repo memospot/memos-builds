@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -12,10 +13,10 @@ import (
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/pkg/errors"
 
-	apiv1 "github.com/usememos/memos/api/v1"
 	"github.com/usememos/memos/plugin/telegram"
 	"github.com/usememos/memos/plugin/webhook"
 	storepb "github.com/usememos/memos/proto/gen/store"
+	apiv1 "github.com/usememos/memos/server/route/api/v1"
 	"github.com/usememos/memos/store"
 )
 
@@ -128,6 +129,37 @@ func (t *TelegramHandler) CallbackQueryHandle(ctx context.Context, bot *telegram
 	n, err := fmt.Sscanf(callbackQuery.Data, "%s %d", &visibility, &memoID)
 	if err != nil || n != 2 {
 		return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Failed to parse callbackQuery.Data %s", callbackQuery.Data))
+	}
+
+	memo, err := t.store.GetMemo(ctx, &store.FindMemo{
+		ID: &memoID,
+	})
+	if err != nil {
+		return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Failed to call FindMemo %s", err))
+	}
+	if memo == nil {
+		_, err = bot.EditMessage(ctx, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID, fmt.Sprintf("Memo %d not found", memoID), nil)
+		if err != nil {
+			return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Failed to EditMessage %s", err))
+		}
+		return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Memo %d not found, possibly deleted elsewhere", memoID))
+	}
+
+	var disablePublicMemo bool
+	setting, err := t.store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
+		Name: apiv1.SystemSettingDisablePublicMemosName.String(),
+	})
+	if err != nil {
+		return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Failed to get workspace setting %s", err))
+	}
+
+	err = json.Unmarshal([]byte(setting.Value), &disablePublicMemo)
+	if err != nil {
+		return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Failed to get workspace setting %s", err))
+	}
+
+	if disablePublicMemo && visibility == store.Public {
+		return bot.AnswerCallbackQuery(ctx, callbackQuery.ID, fmt.Sprintf("Failed to changing Memo %d to %s\n(workspace disallowed public memo)", memoID, visibility))
 	}
 
 	update := store.UpdateMemo{

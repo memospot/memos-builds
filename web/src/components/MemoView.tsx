@@ -42,9 +42,13 @@ const MemoView: React.FC<Props> = (props: Props) => {
   const [displayTime, setDisplayTime] = useState<string>(getRelativeTimeString(getTimeStampByDate(memo.displayTime)));
   const [creator, setCreator] = useState(userStore.getUserByUsername(extractUsernameFromName(memo.creator)));
   const memoContainerRef = useRef<HTMLDivElement>(null);
-  const referenceRelations = memo.relations.filter((relation) => relation.type === MemoRelation_Type.REFERENCE);
+  const referencedMemos = memo.relations.filter((relation) => relation.type === MemoRelation_Type.REFERENCE);
+  const commentAmount = memo.relations.filter(
+    (relation) => relation.type === MemoRelation_Type.COMMENT && relation.relatedMemoId === memo.id,
+  ).length;
   const readonly = memo.creator !== user?.name;
 
+  // Initial related data: creator.
   useEffect(() => {
     (async () => {
       const user = await userStore.getOrFetchUserByUsername(extractUsernameFromName(memo.creator));
@@ -124,17 +128,28 @@ const MemoView: React.FC<Props> = (props: Props) => {
             </>
           )}
         </div>
-        <div className="flex flex-row justify-end items-center select-none">
-          <div className="w-auto invisible group-hover:visible flex flex-row justify-between items-center">
+        <div className="flex flex-row justify-end items-center select-none gap-1">
+          <div className="w-auto invisible group-hover:visible flex flex-row justify-between items-center gap-1">
             {props.showVisibility && memo.visibility !== Visibility.PRIVATE && (
               <Tooltip title={t(`memo.visibility.${convertVisibilityToString(memo.visibility).toLowerCase()}` as any)} placement="top">
-                <span className="h-7 w-7 flex justify-center items-center hover:opacity-70">
+                <span className="flex justify-center items-center hover:opacity-70">
                   <VisibilityIcon visibility={memo.visibility} />
                 </span>
               </Tooltip>
             )}
             {currentUser && <ReactionSelector className="border-none" memo={memo} />}
           </div>
+          <Link
+            className={classNames(
+              "flex flex-row justify-start items-center hover:opacity-70",
+              commentAmount === 0 && "invisible group-hover:visible",
+            )}
+            to={`/m/${memo.name}#comments`}
+            unstable_viewTransition
+          >
+            <Icon.MessageCircleMore className="w-4 h-4 mx-auto text-gray-500 dark:text-gray-400" />
+            {commentAmount > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{commentAmount}</span>}
+          </Link>
           {!readonly && <MemoActionMenu memo={memo} hiddenActions={props.showPinned ? [] : ["pin"]} />}
         </div>
       </div>
@@ -144,9 +159,10 @@ const MemoView: React.FC<Props> = (props: Props) => {
         content={memo.content}
         readonly={readonly}
         onClick={handleMemoContentClick}
+        compact={true}
       />
       <MemoResourceListView resources={memo.resources} />
-      <MemoRelationListView memo={memo} relations={referenceRelations} />
+      <MemoRelationListView memo={memo} relations={referencedMemos} />
       <MemoReactionistView memo={memo} reactions={memo.reactions} />
     </div>
   );

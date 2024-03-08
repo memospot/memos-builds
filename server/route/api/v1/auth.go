@@ -13,11 +13,11 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/usememos/memos/api/auth"
 	"github.com/usememos/memos/internal/util"
 	"github.com/usememos/memos/plugin/idp"
 	"github.com/usememos/memos/plugin/idp/oauth2"
 	storepb "github.com/usememos/memos/proto/gen/store"
+	"github.com/usememos/memos/server/route/api/auth"
 	"github.com/usememos/memos/store"
 )
 
@@ -63,9 +63,6 @@ func (s *APIV1Service) SignIn(c echo.Context) error {
 	workspaceGeneralSetting, err := s.Store.GetWorkspaceGeneralSetting(ctx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting").SetInternal(err)
-	}
-	if workspaceGeneralSetting.DisallowSignup {
-		return echo.NewHTTPError(http.StatusUnauthorized, "signup is disabled").SetInternal(err)
 	}
 	if workspaceGeneralSetting.DisallowPasswordLogin {
 		return echo.NewHTTPError(http.StatusUnauthorized, "password login is deactivated").SetInternal(err)
