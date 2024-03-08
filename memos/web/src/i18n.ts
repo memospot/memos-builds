@@ -1,9 +1,8 @@
-import i18n, { FallbackLng, FallbackLngObjList } from "i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
-import toast from "react-hot-toast";
+import i18n, { BackendModule, FallbackLng, FallbackLngObjList } from "i18next";
 import { initReactI18next } from "react-i18next";
+import { findNearestMatchedLanguage } from "./utils/i18n";
 
-export const availableLocales = [
+export const locales = [
   "ar",
   "de",
   "en",
@@ -35,8 +34,23 @@ const fallbacks = {
   zh: ["zh-Hans", "en"],
 } as FallbackLngObjList;
 
+const LazyImportPlugin: BackendModule = {
+  type: "backend",
+  init: function () {},
+  read: function (language, _, callback) {
+    const matchedLanguage = findNearestMatchedLanguage(language);
+    import(`./locales/${matchedLanguage}.json`)
+      .then((translation: any) => {
+        callback(null, translation);
+      })
+      .catch(() => {
+        // Fallback to English.
+      });
+  },
+};
+
 i18n
-  .use(LanguageDetector)
+  .use(LazyImportPlugin)
   .use(initReactI18next)
   .init({
     detection: {
@@ -48,15 +62,5 @@ i18n
     } as FallbackLng,
   });
 
-for (const locale of availableLocales) {
-  import(`./locales/${locale}.json`)
-    .then((translation) => {
-      i18n.addResourceBundle(locale, "translation", translation.default, true, true);
-    })
-    .catch((err) => {
-      toast.error(`Failed to load locale "${locale}".\n${err}`, { duration: 5000 });
-    });
-}
-
 export default i18n;
-export type TLocale = (typeof availableLocales)[number];
+export type TLocale = (typeof locales)[number];

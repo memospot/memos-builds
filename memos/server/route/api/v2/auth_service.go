@@ -14,11 +14,11 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/usememos/memos/api/auth"
 	"github.com/usememos/memos/internal/util"
 	"github.com/usememos/memos/plugin/idp"
 	"github.com/usememos/memos/plugin/idp/oauth2"
 	apiv2pb "github.com/usememos/memos/proto/gen/api/v2"
+	"github.com/usememos/memos/server/route/api/auth"
 	"github.com/usememos/memos/store"
 )
 
@@ -237,7 +237,7 @@ func (s *APIV2Service) clearAccessTokenCookie(ctx context.Context) error {
 	return nil
 }
 
-func (s *APIV2Service) buildAccessTokenCookie(ctx context.Context, accessToken string, expireTime time.Time) (string, error) {
+func (*APIV2Service) buildAccessTokenCookie(ctx context.Context, accessToken string, expireTime time.Time) (string, error) {
 	attrs := []string{
 		fmt.Sprintf("%s=%s", auth.AccessTokenCookieName, accessToken),
 		"Path=/",
@@ -248,11 +248,17 @@ func (s *APIV2Service) buildAccessTokenCookie(ctx context.Context, accessToken s
 	} else {
 		attrs = append(attrs, "Expires="+expireTime.Format(time.RFC1123))
 	}
-	workspaceGeneralSetting, err := s.Store.GetWorkspaceGeneralSetting(ctx)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get workspace setting")
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", errors.New("failed to get metadata from context")
 	}
-	if strings.HasPrefix(workspaceGeneralSetting.InstanceUrl, "https://") {
+	var origin string
+	for _, v := range md.Get("origin") {
+		origin = v
+	}
+	isHTTPS := strings.HasPrefix(origin, "https://")
+	if isHTTPS {
 		attrs = append(attrs, "SameSite=None")
 		attrs = append(attrs, "Secure")
 	} else {

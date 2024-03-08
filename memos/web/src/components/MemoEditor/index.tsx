@@ -6,6 +6,7 @@ import useLocalStorage from "react-use/lib/useLocalStorage";
 import { memoServiceClient } from "@/grpcweb";
 import { TAB_SPACE_WIDTH, UNKNOWN_ID } from "@/helpers/consts";
 import { isValidUrl } from "@/helpers/utils";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import { useGlobalStore, useResourceStore, useTagStore } from "@/store/module";
 import { useMemoStore, useUserStore } from "@/store/v1";
 import { MemoRelation, MemoRelation_Type } from "@/types/proto/api/v2/memo_relation_service";
@@ -44,14 +45,13 @@ interface State {
   relationList: MemoRelation[];
   isUploadingResource: boolean;
   isRequesting: boolean;
+  isComposing: boolean;
 }
 
 const MemoEditor = (props: Props) => {
   const { className, editorClassName, cacheKey, memoId, parentMemoId, autoFocus, onConfirm } = props;
   const { i18n } = useTranslation();
   const t = useTranslate();
-  const contentCacheKey = `memo-editor-${cacheKey}`;
-  const [contentCache, setContentCache] = useLocalStorage<string>(contentCacheKey, "");
   const {
     state: { systemStatus },
   } = useGlobalStore();
@@ -59,16 +59,20 @@ const MemoEditor = (props: Props) => {
   const memoStore = useMemoStore();
   const resourceStore = useResourceStore();
   const tagStore = useTagStore();
+  const currentUser = useCurrentUser();
   const [state, setState] = useState<State>({
     memoVisibility: Visibility.PRIVATE,
     resourceList: [],
     relationList: props.relationList ?? [],
     isUploadingResource: false,
     isRequesting: false,
+    isComposing: false,
   });
   const [hasContent, setHasContent] = useState<boolean>(false);
   const editorRef = useRef<EditorRefActions>(null);
   const userSetting = userStore.userSetting as UserSetting;
+  const contentCacheKey = `${currentUser.name}-${cacheKey || ""}`;
+  const [contentCache, setContentCache] = useLocalStorage<string>(contentCacheKey, "");
   const referenceRelations = memoId
     ? state.relationList.filter(
         (relation) => relation.memoId === memoId && relation.relatedMemoId !== memoId && relation.type === MemoRelation_Type.REFERENCE,
@@ -115,6 +119,20 @@ const MemoEditor = (props: Props) => {
     }
   }, [memoId]);
 
+  const handleCompositionStart = () => {
+    setState((prevState) => ({
+      ...prevState,
+      isComposing: true,
+    }));
+  };
+
+  const handleCompositionEnd = () => {
+    setState((prevState) => ({
+      ...prevState,
+      isComposing: false,
+    }));
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (!editorRef.current) {
       return;
@@ -129,7 +147,7 @@ const MemoEditor = (props: Props) => {
 
       handleEditorKeydownWithMarkdownShortcuts(event, editorRef.current);
     }
-    if (event.key === "Tab") {
+    if (event.key === "Tab" && !state.isComposing) {
       event.preventDefault();
       const tabSpace = " ".repeat(TAB_SPACE_WIDTH);
       const cursorPosition = editorRef.current.getCursorPosition();
@@ -380,6 +398,8 @@ const MemoEditor = (props: Props) => {
         onKeyDown={handleKeyDown}
         onDrop={handleDropEvent}
         onFocus={handleEditorFocus}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
       >
         <Editor ref={editorRef} {...editorConfig} />
         <ResourceListView resourceList={state.resourceList} setResourceList={handleSetResourceList} />

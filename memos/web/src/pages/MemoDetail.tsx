@@ -155,7 +155,7 @@ const MemoDetail = () => {
           <MemoContent key={`${memo.id}-${memo.updateTime}`} memoId={memo.id} content={memo.content} readonly={readonly} />
           <MemoResourceListView resources={memo.resources} />
           <MemoRelationListView memo={memo} relations={referenceRelations} />
-          <div className="w-full mt-3 flex flex-row justify-between items-center gap-2">
+          <div className="w-full mt-3 select-none flex flex-row justify-between items-center gap-2">
             <div className="flex flex-row justify-start items-center">
               {!readonly && (
                 <Select
@@ -197,6 +197,7 @@ const MemoDetail = () => {
               </Tooltip>
               {!readonly && (
                 <MemoActionMenu
+                  className="ml-1"
                   memo={memo}
                   hiddenActions={["pin", "edit", "share"]}
                   onArchived={handleMemoArchived}
@@ -207,6 +208,9 @@ const MemoDetail = () => {
           </div>
         </div>
         <div className="pt-8 pb-16 w-full">
+          <h2 id="comments" className="sr-only">
+            Comments
+          </h2>
           <div className="relative mx-auto flex-grow w-full min-h-full flex flex-col justify-start items-start gap-y-1">
             {comments.length === 0 ? (
               <div className="w-full flex flex-col justify-center items-center py-6 mb-2">
