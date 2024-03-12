@@ -87,7 +87,6 @@ Now, in the same directory, create a service configuration file named `memos-ser
     <env name="MEMOS_ADDR" value="" />
     <env name="MEMOS_PORT" value="5230" />
     <env name="MEMOS_DATA" value="%ProgramData%\memos" />
-    <env name="MEMOS_METRIC" value="true" />
     <delayedAutoStart>true</delayedAutoStart>
     <log mode="none" />
 </service>
@@ -138,20 +137,18 @@ MEMOS_ADDR=""
 # data directory: database and asset uploads
 MEMOS_DATA="/opt/memos"
 
-# database driver: sqlite, mysql
+# database driver: [sqlite], mysql, postgres
 MEMOS_DRIVER="sqlite"
 
 # database connection string: leave empty for sqlite
-# see: https://www.usememos.com/docs/advanced-settings/mysql
-MEMOS_DSN="dbuser:dbpass@tcp(dbhost)/dbname"
-
-# allow metric collection
-MEMOS_METRIC="true"
+# see: https://www.usememos.com/docs/advanced-settings/database
+MEMOS_DSN="postgresql://user:password@postgres_addr:5432/memos?sslmode=disable"
+MEMOS_DSN="user:password@tcp(mysql_addr)/memos"
 ```
 
-For all supported environment variables, see [cmd/memos.go](https://github.com/usememos/memos/blob/main/cmd/memos.go#L106). All bound flags in `init()` are also supported as environment variables, prefixed with `MEMOS_`.
+For all supported environment variables, see [cmd/memos.go](https://github.com/usememos/memos/blob/main/bin/memos/main.go#L107). All bound flags in `init()` are also supported as environment variables, prefixed with `MEMOS_`.
 
-To set-up Memos with MySQL, see [Memos MySQL Guide](https://www.usememos.com/docs/advanced-settings/mysql).
+To set-up Memos with MySQL, see [Memos Database Guide](https://www.usememos.com/docs/advanced-settings/database).
 
 ## Additional notes
 
