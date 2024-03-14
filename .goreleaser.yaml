@@ -42,6 +42,7 @@ builds:
         goarch: "386"
     flags: >-
       -trimpath
+      -tags=timetzdata
     ldflags: >-
       -s
       -w

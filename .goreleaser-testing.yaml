@@ -23,6 +23,7 @@ builds:
       - linux_s390x
     flags: >-
       -trimpath
+      -tags=timetzdata
     ldflags: >-
       -s
       -w
