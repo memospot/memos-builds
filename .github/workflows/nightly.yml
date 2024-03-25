@@ -74,7 +74,7 @@ jobs:
         run: python scripts/ci.py setup-env --nightly
 
       - name: Cache front-end build
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
           path: |
             build/frontend
@@ -164,7 +164,7 @@ jobs:
       ### /Front-end ###
 
       - name: Cache back-end build
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
           path: |
             build/backend
