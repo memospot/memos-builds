@@ -1,9 +1,10 @@
-import { Divider, Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
+import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
 import classNames from "classnames";
-import copy from "copy-to-clipboard";
 import toast from "react-hot-toast";
+import { useLocation } from "react-router-dom";
 import Icon from "@/components/Icon";
-import { useMemoStore } from "@/store/v1";
+import useNavigateTo from "@/hooks/useNavigateTo";
+import { extractMemoIdFromName, useMemoStore } from "@/store/v1";
 import { RowStatus } from "@/types/proto/api/v2/common";
 import { Memo } from "@/types/proto/api/v2/memo_service";
 import { useTranslate } from "@/utils/i18n";
@@ -15,21 +16,22 @@ interface Props {
   memo: Memo;
   className?: string;
   hiddenActions?: ("edit" | "archive" | "delete" | "share" | "pin")[];
-  onArchived?: () => void;
-  onDeleted?: () => void;
 }
 
 const MemoActionMenu = (props: Props) => {
   const { memo, hiddenActions } = props;
   const t = useTranslate();
+  const location = useLocation();
+  const navigateTo = useNavigateTo();
   const memoStore = useMemoStore();
+  const isInMemoDetailPage = location.pathname.startsWith(`/m/${memo.name}`);
 
   const handleTogglePinMemoBtnClick = async () => {
     try {
       if (memo.pinned) {
         await memoStore.updateMemo(
           {
-            id: memo.id,
+            name: memo.name,
             pinned: false,
           },
           ["pinned"],
@@ -37,7 +39,7 @@ const MemoActionMenu = (props: Props) => {
       } else {
         await memoStore.updateMemo(
           {
-            id: memo.id,
+            name: memo.name,
             pinned: true,
           },
           ["pinned"],
@@ -50,8 +52,8 @@ const MemoActionMenu = (props: Props) => {
 
   const handleEditMemoClick = () => {
     showMemoEditorDialog({
-      memoId: memo.id,
-      cacheKey: `${memo.id}-${memo.updateTime}`,
+      memoId: extractMemoIdFromName(memo.name),
+      cacheKey: `${memo.name}-${memo.updateTime}`,
     });
   };
 
@@ -59,7 +61,7 @@ const MemoActionMenu = (props: Props) => {
     try {
       await memoStore.updateMemo(
         {
-          id: memo.id,
+          name: memo.name,
           rowStatus: RowStatus.ARCHIVED,
         },
         ["row_status"],
@@ -67,9 +69,12 @@ const MemoActionMenu = (props: Props) => {
     } catch (error: any) {
       console.error(error);
       toast.error(error.response.data.message);
+      return;
     }
-    if (props.onArchived) {
-      props.onArchived();
+
+    toast.success("Archived successfully");
+    if (isInMemoDetailPage) {
+      navigateTo("/archived");
     }
   };
 
@@ -80,17 +85,13 @@ const MemoActionMenu = (props: Props) => {
       style: "danger",
       dialogName: "delete-memo-dialog",
       onConfirm: async () => {
-        await memoStore.deleteMemo(memo.id);
-        if (props.onDeleted) {
-          props.onDeleted();
+        await memoStore.deleteMemo(memo.name);
+        toast.success("Deleted successfully");
+        if (isInMemoDetailPage) {
+          navigateTo("/");
         }
       },
     });
-  };
-
-  const handleCopyMemoId = () => {
-    copy(memo.name);
-    toast.success("Copied to clipboard!");
   };
 
   return (
@@ -114,7 +115,7 @@ const MemoActionMenu = (props: Props) => {
           </MenuItem>
         )}
         {!hiddenActions?.includes("share") && (
-          <MenuItem onClick={() => showShareMemoDialog(memo.id)}>
+          <MenuItem onClick={() => showShareMemoDialog(extractMemoIdFromName(memo.name))}>
             <Icon.Share className="w-4 h-auto" />
             {t("common.share")}
           </MenuItem>
@@ -127,12 +128,6 @@ const MemoActionMenu = (props: Props) => {
           <Icon.Trash className="w-4 h-auto" />
           {t("common.delete")}
         </MenuItem>
-        <Divider className="!my-1" />
-        <div className="-mt-0.5 pl-2 pr-2 text-xs text-gray-400">
-          <div className="mt-1 font-mono max-w-20 cursor-pointer truncate" onClick={handleCopyMemoId}>
-            ID: {memo.name}
-          </div>
-        </div>
       </Menu>
     </Dropdown>
   );

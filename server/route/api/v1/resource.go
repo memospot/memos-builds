@@ -26,6 +26,7 @@ import (
 type Resource struct {
 	ID   int32  `json:"id"`
 	Name string `json:"name"`
+	UID  string `json:"uid"`
 
 	// Standard fields
 	CreatorID int32 `json:"creatorId"`
@@ -138,7 +139,7 @@ func (s *APIV1Service) CreateResource(c echo.Context) error {
 	}
 
 	create := &store.Resource{
-		ResourceName: shortuuid.New(),
+		UID:          shortuuid.New(),
 		CreatorID:    userID,
 		Filename:     request.Filename,
 		ExternalLink: request.ExternalLink,
@@ -220,11 +221,11 @@ func (s *APIV1Service) UploadResource(c echo.Context) error {
 	defer sourceFile.Close()
 
 	create := &store.Resource{
-		ResourceName: shortuuid.New(),
-		CreatorID:    userID,
-		Filename:     file.Filename,
-		Type:         file.Header.Get("Content-Type"),
-		Size:         file.Size,
+		UID:       shortuuid.New(),
+		CreatorID: userID,
+		Filename:  file.Filename,
+		Type:      file.Header.Get("Content-Type"),
+		Size:      file.Size,
 	}
 	err = SaveResourceBlob(ctx, s.Store, create, sourceFile)
 	if err != nil {
@@ -371,7 +372,8 @@ func replacePathTemplate(path, filename string) string {
 func convertResourceFromStore(resource *store.Resource) *Resource {
 	return &Resource{
 		ID:           resource.ID,
-		Name:         resource.ResourceName,
+		Name:         fmt.Sprintf("resources/%d", resource.ID),
+		UID:          resource.UID,
 		CreatorID:    resource.CreatorID,
 		CreatedTs:    resource.CreatedTs,
 		UpdatedTs:    resource.UpdatedTs,

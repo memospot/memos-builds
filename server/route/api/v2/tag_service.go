@@ -51,12 +51,12 @@ func (s *APIV2Service) BatchUpsertTag(ctx context.Context, request *apiv2pb.Batc
 }
 
 func (s *APIV2Service) ListTags(ctx context.Context, request *apiv2pb.ListTagsRequest) (*apiv2pb.ListTagsResponse, error) {
-	username, err := ExtractUsernameFromName(request.User)
+	userID, err := ExtractUserIDFromName(request.User)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid username: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
 	user, err := s.Store.GetUser(ctx, &store.FindUser{
-		Username: &username,
+		ID: &userID,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
@@ -83,12 +83,12 @@ func (s *APIV2Service) ListTags(ctx context.Context, request *apiv2pb.ListTagsRe
 }
 
 func (s *APIV2Service) RenameTag(ctx context.Context, request *apiv2pb.RenameTagRequest) (*apiv2pb.RenameTagResponse, error) {
-	username, err := ExtractUsernameFromName(request.User)
+	userID, err := ExtractUserIDFromName(request.User)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid username: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
 	user, err := s.Store.GetUser(ctx, &store.FindUser{
-		Username: &username,
+		ID: &userID,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
@@ -111,7 +111,7 @@ func (s *APIV2Service) RenameTag(ctx context.Context, request *apiv2pb.RenameTag
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to parse memo: %v", err)
 		}
-		traverseASTNodes(nodes, func(node ast.Node) {
+		TraverseASTNodes(nodes, func(node ast.Node) {
 			if tag, ok := node.(*ast.Tag); ok && tag.Content == request.OldName {
 				tag.Content = request.NewName
 			}
@@ -148,12 +148,12 @@ func (s *APIV2Service) RenameTag(ctx context.Context, request *apiv2pb.RenameTag
 }
 
 func (s *APIV2Service) DeleteTag(ctx context.Context, request *apiv2pb.DeleteTagRequest) (*apiv2pb.DeleteTagResponse, error) {
-	username, err := ExtractUsernameFromName(request.Tag.Creator)
+	userID, err := ExtractUserIDFromName(request.Tag.Creator)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid username: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
 	user, err := s.Store.GetUser(ctx, &store.FindUser{
-		Username: &username,
+		ID: &userID,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
@@ -172,12 +172,12 @@ func (s *APIV2Service) DeleteTag(ctx context.Context, request *apiv2pb.DeleteTag
 }
 
 func (s *APIV2Service) GetTagSuggestions(ctx context.Context, request *apiv2pb.GetTagSuggestionsRequest) (*apiv2pb.GetTagSuggestionsResponse, error) {
-	username, err := ExtractUsernameFromName(request.User)
+	userID, err := ExtractUserIDFromName(request.User)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid username: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
 	}
 	user, err := s.Store.GetUser(ctx, &store.FindUser{
-		Username: &username,
+		ID: &userID,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
@@ -215,7 +215,7 @@ func (s *APIV2Service) GetTagSuggestions(ctx context.Context, request *apiv2pb.G
 		}
 
 		// Dynamically upsert tags from memo content.
-		traverseASTNodes(nodes, func(node ast.Node) {
+		TraverseASTNodes(nodes, func(node ast.Node) {
 			if tagNode, ok := node.(*ast.Tag); ok {
 				tag := tagNode.Content
 				if !slices.Contains(tagNameList, tag) {
@@ -244,28 +244,28 @@ func (s *APIV2Service) convertTagFromStore(ctx context.Context, tag *store.Tag) 
 	}
 	return &apiv2pb.Tag{
 		Name:    tag.Name,
-		Creator: fmt.Sprintf("%s%s", UserNamePrefix, user.Username),
+		Creator: fmt.Sprintf("%s%d", UserNamePrefix, user.ID),
 	}, nil
 }
 
-func traverseASTNodes(nodes []ast.Node, fn func(ast.Node)) {
+func TraverseASTNodes(nodes []ast.Node, fn func(ast.Node)) {
 	for _, node := range nodes {
 		fn(node)
 		switch n := node.(type) {
 		case *ast.Paragraph:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.Heading:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.Blockquote:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.OrderedList:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.UnorderedList:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.TaskList:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.Bold:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		}
 	}
 }
