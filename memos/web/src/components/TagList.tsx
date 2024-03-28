@@ -9,6 +9,10 @@ import { showCommonDialog } from "./Dialog/CommonDialog";
 import Icon from "./Icon";
 import showRenameTagDialog from "./RenameTagDialog";
 
+interface KVObject<T = any> {
+  [key: string]: T;
+}
+
 interface Tag {
   key: string;
   text: string;
@@ -75,19 +79,23 @@ const TagList = () => {
   return (
     <div className="flex flex-col justify-start items-start w-full mt-3 px-1 h-auto shrink-0 flex-nowrap hide-scrollbar">
       <div className="flex flex-row justify-start items-center w-full">
-        <span className="text-sm leading-6 font-mono text-gray-400">{t("common.tags")}</span>
-        <button
-          onClick={() => showCreateTagDialog()}
-          className="flex flex-col justify-center items-center w-5 h-5 bg-gray-200 dark:bg-zinc-800 rounded ml-2 hover:shadow"
-        >
-          <Icon.Plus className="w-4 h-4 text-gray-400" />
-        </button>
+        <span className="text-sm leading-6 font-mono text-gray-400 select-none" onDoubleClick={() => showCreateTagDialog()}>
+          {t("common.tags")}
+        </span>
       </div>
-      <div className="flex flex-col justify-start items-start relative w-full h-auto flex-nowrap">
-        {tags.map((t, idx) => (
-          <TagItemContainer key={t.text + "-" + idx} tag={t} tagQuery={filter.tag} />
-        ))}
-      </div>
+      {tags.length > 0 ? (
+        <div className="flex flex-col justify-start items-start relative w-full h-auto flex-nowrap gap-2 mt-1">
+          {tags.map((t, idx) => (
+            <TagItemContainer key={t.text + "-" + idx} tag={t} tagQuery={filter.tag} />
+          ))}
+        </div>
+      ) : (
+        <div>
+          <p className="text-sm leading-snug italic text-gray-400 dark:text-gray-500">
+            You can create tags by inputting <code>`#tag`</code>.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
@@ -133,7 +141,7 @@ const TagItemContainer: React.FC<TagItemContainerProps> = (props: TagItemContain
 
   return (
     <>
-      <div className="relative group flex flex-row justify-between items-center w-full h-8 py-0 mt-px first:mt-1 rounded-lg text-base sm:text-sm cursor-pointer select-none shrink-0 hover:opacity-80">
+      <div className="relative flex flex-row justify-between items-center w-full leading-6 py-0 mt-px rounded-lg text-sm select-none shrink-0">
         <div
           className={`flex flex-row justify-start items-center truncate shrink leading-5 mr-1 text-gray-600 dark:text-gray-400 ${
             isActive && "!text-blue-600"
@@ -141,18 +149,23 @@ const TagItemContainer: React.FC<TagItemContainerProps> = (props: TagItemContain
         >
           <Dropdown>
             <MenuButton slots={{ root: "div" }}>
-              <div className="shrink-0">
-                <Icon.Hash className="w-4 h-auto shrink-0 opacity-60 mr-1" />
+              <div className="shrink-0 group">
+                <Icon.Hash className="group-hover:hidden w-4 h-auto shrink-0 opacity-60 mr-1" />
+                <Icon.MoreVertical className="hidden group-hover:block w-4 h-auto shrink-0 opacity-60 mr-1" />
               </div>
             </MenuButton>
-            <Menu size="sm" placement="bottom-start">
-              <MenuItem onClick={() => showRenameTagDialog({ tag: tag.text })}>{t("common.rename")}</MenuItem>
+            <Menu size="sm" placement="bottom">
+              <MenuItem onClick={() => showRenameTagDialog({ tag: tag.text })}>
+                <Icon.Edit3 className="w-4 h-auto" />
+                {t("common.rename")}
+              </MenuItem>
               <MenuItem color="danger" onClick={handleDeleteTag}>
+                <Icon.Trash className="w-4 h-auto" />
                 {t("common.delete")}
               </MenuItem>
             </Menu>
           </Dropdown>
-          <span className="truncate" onClick={handleTagClick}>
+          <span className="truncate cursor-pointer hover:opacity-80" onClick={handleTagClick}>
             {tag.key}
           </span>
         </div>
@@ -162,7 +175,7 @@ const TagItemContainer: React.FC<TagItemContainerProps> = (props: TagItemContain
               className={`flex flex-row justify-center items-center w-6 h-6 shrink-0 transition-all rotate-0 ${showSubTags && "rotate-90"}`}
               onClick={handleToggleBtnClick}
             >
-              <Icon.ChevronRight className="w-5 h-5 opacity-40 dark:text-gray-400" />
+              <Icon.ChevronRight className="w-5 h-5 cursor-pointer opacity-40 dark:text-gray-400" />
             </span>
           ) : null}
         </div>

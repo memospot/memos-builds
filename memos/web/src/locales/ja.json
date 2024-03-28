@@ -32,6 +32,7 @@
     "create": "作成する",
     "database": "データベース",
     "delete": "削除する",
+    "description": "説明",
     "edit": "編集する",
     "email": "Eメール",
     "explore": "カレンダービュー",
@@ -45,7 +46,7 @@
     "link": "リンク",
     "mark": "マーク",
     "name": "名前",
-    "new": "New",
+    "new": "新しく追加",
     "nickname": "ニックネーム",
     "null": "null",
     "or": "もしくは",
@@ -101,14 +102,6 @@
     "text": "コードをあなたのサイズにコピーペーストすればメモを埋め込めます",
     "title": "メモを埋め込む"
   },
-  "heatmap": {
-    "day": "日",
-    "days": "日間",
-    "memo-in": "{{period}} 個のメモを作成",
-    "memo-on": "{{date}} に {{amount}} 個のメモを作成",
-    "memos-in": "{{period}} 個のメモを作成",
-    "memos-on": "{{date}} に {{amount}} 個のメモを作成"
-  },
   "inbox": {
     "memo-comment": "{{user}} があなたの {{memo}} にコメントしました。",
     "version-update": "新しいバージョン {{version}} が利用可能です!"
@@ -125,9 +118,10 @@
     "delete-memo": "メモを削除する",
     "embed": "埋め込む",
     "fetch-more": "クリックしてさらに取得する",
-    "fetching-data": "取得中...",
+    "fetching-data": "取得中…",
     "no-archived-memos": "アーカイブされたメモはありません。",
     "search-placeholder": "メモを検索",
+    "show-more": "続きを見る",
     "view-detail": "詳細を見る",
     "visibility": {
       "disabled": "公開メモは無効化されています。",
@@ -200,7 +194,7 @@
     "fetching-data": "データを取得中...",
     "file-drag-drop-prompt": "アップロードするファイルをドラックアンドドロップする",
     "linked-amount": "Linked amount",
-    "no-files-selected": "ファイルが選択されていません！",
+    "no-files-selected": "ファイルが選択されていません",
     "no-resources": "ファイルはありません。",
     "no-unused-resources": "未使用のファイルはありません。",
     "reset-link": "リンクをリセット",
@@ -246,20 +240,11 @@
     "my-account": "アカウント設定",
     "preference": "設定",
     "preference-section": {
-      "auto-collapse": "自動で折りたたむ",
-      "created_ts": "投稿時間",
-      "daily-review-time-offset": "今日のまとめの設定時差",
       "default-memo-sort-option": "メモの表示時間",
       "default-memo-visibility": "公開範囲の初期設定",
-      "default-resource-visibility": "ファイルの保存先の初期設定",
-      "editor-font-style": "フォント設定",
-      "enable-double-click": "ダブルクリックで編集を有効化",
-      "enable-folding-memo": "折りたたみメモの有効化",
-      "mobile-editor-style": "モバイルエディターの設定",
       "telegram-user-id": "TelegramのUserid",
       "telegram-user-id-placeholder": "文章をTelegram Botに送信して取得します。",
-      "theme": "テーマ",
-      "updated_ts": "編集された時間"
+      "theme": "テーマ"
     },
     "sso": "SSO",
     "sso-section": {

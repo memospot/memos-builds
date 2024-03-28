@@ -57,6 +57,7 @@ type User struct {
 	Nickname     string
 	PasswordHash string
 	AvatarURL    string
+	Description  string
 }
 
 type UpdateUser struct {
@@ -71,6 +72,7 @@ type UpdateUser struct {
 	Password     *string
 	AvatarURL    *string
 	PasswordHash *string
+	Description  *string
 }
 
 type FindUser struct {
@@ -80,6 +82,12 @@ type FindUser struct {
 	Role      *Role
 	Email     *string
 	Nickname  *string
+
+	// Random and limit are used in list users.
+	// Whether to return random users.
+	Random bool
+	// The maximum number of users to return.
+	Limit *int
 }
 
 type DeleteUser struct {

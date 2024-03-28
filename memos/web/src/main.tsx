@@ -1,3 +1,4 @@
+import "@github/relative-time-element";
 import { CssVarsProvider } from "@mui/joy";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "react-hot-toast";
@@ -28,7 +29,7 @@ import theme from "./theme";
         <CommonContextProvider>
           <RouterProvider router={router} />
         </CommonContextProvider>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" toastOptions={{ className: "dark:bg-zinc-700 dark:text-gray-300" }} />
       </CssVarsProvider>
     </Provider>,
   );
