@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "@/components/Icon";
 import MemoResourceListView from "@/components/MemoResourceListView";
 import useLoading from "@/hooks/useLoading";
-import { extractMemoIdFromName, useMemoStore } from "@/store/v1";
+import { useMemoStore } from "@/store/v1";
 import MemoContent from "..";
 import { RendererContext } from "../types";
 import Error from "./Error";
@@ -30,7 +30,7 @@ const EmbeddedMemo = ({ resourceId, params: paramsStr }: Props) => {
   if (!memo) {
     return <Error message={`Memo not found: ${resourceId}`} />;
   }
-  if (extractMemoIdFromName(memo.name) === context.memoId || context.embeddedMemos.has(resourceName)) {
+  if (memo.name === context.memoName || context.embeddedMemos.has(resourceName)) {
     return <Error message={`Nested Rendering Error: ![[${resourceName}]]`} />;
   }
 
@@ -43,7 +43,7 @@ const EmbeddedMemo = ({ resourceId, params: paramsStr }: Props) => {
       <div className="w-full">
         <MemoContent
           key={`${memo.name}-${memo.updateTime}`}
-          memoId={extractMemoIdFromName(memo.name)}
+          memoName={memo.name}
           content={memo.content}
           embeddedMemos={context.embeddedMemos}
         />
@@ -58,13 +58,13 @@ const EmbeddedMemo = ({ resourceId, params: paramsStr }: Props) => {
         <div className="text-sm leading-6 text-gray-400 select-none">
           <relative-time datetime={memo.displayTime?.toISOString()} tense="past"></relative-time>
         </div>
-        <Link className="hover:opacity-80" to={`/m/${memo.name}`} unstable_viewTransition>
+        <Link className="hover:opacity-80" to={`/m/${memo.uid}`} unstable_viewTransition>
           <Icon.ArrowUpRight className="w-5 h-auto opacity-80 text-gray-400" />
         </Link>
       </div>
       <MemoContent
         key={`${memo.name}-${memo.updateTime}`}
-        memoId={extractMemoIdFromName(memo.name)}
+        memoName={memo.name}
         content={memo.content}
         embeddedMemos={context.embeddedMemos}
       />
