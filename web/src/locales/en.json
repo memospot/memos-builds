@@ -62,9 +62,7 @@
     "search": "Search",
     "role": "Role",
     "description": "Description",
-    "statistics": "Statistics",
-    "days": "Days",
-    "memos": "Memos"
+    "statistics": "Statistics"
   },
   "router": {
     "go-to-home": "Go to Home",
@@ -312,6 +310,7 @@
     "no-data": "No data found.",
     "memos-ready": "all memos are ready",
     "resource-ready": "all resource are ready",
+    "archived-successfully": "Archived successfully",
     "restored-successfully": "Restored successfully",
     "memo-updated-datetime": "Memo created datetime changed.",
     "invalid-created-datetime": "Invalid created datetime.",

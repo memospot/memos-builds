@@ -31,7 +31,6 @@
     "confirm": "確認",
     "create": "建立",
     "database": "資料庫",
-    "days": "天",
     "delete": "刪除",
     "description": "說明",
     "edit": "編輯",
@@ -46,7 +45,6 @@
     "learn-more": "了解",
     "link": "連結",
     "mark": "Mark",
-    "memos": "備忘錄",
     "name": "名稱",
     "new": "新增",
     "nickname": "暱稱",
@@ -134,6 +132,7 @@
     }
   },
   "message": {
+    "archived-successfully": "封存成功",
     "change-memo-created-time": "變更 Memo 建立時間",
     "change-resource-filename": "變更資源檔名",
     "click-to-save-the-image": "點選以儲存圖片",

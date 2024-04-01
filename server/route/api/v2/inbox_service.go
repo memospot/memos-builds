@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -31,11 +30,7 @@ func (s *APIV2Service) ListInboxes(ctx context.Context, _ *apiv2pb.ListInboxesRe
 		Inboxes: []*apiv2pb.Inbox{},
 	}
 	for _, inbox := range inboxes {
-		inboxMessage, err := s.convertInboxFromStore(ctx, inbox)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to convert inbox from store: %v", err)
-		}
-		response.Inboxes = append(response.Inboxes, inboxMessage)
+		response.Inboxes = append(response.Inboxes, convertInboxFromStore(inbox))
 	}
 
 	return response, nil
@@ -67,12 +62,8 @@ func (s *APIV2Service) UpdateInbox(ctx context.Context, request *apiv2pb.UpdateI
 		return nil, status.Errorf(codes.Internal, "failed to update inbox: %v", err)
 	}
 
-	inboxMessage, err := s.convertInboxFromStore(ctx, inbox)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert inbox from store: %v", err)
-	}
 	return &apiv2pb.UpdateInboxResponse{
-		Inbox: inboxMessage,
+		Inbox: convertInboxFromStore(inbox),
 	}, nil
 }
 
@@ -90,29 +81,16 @@ func (s *APIV2Service) DeleteInbox(ctx context.Context, request *apiv2pb.DeleteI
 	return &apiv2pb.DeleteInboxResponse{}, nil
 }
 
-func (s *APIV2Service) convertInboxFromStore(ctx context.Context, inbox *store.Inbox) (*apiv2pb.Inbox, error) {
-	sender, err := s.Store.GetUser(ctx, &store.FindUser{
-		ID: &inbox.SenderID,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get sender")
-	}
-	receiver, err := s.Store.GetUser(ctx, &store.FindUser{
-		ID: &inbox.ReceiverID,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get receiver")
-	}
-
+func convertInboxFromStore(inbox *store.Inbox) *apiv2pb.Inbox {
 	return &apiv2pb.Inbox{
-		Name:       fmt.Sprintf("inboxes/%d", inbox.ID),
-		Sender:     fmt.Sprintf("users/%s", sender.Username),
-		Receiver:   fmt.Sprintf("users/%s", receiver.Username),
+		Name:       fmt.Sprintf("%s%d", InboxNamePrefix, inbox.ID),
+		Sender:     fmt.Sprintf("%s%d", UserNamePrefix, inbox.SenderID),
+		Receiver:   fmt.Sprintf("%s%d", UserNamePrefix, inbox.ReceiverID),
 		Status:     convertInboxStatusFromStore(inbox.Status),
 		CreateTime: timestamppb.New(time.Unix(inbox.CreatedTs, 0)),
 		Type:       apiv2pb.Inbox_Type(inbox.Message.Type),
 		ActivityId: inbox.Message.ActivityId,
-	}, nil
+	}
 }
 
 func convertInboxStatusFromStore(status store.InboxStatus) apiv2pb.Inbox_Status {

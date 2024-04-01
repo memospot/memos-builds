@@ -2,17 +2,17 @@ import { IconButton } from "@mui/joy";
 import { useEffect } from "react";
 import { useGlobalStore, useTagStore } from "@/store/module";
 import { MemoRelation } from "@/types/proto/api/v2/memo_relation_service";
-import MemoEditorV1 from ".";
+import MemoEditor from ".";
 import { generateDialog } from "../Dialog";
 import Icon from "../Icon";
 
 interface Props extends DialogProps {
-  memoId?: number;
+  memoName?: string;
   cacheKey?: string;
   relationList?: MemoRelation[];
 }
 
-const MemoEditorDialog: React.FC<Props> = ({ memoId, cacheKey, relationList, destroy }: Props) => {
+const MemoEditorDialog: React.FC<Props> = ({ memoName: memo, cacheKey, relationList, destroy }: Props) => {
   const globalStore = useGlobalStore();
   const tagStore = useTagStore();
   const { systemStatus } = globalStore.state;
@@ -29,7 +29,7 @@ const MemoEditorDialog: React.FC<Props> = ({ memoId, cacheKey, relationList, des
     <>
       <div className="w-full flex flex-row justify-between items-center mb-2">
         <div className="flex flex-row justify-start items-center">
-          <img className="w-6 h-auto rounded-full shadow" src={systemStatus.customizedProfile.logoUrl} alt="" />
+          <img className="w-6 h-auto rounded-full shadow" src={systemStatus.customizedProfile.logoUrl || "/full-logo.webp"} alt="" />
           <p className="ml-1 text-lg opacity-80 dark:text-gray-300">{systemStatus.customizedProfile.name}</p>
         </div>
         <IconButton size="sm" onClick={handleCloseBtnClick}>
@@ -37,10 +37,10 @@ const MemoEditorDialog: React.FC<Props> = ({ memoId, cacheKey, relationList, des
         </IconButton>
       </div>
       <div className="flex flex-col justify-start items-start max-w-full w-[36rem]">
-        <MemoEditorV1
+        <MemoEditor
           className="border-none !p-0 -mb-2"
-          cacheKey={`memo-editor-${cacheKey || memoId}`}
-          memoId={memoId}
+          cacheKey={`memo-editor-${cacheKey || memo}`}
+          memoName={memo}
           relationList={relationList}
           onConfirm={handleCloseBtnClick}
           autoFocus
@@ -50,7 +50,7 @@ const MemoEditorDialog: React.FC<Props> = ({ memoId, cacheKey, relationList, des
   );
 };
 
-export default function showMemoEditorDialog(props: Pick<Props, "memoId" | "cacheKey" | "relationList"> = {}): void {
+export default function showMemoEditorDialog(props: Pick<Props, "memoName" | "cacheKey" | "relationList"> = {}): void {
   generateDialog(
     {
       className: "memo-editor-dialog",

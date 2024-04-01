@@ -14,7 +14,7 @@ import { getTimeStampByDate } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useFilterWithUrlParams from "@/hooks/useFilterWithUrlParams";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
-import { extractMemoIdFromName, useMemoList, useMemoStore } from "@/store/v1";
+import { useMemoList, useMemoStore } from "@/store/v1";
 import { RowStatus } from "@/types/proto/api/v2/common";
 import { useTranslate } from "@/utils/i18n";
 
@@ -63,8 +63,8 @@ const Home = () => {
   const handleEditPrevious = useCallback(() => {
     const lastMemo = memoList.value[memoList.value.length - 1];
     showMemoEditorDialog({
-      memoId: extractMemoIdFromName(lastMemo.name),
-      cacheKey: `${lastMemo.name}-${lastMemo.updateTime}`,
+      memoName: lastMemo.name,
+      cacheKey: `${lastMemo.name}-${lastMemo.displayTime}`,
     });
   }, [memoList]);
 
