@@ -62,7 +62,9 @@
     "search": "Search",
     "role": "Role",
     "description": "Description",
-    "statistics": "Statistics"
+    "statistics": "Statistics",
+    "days": "Days",
+    "memos": "Memos"
   },
   "router": {
     "go-to-home": "Go to Home",
@@ -77,11 +79,9 @@
     "repeat-new-password": "Repeat the new password"
   },
   "editor": {
-    "editing": "Editing...",
-    "cancel-edit": "Cancel edit",
     "save": "Save",
-    "placeholder": "Any thoughts...",
-    "local": "Local"
+    "any-thoughts": "Any thoughts...",
+    "add-your-comment-here": "Add your comment here..."
   },
   "memo": {
     "view-detail": "View Detail",
@@ -106,6 +106,12 @@
       "no-comment": "No comment"
     },
     "show-more": "Show more"
+  },
+  "reference": {
+    "add-references": "Add references",
+    "search-bar-placeholder": "Search content",
+    "no-memos-found": "No memos found",
+    "embedded-usage": "Use as Embedded Content"
   },
   "resource": {
     "no-resources": "No resources.",

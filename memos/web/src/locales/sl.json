@@ -63,10 +63,7 @@
     "wed": "Sre"
   },
   "editor": {
-    "cancel-edit": "Prekliči urejanje",
-    "editing": "Urejanje...",
-    "local": "Lokalno",
-    "placeholder": "Kakšne misli...",
+    "any-thoughts": "Kakšne misli...",
     "save": "Shrani"
   },
   "embed-memo": {

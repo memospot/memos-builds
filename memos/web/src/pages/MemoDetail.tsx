@@ -73,7 +73,7 @@ const MemoDetail = () => {
           <div className="w-auto inline-block mb-2">
             <Link
               className="px-3 py-1 border rounded-lg max-w-xs w-auto text-sm flex flex-row justify-start items-center flex-nowrap text-gray-600 dark:text-gray-400 dark:border-gray-500 hover:shadow hover:opacity-80"
-              to={`/m/${parentMemo.name}`}
+              to={`/m/${parentMemo.uid}`}
               unstable_viewTransition
             >
               <Icon.ArrowUpLeftFromCircle className="w-4 h-auto shrink-0 opacity-60 mr-2" />
@@ -86,6 +86,7 @@ const MemoDetail = () => {
           className="shadow hover:shadow-xl transition-all"
           memo={memo}
           compact={false}
+          showCreator
           showVisibility
           showPinned
         />
@@ -107,7 +108,7 @@ const MemoDetail = () => {
                   <span className="text-gray-400 text-sm ml-0.5">({comments.length})</span>
                 </div>
                 {comments.map((comment) => (
-                  <MemoView key={`${memo.name}-${memo.displayTime}`} memo={comment} />
+                  <MemoView key={`${memo.name}-${memo.displayTime}`} memo={comment} showCreator />
                 ))}
               </>
             )}
@@ -117,6 +118,7 @@ const MemoDetail = () => {
               <MemoEditor
                 key={memo.name}
                 cacheKey={`comment-editor-${memo.name}`}
+                placeholder={t("editor.add-your-comment-here")}
                 parentMemoName={memo.name}
                 onConfirm={handleCommentCreated}
               />

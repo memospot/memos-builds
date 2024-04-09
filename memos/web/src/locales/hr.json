@@ -85,10 +85,7 @@
     "wed": "Sri"
   },
   "editor": {
-    "cancel-edit": "Otkaži uređivanje",
-    "editing": "Uređivanje...",
-    "local": "Lokalno",
-    "placeholder": "Piši... piši mi...",
+    "any-thoughts": "Piši... piši mi...",
     "save": "Sačuvaj"
   },
   "embed-memo": {
