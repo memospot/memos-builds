@@ -93,10 +93,7 @@
     "wed": "Qua"
   },
   "editor": {
-    "cancel-edit": "Cancelar edição",
-    "editing": "Editando…",
-    "local": "Local",
-    "placeholder": "Alguma ideia…",
+    "any-thoughts": "Alguma ideia…",
     "save": "Salvar"
   },
   "embed-memo": {

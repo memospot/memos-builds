@@ -71,6 +71,7 @@
     "sign-in-with": "S'identifier avec {{provider}}",
     "sign-out": "Se déconnecter",
     "sign-up": "S'inscrire",
+    "statistics": "Statistiques",
     "tags": "Étiquettes",
     "title": "Titre",
     "type": "Type",
@@ -92,10 +93,7 @@
     "wed": "Me"
   },
   "editor": {
-    "cancel-edit": "Annuler l'édition",
-    "editing": "Édition...",
-    "local": "Local",
-    "placeholder": "Une idée...",
+    "any-thoughts": "Une idée...",
     "save": "Enregistrer"
   },
   "embed-memo": {
@@ -133,6 +131,7 @@
     }
   },
   "message": {
+    "archived-successfully": "Archivé avec succès",
     "change-memo-created-time": "Modifier l'heure de création du memo",
     "change-resource-filename": "Changer le nom du fichier de ressources",
     "click-to-save-the-image": "Cliquez pour enregistrer l'image",
