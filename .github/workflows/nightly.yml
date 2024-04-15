@@ -209,7 +209,7 @@ jobs:
           platforms: ${{ env.QEMU_PLATFORMS }}
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@2b51285047da1547ffb1b2203d8be4c0af6b1f20
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb
         with:
           version: latest
           install: true
