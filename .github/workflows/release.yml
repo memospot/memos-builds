@@ -139,7 +139,7 @@ jobs:
           tag: "v3.34.1"
 
       - name: Setup buf
-        uses: bufbuild/buf-setup-action@9990c72db080fa39cf561230b8d2d7b736681f85
+        uses: bufbuild/buf-setup-action@480a0ee8a588045b52a847b48138c6f377a89519
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           version: 1.29.0
