@@ -1,6 +1,7 @@
 ### Project-specific ###
 build/
 node_modules/
+memos/*
 
 # ci scripts
 __pycache__/
@@ -9,10 +10,6 @@ __pycache__/
 
 # Task
 .task
-
-# Frontend
-# memos/server/frontend
-# !memos/server/frontend.go
 
 # Air (hot reload) generated
 .air

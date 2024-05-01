@@ -28,13 +28,15 @@ tasks:
       - web/src/!(node_modules)/**/*.{ts,tsx,js,css,less,json,html,png,webp,wasm}
       - web/src/*.{ts,js,json,html}
       - web/pnpm-lock.yaml
-    generates: ["../build/frontend/dist/**/*"]
+    generates:
+      - ./server/router/frontend/dist/**/*.{js,css,woff,woff2,ttf,png,webp,wasm}
+      - ./server/router/frontend/dist/*.{html,webp,png,webmanifest}
     cmds:
       - >-
         python ../scripts/ci.py build-frontend
         --source=./web
         --dist=./web/dist
-        --final=../build/frontend
+        --final=./server/router/frontend
 
   build:backend-tidy:
     desc: Tidy go.mod
@@ -76,7 +78,7 @@ tasks:
 
   build:nightly:
     desc: "[CI] Build nightly binaries for all configured OS/Arch, ignores git status"
-    deps: [build:frontend, build:backend-nightly]
+    cmds: [task: build:frontend, task: build:backend-nightly]
 
   build:testing:
     desc: Build Docker-targeted binaries, ignores git status.

@@ -58,14 +58,15 @@ def build_frontend(source: str, dist: str, final: str) -> None:
         msg = f"{RED}Front-end build failed!{RESET}"
         raise RuntimeError(msg)
 
-    print(f"{MAGENTA}Emptying `{final_path}`...{RESET}")
-    rmtree(final_path, ignore_errors=True)
+    final_dist = final_path.joinpath("dist")
+    print(f"{MAGENTA}Emptying `{final_dist}`...{RESET}")
+    rmtree(final_dist, ignore_errors=True)
     final_path.mkdir(parents=True, exist_ok=True)
 
     print(f"{MAGENTA}Moving build files...{RESET}")
     move(dist_path, final_path)
 
-    if final_path.joinpath("dist", "index.html").exists():
+    if final_dist.joinpath("index.html").exists():
         print(f"{GREEN}>> Front-end build complete! <<{RESET}")
     else:
         print(f"{RED}Front-end build failed!{RESET}")

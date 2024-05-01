@@ -70,7 +70,7 @@ SH
 COPY build/backend/memos_linux_${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
 
 # Copy front-end files.
-COPY build/frontend/dist /opt/memos/dist/
+# COPY memos/server/router/frontend/dist /opt/memos/dist/
 
 # Copy entrypoint script.
 COPY docker/entrypoint.sh /opt/memos/

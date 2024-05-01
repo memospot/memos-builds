@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("--source", default="memos/web", help="Front-end root folder.")
     parser.add_argument("--dist", default="memos/web/dist", help="Usually 'web/dist'.")
     parser.add_argument(
-        "--final", default="build/frontend", help="Where to move the final build."
+        "--final", default="memos/server/router/frontend", help="Where to move the final build."
     )
 
     # setup-env

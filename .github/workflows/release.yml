@@ -96,7 +96,7 @@ jobs:
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
           path: |
-            build/frontend
+            memos/server/router/frontend/
             .task/checksum/build-frontend
           key: |
             frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
@@ -113,7 +113,7 @@ jobs:
           compression-level: 9
           if-no-files-found: error
           path: |
-            build/frontend/
+            memos/server/router/frontend/
             .task/checksum/build-frontend
 
   goreleaser:
