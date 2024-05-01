@@ -1,11 +1,11 @@
 import { Tooltip } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { activityServiceClient } from "@/grpcweb";
 import { useInboxStore } from "@/store/v1";
-import { Activity } from "@/types/proto/api/v2/activity_service";
-import { Inbox, Inbox_Status } from "@/types/proto/api/v2/inbox_service";
+import { Activity } from "@/types/proto/api/v1/activity_service";
+import { Inbox, Inbox_Status } from "@/types/proto/api/v1/inbox_service";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "../Icon";
 
@@ -24,13 +24,9 @@ const VersionUpdateMessage = ({ inbox }: Props) => {
     }
 
     (async () => {
-      const { activity } = await activityServiceClient.getActivity({
+      const activity = await activityServiceClient.getActivity({
         id: inbox.activityId,
       });
-      if (!activity) {
-        return;
-      }
-
       setActivity(activity);
     })();
   }, [inbox.activityId]);
@@ -55,14 +51,14 @@ const VersionUpdateMessage = ({ inbox }: Props) => {
       ["status"],
     );
     if (!silence) {
-      toast.success("Archived");
+      toast.success(t("message.archived-successfully"));
     }
   };
 
   return (
     <div className="w-full flex flex-row justify-start items-start gap-3">
       <div
-        className={classNames(
+        className={clsx(
           "shrink-0 mt-2 p-2 rounded-full border",
           inbox.status === Inbox_Status.UNREAD
             ? "border-blue-600 text-blue-600 bg-blue-50 dark:bg-zinc-800"
@@ -74,7 +70,7 @@ const VersionUpdateMessage = ({ inbox }: Props) => {
         </Tooltip>
       </div>
       <div
-        className={classNames(
+        className={clsx(
           "border w-full p-3 px-4 rounded-lg flex flex-col justify-start items-start gap-2 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700",
           inbox.status !== Inbox_Status.UNREAD && "opacity-60",
         )}

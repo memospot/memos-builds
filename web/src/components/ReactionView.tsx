@@ -1,11 +1,11 @@
 import { Tooltip } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import { memoServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoStore } from "@/store/v1";
-import { Memo } from "@/types/proto/api/v2/memo_service";
-import { Reaction_Type } from "@/types/proto/api/v2/reaction_service";
-import { User } from "@/types/proto/api/v2/user_service";
+import { Memo } from "@/types/proto/api/v1/memo_service";
+import { Reaction_Type } from "@/types/proto/api/v1/reaction_service";
+import { User } from "@/types/proto/api/v1/user_service";
 
 interface Props {
   memo: Memo;
@@ -97,7 +97,7 @@ const ReactionView = (props: Props) => {
   return (
     <Tooltip title={stringifyUsers(users, reactionType)} placement="top">
       <div
-        className={classNames(
+        className={clsx(
           "h-7 border px-2 py-0.5 rounded-full font-memo flex flex-row justify-center items-center gap-1 dark:border-zinc-700",
           currentUser && "cursor-pointer",
           hasReaction && "bg-blue-100 border-blue-200 dark:bg-zinc-900",

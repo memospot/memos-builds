@@ -1,12 +1,12 @@
 import { Tooltip } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { extractMemoIdFromName, useUserStore } from "@/store/v1";
-import { MemoRelation_Type } from "@/types/proto/api/v2/memo_relation_service";
-import { Memo, Visibility } from "@/types/proto/api/v2/memo_service";
+import { MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
+import { Memo, Visibility } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityToString } from "@/utils/memo";
 import showChangeMemoCreatedTsDialog from "./ChangeMemoCreatedTsDialog";
@@ -77,7 +77,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
 
   return (
     <div
-      className={classNames(
+      className={clsx(
         "group relative flex flex-col justify-start items-start w-full px-4 py-3 mb-2 gap-2 bg-white dark:bg-zinc-800 rounded-lg border border-white dark:border-zinc-800 hover:border-gray-200 dark:hover:border-zinc-700",
         props.showPinned && memo.pinned && "border-gray-200 border dark:border-zinc-700",
         className,
@@ -126,7 +126,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
           </div>
           {!isInMemoDetailPage && (
             <Link
-              className={classNames(
+              className={clsx(
                 "flex flex-row justify-start items-center hover:opacity-70",
                 commentAmount === 0 && "invisible group-hover:visible",
               )}
@@ -138,7 +138,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
             </Link>
           )}
           {props.showPinned && memo.pinned && (
-            <Tooltip title={"Pinned"} placement="top">
+            <Tooltip title={t("common.pinned")} placement="top">
               <Icon.Bookmark className="w-4 h-auto text-amber-500" />
             </Tooltip>
           )}
@@ -148,7 +148,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
       <MemoContent
         key={`${memo.name}-${memo.updateTime}`}
         memoName={memo.name}
-        content={memo.content}
+        nodes={memo.nodes}
         readonly={readonly}
         onClick={handleMemoContentClick}
         compact={props.compact ?? true}

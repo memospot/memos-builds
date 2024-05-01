@@ -21,7 +21,7 @@ const EmbeddedMemo = ({ resourceId, params: paramsStr }: Props) => {
   const resourceName = `memos/${resourceId}`;
 
   useEffect(() => {
-    memoStore.searchMemos(`uid == "${resourceId}"`).finally(() => loadingState.setFinish());
+    memoStore.searchMemos(`uid == "${resourceId}" && include_comments == true`).finally(() => loadingState.setFinish());
   }, [resourceId]);
 
   if (loadingState.isLoading) {
@@ -44,7 +44,7 @@ const EmbeddedMemo = ({ resourceId, params: paramsStr }: Props) => {
         <MemoContent
           key={`${memo.name}-${memo.updateTime}`}
           memoName={memo.name}
-          content={memo.content}
+          nodes={memo.nodes}
           embeddedMemos={context.embeddedMemos}
         />
         <MemoResourceListView resources={memo.resources} />
@@ -62,12 +62,7 @@ const EmbeddedMemo = ({ resourceId, params: paramsStr }: Props) => {
           <Icon.ArrowUpRight className="w-5 h-auto opacity-80 text-gray-400" />
         </Link>
       </div>
-      <MemoContent
-        key={`${memo.name}-${memo.updateTime}`}
-        memoName={memo.name}
-        content={memo.content}
-        embeddedMemos={context.embeddedMemos}
-      />
+      <MemoContent key={`${memo.name}-${memo.updateTime}`} memoName={memo.name} nodes={memo.nodes} embeddedMemos={context.embeddedMemos} />
       <MemoResourceListView resources={memo.resources} />
     </div>
   );

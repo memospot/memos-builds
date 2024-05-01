@@ -1,5 +1,5 @@
-import classNames from "classnames";
-import { Visibility } from "@/types/proto/api/v2/memo_service";
+import clsx from "clsx";
+import { Visibility } from "@/types/proto/api/v1/memo_service";
 import Icon from "./Icon";
 
 interface Props {
@@ -21,7 +21,7 @@ const VisibilityIcon = (props: Props) => {
     return null;
   }
 
-  return <VIcon className={classNames("w-4 h-auto text-gray-500 dark:text-gray-400")} />;
+  return <VIcon className={clsx("w-4 h-auto text-gray-500 dark:text-gray-400")} />;
 };
 
 export default VisibilityIcon;

@@ -1,8 +1,9 @@
 import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
 import { useEffect, useState } from "react";
+import useDebounce from "react-use/lib/useDebounce";
 import useToggle from "react-use/lib/useToggle";
-import { useFilterStore, useTagStore } from "@/store/module";
-import { useMemoList } from "@/store/v1";
+import { useFilterStore } from "@/store/module";
+import { useMemoList, useTagStore } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 import showCreateTagDialog from "../CreateTagDialog";
 import { showCommonDialog } from "../Dialog/CommonDialog";
@@ -24,16 +25,19 @@ const TagsSection = () => {
   const filterStore = useFilterStore();
   const tagStore = useTagStore();
   const memoList = useMemoList();
-  const tagsText = tagStore.state.tags;
   const filter = filterStore.state;
   const [tags, setTags] = useState<Tag[]>([]);
 
-  useEffect(() => {
-    tagStore.fetchTags();
-  }, [memoList.size()]);
+  useDebounce(
+    () => {
+      tagStore.fetchTags();
+    },
+    300,
+    [memoList.size()],
+  );
 
   useEffect(() => {
-    const sortedTags = Array.from(tagsText).sort();
+    const sortedTags = Array.from(tagStore.getState().tags).sort();
     const root: KVObject<any> = {
       subTags: [],
     };
@@ -51,15 +55,7 @@ const TagsSection = () => {
           tagText += "/" + key;
         }
 
-        let obj = null;
-
-        for (const t of tempObj.subTags) {
-          if (t.text === tagText) {
-            obj = t;
-            break;
-          }
-        }
-
+        let obj = tempObj.subTags.find((t: Tag) => t.text === tagText);
         if (!obj) {
           obj = {
             key,
@@ -74,7 +70,7 @@ const TagsSection = () => {
     }
 
     setTags(root.subTags as Tag[]);
-  }, [tagsText]);
+  }, [tagStore.getState().tags]);
 
   return (
     <div className="flex flex-col justify-start items-start w-full mt-3 px-1 h-auto shrink-0 flex-nowrap hide-scrollbar">
@@ -92,9 +88,7 @@ const TagsSection = () => {
       ) : (
         <div className="p-2 border rounded-md flex flex-row justify-start items-start gap-1 text-gray-400 dark:text-gray-500">
           <Icon.ThumbsUp />
-          <p className="mt-0.5 text-sm leading-snug italic">
-            You can create tags by inputting <code>`#tag`</code>.
-          </p>
+          <p className="mt-0.5 text-sm leading-snug italic">{t("tag.create-tags-guide")}</p>
         </div>
       )}
     </div>
@@ -130,8 +124,8 @@ const TagItemContainer: React.FC<TagItemContainerProps> = (props: TagItemContain
 
   const handleDeleteTag = async () => {
     showCommonDialog({
-      title: "Delete Tag",
-      content: "Are you sure to delete this tag?",
+      title: t("tag.delete-tag"),
+      content: t("tag.delete-confirm"),
       style: "danger",
       dialogName: "delete-tag-dialog",
       onConfirm: async () => {

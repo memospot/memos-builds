@@ -1,10 +1,9 @@
 import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import { authServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { Routes } from "@/router";
-import { useGlobalStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 import UserAvatar from "./UserAvatar";
@@ -17,10 +16,8 @@ const UserBanner = (props: Props) => {
   const { collapsed } = props;
   const t = useTranslate();
   const navigateTo = useNavigateTo();
-  const globalStore = useGlobalStore();
-  const { systemStatus } = globalStore.state;
   const user = useCurrentUser();
-  const title = user ? user.nickname || user.username : systemStatus.customizedProfile.name || "memos";
+  const title = user ? user.nickname || user.username : "memos";
   const avatarUrl = user ? user.avatarUrl : "/full-logo.webp";
 
   const handleSignOut = async () => {
@@ -33,7 +30,7 @@ const UserBanner = (props: Props) => {
       <Dropdown>
         <MenuButton disabled={!user} slots={{ root: "div" }}>
           <div
-            className={classNames(
+            className={clsx(
               "py-1 my-1 w-auto flex flex-row justify-start items-center cursor-pointer rounded-2xl border border-transparent text-gray-800 dark:text-gray-400",
               collapsed ? "px-1" : "px-3",
             )}

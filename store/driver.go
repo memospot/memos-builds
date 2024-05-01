@@ -3,8 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-
-	storepb "github.com/usememos/memos/proto/gen/store"
 )
 
 // Driver is an interface for store driver.
@@ -53,8 +51,6 @@ type Driver interface {
 	UpsertWorkspaceSetting(ctx context.Context, upsert *WorkspaceSetting) (*WorkspaceSetting, error)
 	ListWorkspaceSettings(ctx context.Context, find *FindWorkspaceSetting) ([]*WorkspaceSetting, error)
 	DeleteWorkspaceSetting(ctx context.Context, delete *DeleteWorkspaceSetting) error
-	UpsertWorkspaceSettingV1(ctx context.Context, upsert *storepb.WorkspaceSetting) (*storepb.WorkspaceSetting, error)
-	ListWorkspaceSettingsV1(ctx context.Context, find *FindWorkspaceSettingV1) ([]*storepb.WorkspaceSetting, error)
 
 	// User model related methods.
 	CreateUser(ctx context.Context, create *User) (*User, error)
@@ -63,8 +59,8 @@ type Driver interface {
 	DeleteUser(ctx context.Context, delete *DeleteUser) error
 
 	// UserSetting model related methods.
-	UpsertUserSetting(ctx context.Context, upsert *storepb.UserSetting) (*storepb.UserSetting, error)
-	ListUserSettings(ctx context.Context, find *FindUserSetting) ([]*storepb.UserSetting, error)
+	UpsertUserSetting(ctx context.Context, upsert *UserSetting) (*UserSetting, error)
+	ListUserSettings(ctx context.Context, find *FindUserSetting) ([]*UserSetting, error)
 
 	// IdentityProvider model related methods.
 	CreateIdentityProvider(ctx context.Context, create *IdentityProvider) (*IdentityProvider, error)
@@ -77,12 +73,6 @@ type Driver interface {
 	ListTags(ctx context.Context, find *FindTag) ([]*Tag, error)
 	DeleteTag(ctx context.Context, delete *DeleteTag) error
 
-	// Storage model related methods.
-	CreateStorage(ctx context.Context, create *Storage) (*Storage, error)
-	ListStorages(ctx context.Context, find *FindStorage) ([]*Storage, error)
-	UpdateStorage(ctx context.Context, update *UpdateStorage) (*Storage, error)
-	DeleteStorage(ctx context.Context, delete *DeleteStorage) error
-
 	// Inbox model related methods.
 	CreateInbox(ctx context.Context, create *Inbox) (*Inbox, error)
 	ListInboxes(ctx context.Context, find *FindInbox) ([]*Inbox, error)
@@ -90,13 +80,13 @@ type Driver interface {
 	DeleteInbox(ctx context.Context, delete *DeleteInbox) error
 
 	// Webhook model related methods.
-	CreateWebhook(ctx context.Context, create *storepb.Webhook) (*storepb.Webhook, error)
-	ListWebhooks(ctx context.Context, find *FindWebhook) ([]*storepb.Webhook, error)
-	UpdateWebhook(ctx context.Context, update *UpdateWebhook) (*storepb.Webhook, error)
+	CreateWebhook(ctx context.Context, create *Webhook) (*Webhook, error)
+	ListWebhooks(ctx context.Context, find *FindWebhook) ([]*Webhook, error)
+	UpdateWebhook(ctx context.Context, update *UpdateWebhook) (*Webhook, error)
 	DeleteWebhook(ctx context.Context, delete *DeleteWebhook) error
 
 	// Reaction model related methods.
-	UpsertReaction(ctx context.Context, create *storepb.Reaction) (*storepb.Reaction, error)
-	ListReactions(ctx context.Context, find *FindReaction) ([]*storepb.Reaction, error)
+	UpsertReaction(ctx context.Context, create *Reaction) (*Reaction, error)
+	ListReactions(ctx context.Context, find *FindReaction) ([]*Reaction, error)
 	DeleteReaction(ctx context.Context, delete *DeleteReaction) error
 }

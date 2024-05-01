@@ -2,7 +2,7 @@ import { Button, IconButton, Input } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useUserStore } from "@/store/v1";
-import { User } from "@/types/proto/api/v2/user_service";
+import { User } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
@@ -60,7 +60,7 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
       handleCloseBtnClick();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.details);
     }
   };
 

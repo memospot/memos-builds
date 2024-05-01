@@ -1,122 +1,199 @@
-import { Button, Divider, Dropdown, IconButton, List, ListItem, Menu, MenuButton, MenuItem, Radio, RadioGroup } from "@mui/joy";
-import { useEffect, useState } from "react";
+import { Button, Divider, Input, List, ListItem, Radio, RadioGroup, Tooltip } from "@mui/joy";
+import { isEqual } from "lodash-es";
+import { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
-import * as api from "@/helpers/api";
-import { useGlobalStore } from "@/store/module";
+import { WorkspaceSettingPrefix, useWorkspaceSettingStore } from "@/store/v1";
+import {
+  WorkspaceStorageSetting,
+  WorkspaceStorageSetting_S3Config,
+  WorkspaceStorageSetting_StorageType,
+} from "@/types/proto/api/v1/workspace_setting_service";
+import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
 import { useTranslate } from "@/utils/i18n";
-import showCreateStorageServiceDialog from "../CreateStorageServiceDialog";
-import { showCommonDialog } from "../Dialog/CommonDialog";
 import Icon from "../Icon";
-import LearnMore from "../LearnMore";
-import showUpdateLocalStorageDialog from "../UpdateLocalStorageDialog";
 
 const StorageSection = () => {
   const t = useTranslate();
-  const globalStore = useGlobalStore();
-  const systemStatus = globalStore.state.systemStatus;
-  const [storageServiceId, setStorageServiceId] = useState(systemStatus.storageServiceId);
-  const [storageList, setStorageList] = useState<ObjectStorage[]>([]);
+  const workspaceSettingStore = useWorkspaceSettingStore();
+  const [workspaceStorageSetting, setWorkspaceStorageSetting] = useState<WorkspaceStorageSetting>(
+    WorkspaceStorageSetting.fromPartial(
+      workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.WORKSPACE_SETTING_STORAGE)?.storageSetting || {},
+    ),
+  );
 
-  useEffect(() => {
-    fetchStorageList();
-  }, []);
-
-  const fetchStorageList = async () => {
-    const { data: storageList } = await api.getStorageList();
-    setStorageList(storageList);
-  };
-
-  const handleActiveStorageServiceChanged = async (storageId: StorageId) => {
-    await api.upsertSystemSetting({
-      name: "storage-service-id",
-      value: JSON.stringify(storageId),
-    });
-    try {
-      await globalStore.fetchSystemStatus();
-    } catch (error: any) {
-      console.error(error);
+  const allowSaveStorageSetting = useMemo(() => {
+    if (workspaceStorageSetting.uploadSizeLimitMb <= 0) {
+      return false;
     }
-    setStorageServiceId(storageId);
+
+    const origin = WorkspaceStorageSetting.fromPartial(
+      workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.WORKSPACE_SETTING_STORAGE)?.storageSetting || {},
+    );
+    if (workspaceStorageSetting.storageType === WorkspaceStorageSetting_StorageType.STORAGE_TYPE_LOCAL) {
+      if (workspaceStorageSetting.filepathTemplate.length === 0) {
+        return false;
+      }
+    } else if (workspaceStorageSetting.storageType === WorkspaceStorageSetting_StorageType.STORAGE_TYPE_S3) {
+      if (
+        workspaceStorageSetting.s3Config?.accessKeyId.length === 0 ||
+        workspaceStorageSetting.s3Config?.accessKeySecret.length === 0 ||
+        workspaceStorageSetting.s3Config?.endpoint.length === 0 ||
+        workspaceStorageSetting.s3Config?.region.length === 0 ||
+        workspaceStorageSetting.s3Config?.bucket.length === 0
+      ) {
+        return false;
+      }
+    }
+    return !isEqual(origin, workspaceStorageSetting);
+  }, [workspaceStorageSetting, workspaceSettingStore.getState()]);
+
+  const handleMaxUploadSizeChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    let num = parseInt(event.target.value);
+    if (Number.isNaN(num)) {
+      num = 0;
+    }
+    const update: WorkspaceStorageSetting = {
+      ...workspaceStorageSetting,
+      uploadSizeLimitMb: num,
+    };
+    setWorkspaceStorageSetting(update);
   };
 
-  const handleDeleteStorage = (storage: ObjectStorage) => {
-    showCommonDialog({
-      title: t("setting.storage-section.delete-storage"),
-      content: t("setting.storage-section.warning-text", { name: storage.name }),
-      style: "danger",
-      dialogName: "delete-storage-dialog",
-      onConfirm: async () => {
-        try {
-          await api.deleteStorage(storage.id);
-        } catch (error: any) {
-          console.error(error);
-          toast.error(error.response.data.message);
-        }
-        await fetchStorageList();
-      },
+  const handleFilepathTemplateChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    const update: WorkspaceStorageSetting = {
+      ...workspaceStorageSetting,
+      filepathTemplate: event.target.value,
+    };
+    setWorkspaceStorageSetting(update);
+  };
+
+  const handlePartialS3ConfigChanged = async (s3Config: Partial<WorkspaceStorageSetting_S3Config>) => {
+    const update: WorkspaceStorageSetting = {
+      ...workspaceStorageSetting,
+      s3Config: WorkspaceStorageSetting_S3Config.fromPartial({
+        ...workspaceStorageSetting.s3Config,
+        ...s3Config,
+      }),
+    };
+    setWorkspaceStorageSetting(update);
+  };
+
+  const handleS3ConfigAccessKeyIdChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    handlePartialS3ConfigChanged({ accessKeyId: event.target.value });
+  };
+
+  const handleS3ConfigAccessKeySecretChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    handlePartialS3ConfigChanged({ accessKeySecret: event.target.value });
+  };
+
+  const handleS3ConfigEndpointChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    handlePartialS3ConfigChanged({ endpoint: event.target.value });
+  };
+
+  const handleS3ConfigRegionChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    handlePartialS3ConfigChanged({ region: event.target.value });
+  };
+
+  const handleS3ConfigBucketChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    handlePartialS3ConfigChanged({ bucket: event.target.value });
+  };
+
+  const handleStorageTypeChanged = async (storageType: WorkspaceStorageSetting_StorageType) => {
+    const update: WorkspaceStorageSetting = {
+      ...workspaceStorageSetting,
+      storageType: storageType,
+    };
+    setWorkspaceStorageSetting(update);
+  };
+
+  const saveWorkspaceStorageSetting = async () => {
+    await workspaceSettingStore.setWorkspaceSetting({
+      name: `${WorkspaceSettingPrefix}${WorkspaceSettingKey.WORKSPACE_SETTING_STORAGE}`,
+      storageSetting: workspaceStorageSetting,
     });
+    toast.success("Updated");
   };
 
   return (
     <div className="w-full flex flex-col gap-2 pt-2 pb-4">
-      <div className="w-full flex flex-row justify-start items-center">
-        <span className="font-mono text-sm text-gray-400 mr-2 dark:text-gray-500">{t("setting.storage-section.current-storage")}</span>
-      </div>
+      <div className="font-medium text-gray-700 dark:text-gray-500">{t("setting.storage-section.current-storage")}</div>
       <RadioGroup
+        orientation="horizontal"
         className="w-full"
-        value={storageServiceId}
+        value={workspaceStorageSetting.storageType}
         onChange={(event) => {
-          handleActiveStorageServiceChanged(Number(event.target.value));
+          handleStorageTypeChanged(event.target.value as WorkspaceStorageSetting_StorageType);
         }}
       >
-        <Radio value={"0"} label={t("setting.storage-section.type-database")} />
-        <div className="w-full mt-2 flex flex-row justify-start items-center gap-x-2">
-          <Radio value={"-1"} label={t("setting.storage-section.type-local")} />
-          <IconButton size="sm" onClick={() => showUpdateLocalStorageDialog(systemStatus.localStoragePath)}>
-            <Icon.PenBox className="w-4 h-auto" />
-          </IconButton>
-        </div>
-        {storageList.map((storage) => (
-          <Radio key={storage.id} value={storage.id} label={storage.name} />
-        ))}
+        <Radio value={WorkspaceStorageSetting_StorageType.STORAGE_TYPE_DATABASE} label={t("setting.storage-section.type-database")} />
+        <Radio value={WorkspaceStorageSetting_StorageType.STORAGE_TYPE_LOCAL} label={t("setting.storage-section.type-local")} />
+        <Radio value={WorkspaceStorageSetting_StorageType.STORAGE_TYPE_S3} label={"S3"} />
       </RadioGroup>
-      <Divider className="!my-2" />
-      <div className="mb-2 w-full flex flex-row justify-between items-center gap-1">
-        <div className="flex items-center gap-1">
-          <span className="font-mono text-sm text-gray-400">{t("setting.storage-section.storage-services")}</span>
-          <LearnMore url="https://usememos.com/docs/advanced-settings/cloudflare-r2" />
+      <div className="w-full flex flex-row justify-between items-center">
+        <div className="flex flex-row items-center">
+          <span className="text-gray-700 dark:text-gray-500 mr-1">{t("setting.system-section.max-upload-size")}</span>
+          <Tooltip title={t("setting.system-section.max-upload-size-hint")} placement="top">
+            <Icon.HelpCircle className="w-4 h-auto" />
+          </Tooltip>
         </div>
-        <Button onClick={() => showCreateStorageServiceDialog(undefined, fetchStorageList)}>{t("common.create")}</Button>
+        <Input
+          className="w-16"
+          sx={{
+            fontFamily: "monospace",
+          }}
+          defaultValue={workspaceStorageSetting.uploadSizeLimitMb}
+          onChange={handleMaxUploadSizeChanged}
+        />
       </div>
-      <div className="w-full flex flex-col">
-        {storageList.map((storage) => (
-          <div
-            key={storage.id}
-            className="py-2 w-full border-t last:border-b dark:border-zinc-700 flex flex-row items-center justify-between"
-          >
-            <div className="flex flex-row items-center">
-              <p className="ml-2">{storage.name}</p>
-            </div>
-            <div className="flex flex-row items-center">
-              <Dropdown>
-                <MenuButton size="sm">
-                  <Icon.MoreVertical className="w-4 h-auto" />
-                </MenuButton>
-                <Menu placement="bottom-end" size="sm">
-                  <MenuItem onClick={() => showCreateStorageServiceDialog(storage, fetchStorageList)}>{t("common.edit")}</MenuItem>
-                  <MenuItem onClick={() => handleDeleteStorage(storage)}>{t("common.delete")}</MenuItem>
-                </Menu>
-              </Dropdown>
-            </div>
+      {workspaceStorageSetting.storageType !== WorkspaceStorageSetting_StorageType.STORAGE_TYPE_DATABASE && (
+        <div className="w-full flex flex-row justify-between items-center">
+          <span className="text-gray-700 dark:text-gray-500 mr-1">Filepath template</span>
+          <Input
+            defaultValue={workspaceStorageSetting.filepathTemplate}
+            placeholder="assets/{timestamp}_{filename}"
+            onChange={handleFilepathTemplateChanged}
+          />
+        </div>
+      )}
+      {workspaceStorageSetting.storageType === WorkspaceStorageSetting_StorageType.STORAGE_TYPE_S3 && (
+        <>
+          <div className="w-full flex flex-row justify-between items-center">
+            <span className="text-gray-700 dark:text-gray-500 mr-1">Access key id</span>
+            <Input
+              defaultValue={workspaceStorageSetting.s3Config?.accessKeyId}
+              placeholder=""
+              onChange={handleS3ConfigAccessKeyIdChanged}
+            />
           </div>
-        ))}
-        {storageList.length === 0 && (
-          <div className="w-full text-sm dark:border-zinc-700 opacity-60 flex flex-row items-center justify-between">
-            <p className="">No storage service found.</p>
+          <div className="w-full flex flex-row justify-between items-center">
+            <span className="text-gray-700 dark:text-gray-500 mr-1">Access key secret</span>
+            <Input
+              defaultValue={workspaceStorageSetting.s3Config?.accessKeySecret}
+              placeholder=""
+              onChange={handleS3ConfigAccessKeySecretChanged}
+            />
           </div>
-        )}
+          <div className="w-full flex flex-row justify-between items-center">
+            <span className="text-gray-700 dark:text-gray-500 mr-1">Endpoint</span>
+            <Input defaultValue={workspaceStorageSetting.s3Config?.endpoint} placeholder="" onChange={handleS3ConfigEndpointChanged} />
+          </div>
+          <div className="w-full flex flex-row justify-between items-center">
+            <span className="text-gray-700 dark:text-gray-500 mr-1">Region</span>
+            <Input defaultValue={workspaceStorageSetting.s3Config?.region} placeholder="" onChange={handleS3ConfigRegionChanged} />
+          </div>
+          <div className="w-full flex flex-row justify-between items-center">
+            <span className="text-gray-700 dark:text-gray-500 mr-1">Bucket</span>
+            <Input defaultValue={workspaceStorageSetting.s3Config?.bucket} placeholder="" onChange={handleS3ConfigBucketChanged} />
+          </div>
+        </>
+      )}
+      <div>
+        <Button disabled={!allowSaveStorageSetting} onClick={saveWorkspaceStorageSetting}>
+          {t("common.save")}
+        </Button>
       </div>
+      <Divider className="!my-2" />
       <div className="w-full mt-4">
         <p className="text-sm">{t("common.learn-more")}:</p>
         <List component="ul" marker="disc" size="sm">
