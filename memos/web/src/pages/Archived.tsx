@@ -14,8 +14,8 @@ import { getTimeStampByDate } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useFilterWithUrlParams from "@/hooks/useFilterWithUrlParams";
 import { useMemoList, useMemoStore } from "@/store/v1";
-import { RowStatus } from "@/types/proto/api/v2/common";
-import { Memo } from "@/types/proto/api/v2/memo_service";
+import { RowStatus } from "@/types/proto/api/v1/common";
+import { Memo } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 
 const Archived = () => {
@@ -121,7 +121,7 @@ const Archived = () => {
                   </Tooltip>
                 </div>
               </div>
-              <MemoContent key={`${memo.name}-${memo.displayTime}`} memoName={memo.name} content={memo.content} readonly={true} />
+              <MemoContent key={`${memo.name}-${memo.displayTime}`} memoName={memo.name} nodes={memo.nodes} readonly={true} />
             </div>
           ))}
           {isRequesting ? (

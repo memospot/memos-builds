@@ -1,13 +1,13 @@
 import { Tooltip } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { activityServiceClient } from "@/grpcweb";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { MemoNamePrefix, useInboxStore, useMemoStore, useUserStore } from "@/store/v1";
-import { Inbox, Inbox_Status } from "@/types/proto/api/v2/inbox_service";
-import { Memo } from "@/types/proto/api/v2/memo_service";
-import { User } from "@/types/proto/api/v2/user_service";
+import { Inbox, Inbox_Status } from "@/types/proto/api/v1/inbox_service";
+import { Memo } from "@/types/proto/api/v1/memo_service";
+import { User } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "../Icon";
 
@@ -30,12 +30,9 @@ const MemoCommentMessage = ({ inbox }: Props) => {
     }
 
     (async () => {
-      const { activity } = await activityServiceClient.getActivity({
+      const activity = await activityServiceClient.getActivity({
         id: inbox.activityId,
       });
-      if (!activity) {
-        return;
-      }
       if (activity.payload?.memoComment) {
         const memoCommentPayload = activity.payload.memoComment;
         const relatedMemoId = memoCommentPayload.relatedMemoId;
@@ -69,14 +66,14 @@ const MemoCommentMessage = ({ inbox }: Props) => {
       ["status"],
     );
     if (!silence) {
-      toast.success("Archived");
+      toast.success(t("message.archived-successfully"));
     }
   };
 
   return (
     <div className="w-full flex flex-row justify-start items-start gap-3">
       <div
-        className={classNames(
+        className={clsx(
           "shrink-0 mt-2 p-2 rounded-full border",
           inbox.status === Inbox_Status.UNREAD
             ? "border-blue-600 text-blue-600 bg-blue-50 dark:bg-zinc-800"
@@ -88,7 +85,7 @@ const MemoCommentMessage = ({ inbox }: Props) => {
         </Tooltip>
       </div>
       <div
-        className={classNames(
+        className={clsx(
           "border w-full p-3 px-4 rounded-lg flex flex-col justify-start items-start gap-2 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700",
           inbox.status !== Inbox_Status.UNREAD && "opacity-60",
         )}

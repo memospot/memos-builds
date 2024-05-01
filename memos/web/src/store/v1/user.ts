@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { authServiceClient, userServiceClient } from "@/grpcweb";
-import { User, UserSetting, User_Role } from "@/types/proto/api/v2/user_service";
+import { User, UserSetting, User_Role } from "@/types/proto/api/v1/user_service";
 
 interface State {
   userMapByName: Record<string, User>;
@@ -29,6 +29,7 @@ const requestCache = new Map<string, Promise<any>>();
 
 export const useUserStore = create(
   combine(getDefaultState(), (set, get) => ({
+    getState: () => get(),
     fetchUsers: async () => {
       const { users } = await userServiceClient.listUsers({});
       const userMap = get().userMapByName;
@@ -51,7 +52,7 @@ export const useUserStore = create(
         .getUser({
           name: name,
         })
-        .then(({ user }) => user);
+        .then((user) => user);
       requestCache.set(name, promisedUser);
       const user = await promisedUser;
       if (!user) {
@@ -87,13 +88,10 @@ export const useUserStore = create(
       return userMap[name];
     },
     updateUser: async (user: Partial<User>, updateMask: string[]) => {
-      const { user: updatedUser } = await userServiceClient.updateUser({
+      const updatedUser = await userServiceClient.updateUser({
         user: user,
         updateMask: updateMask,
       });
-      if (!updatedUser) {
-        throw new Error("User not found");
-      }
       const userMap = get().userMapByName;
       if (user.name && user.name !== updatedUser.name) {
         delete userMap[user.name];
@@ -114,14 +112,11 @@ export const useUserStore = create(
       set({ userMapByName: userMap });
     },
     fetchCurrentUser: async () => {
-      const { user } = await authServiceClient.getAuthStatus({});
-      if (!user) {
-        throw new Error("User not found");
-      }
+      const user = await authServiceClient.getAuthStatus({});
       const userMap = get().userMapByName;
       userMap[user.name] = user;
       set({ currentUser: user.name, userMapByName: userMap });
-      const { setting } = await userServiceClient.getUserSetting({});
+      const setting = await userServiceClient.getUserSetting({});
       set({
         userSetting: UserSetting.fromPartial({
           ...getDefaultUserSetting(),
@@ -131,13 +126,10 @@ export const useUserStore = create(
       return user;
     },
     updateUserSetting: async (userSetting: Partial<UserSetting>, updateMask: string[]) => {
-      const { setting: updatedUserSetting } = await userServiceClient.updateUserSetting({
+      const updatedUserSetting = await userServiceClient.updateUserSetting({
         setting: userSetting,
         updateMask: updateMask,
       });
-      if (!updatedUserSetting) {
-        throw new Error("User setting not found");
-      }
       set({ userSetting: updatedUserSetting });
       return updatedUserSetting;
     },

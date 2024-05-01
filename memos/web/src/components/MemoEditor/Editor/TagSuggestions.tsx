@@ -1,9 +1,9 @@
-import classNames from "classnames";
+import clsx from "clsx";
 import Fuse from "fuse.js";
 import { useEffect, useRef, useState } from "react";
 import getCaretCoordinates from "textarea-caret";
 import OverflowTip from "@/components/kit/OverflowTip";
-import { useTagStore } from "@/store/module";
+import { useTagStore } from "@/store/v1";
 import { EditorRefActions } from ".";
 
 type Props = {
@@ -15,15 +15,15 @@ type Position = { left: number; top: number; height: number };
 
 const TagSuggestions = ({ editorRef, editorActions }: Props) => {
   const [position, setPosition] = useState<Position | null>(null);
-  const hide = () => setPosition(null);
-
-  const { state } = useTagStore();
-  const tagsRef = useRef(state.tags);
-  tagsRef.current = state.tags;
+  const tagStore = useTagStore();
+  const tagsRef = useRef(Array.from(tagStore.getState().tags));
+  tagsRef.current = Array.from(tagStore.getState().tags);
 
   const [selected, select] = useState(0);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
+
+  const hide = () => setPosition(null);
 
   const getCurrentWord = (): [word: string, startIndex: number] => {
     const editor = editorRef.current;
@@ -110,7 +110,7 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
         <div
           key={tag}
           onMouseDown={() => autocomplete(tag)}
-          className={classNames(
+          className={clsx(
             "rounded p-1 px-2 w-full truncate text-sm dark:text-gray-300 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800",
             i === selected ? "bg-zinc-300 dark:bg-zinc-600" : "",
           )}

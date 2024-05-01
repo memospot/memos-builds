@@ -1,12 +1,12 @@
 import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import toast from "react-hot-toast";
 import { useLocation } from "react-router-dom";
 import Icon from "@/components/Icon";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { extractMemoIdFromName, useMemoStore } from "@/store/v1";
-import { RowStatus } from "@/types/proto/api/v2/common";
-import { Memo } from "@/types/proto/api/v2/memo_service";
+import { RowStatus } from "@/types/proto/api/v1/common";
+import { Memo } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { showCommonDialog } from "./Dialog/CommonDialog";
 import showMemoEditorDialog from "./MemoEditor/MemoEditorDialog";
@@ -97,7 +97,7 @@ const MemoActionMenu = (props: Props) => {
       dialogName: "delete-memo-dialog",
       onConfirm: async () => {
         await memoStore.deleteMemo(memo.name);
-        toast.success("Deleted successfully");
+        toast.success(t("message.deleted-successfully"));
         if (isInMemoDetailPage) {
           navigateTo("/");
         }
@@ -108,7 +108,7 @@ const MemoActionMenu = (props: Props) => {
   return (
     <Dropdown>
       <MenuButton slots={{ root: "div" }}>
-        <span className={classNames("flex justify-center items-center rounded-full hover:opacity-70", props.className)}>
+        <span className={clsx("flex justify-center items-center rounded-full hover:opacity-70", props.className)}>
           <Icon.MoreVertical className="w-4 h-4 mx-auto text-gray-500 dark:text-gray-400" />
         </span>
       </MenuButton>

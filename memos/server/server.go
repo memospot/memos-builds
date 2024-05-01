@@ -3,88 +3,83 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"github.com/soheilhy/cmux"
+	"google.golang.org/grpc"
 
-	"github.com/usememos/memos/plugin/telegram"
-	"github.com/usememos/memos/server/integration"
+	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/server/profile"
-	apiv1 "github.com/usememos/memos/server/route/api/v1"
-	apiv2 "github.com/usememos/memos/server/route/api/v2"
-	"github.com/usememos/memos/server/route/frontend"
+	apiv1 "github.com/usememos/memos/server/router/api/v1"
+	"github.com/usememos/memos/server/router/frontend"
+	"github.com/usememos/memos/server/router/rss"
 	versionchecker "github.com/usememos/memos/server/service/version_checker"
 	"github.com/usememos/memos/store"
 )
 
 type Server struct {
-	e *echo.Echo
-
-	ID      string
 	Secret  string
 	Profile *profile.Profile
 	Store   *store.Store
 
-	// Asynchronous runners.
-	telegramBot *telegram.Bot
+	echoServer *echo.Echo
+	grpcServer *grpc.Server
 }
 
 func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store) (*Server, error) {
-	e := echo.New()
-	e.Debug = true
-	e.HideBanner = true
-	e.HidePort = true
-
 	s := &Server{
-		e:       e,
 		Store:   store,
 		Profile: profile,
-
-		// Asynchronous runners.
-		telegramBot: telegram.NewBotWithHandler(integration.NewTelegramHandler(store)),
 	}
 
-	// Register CORS middleware.
-	e.Use(CORSMiddleware(s.Profile.Origins))
+	echoServer := echo.New()
+	echoServer.Debug = true
+	echoServer.HideBanner = true
+	echoServer.HidePort = true
+	s.echoServer = echoServer
 
-	serverID, err := s.getSystemServerID(ctx)
+	workspaceBasicSetting, err := s.getOrUpsertWorkspaceBasicSetting(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve system server ID")
+		return nil, errors.Wrap(err, "failed to get workspace basic setting")
 	}
-	s.ID = serverID
 
 	secret := "usememos"
 	if profile.Mode == "prod" {
-		secret, err = s.getSystemSecretSessionName(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to retrieve system secret session name")
-		}
+		secret = workspaceBasicSetting.SecretKey
 	}
 	s.Secret = secret
 
 	// Register healthz endpoint.
-	e.GET("/healthz", func(c echo.Context) error {
+	echoServer.GET("/healthz", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Service ready.")
 	})
 
 	// Only serve frontend when it's enabled.
 	if profile.Frontend {
 		frontendService := frontend.NewFrontendService(profile, store)
-		frontendService.Serve(ctx, e)
+		frontendService.Serve(ctx, echoServer)
 	}
 
-	// Register API v1 endpoints.
-	rootGroup := e.Group("")
-	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store, s.telegramBot)
-	apiV1Service.Register(rootGroup)
+	rootGroup := echoServer.Group("")
 
-	apiV2Service := apiv2.NewAPIV2Service(s.Secret, profile, store, s.Profile.Port+1)
-	// Register gRPC gateway as api v2.
-	if err := apiV2Service.RegisterGateway(ctx, e); err != nil {
+	// Create and register RSS routes.
+	rss.NewRSSService(s.Profile, s.Store).RegisterRoutes(rootGroup)
+
+	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		apiv1.NewLoggerInterceptor().LoggerInterceptor,
+		apiv1.NewGRPCAuthInterceptor(store, secret).AuthenticationInterceptor,
+	))
+	s.grpcServer = grpcServer
+
+	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store, grpcServer)
+	// Register gRPC gateway as api v1.
+	if err := apiV1Service.RegisterGateway(ctx, echoServer); err != nil {
 		return nil, errors.Wrap(err, "failed to register gRPC gateway")
 	}
 
@@ -92,21 +87,46 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	go versionchecker.NewVersionChecker(s.Store, s.Profile).Start(ctx)
-	go s.telegramBot.Start(ctx)
-	return s.e.Start(fmt.Sprintf("%s:%d", s.Profile.Addr, s.Profile.Port))
+	address := fmt.Sprintf(":%d", s.Profile.Port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return errors.Wrap(err, "failed to listen")
+	}
+
+	muxServer := cmux.New(listener)
+	go func() {
+		grpcListener := muxServer.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
+		if err := s.grpcServer.Serve(grpcListener); err != nil {
+			slog.Error("failed to serve gRPC", err)
+		}
+	}()
+	go func() {
+		httpListener := muxServer.Match(cmux.HTTP1Fast())
+		s.echoServer.Listener = httpListener
+		if err := s.echoServer.Start(address); err != nil {
+			slog.Error("failed to start echo server", err)
+		}
+	}()
+	go func() {
+		if err := muxServer.Serve(); err != nil {
+			slog.Error("mux server listen error", err)
+		}
+	}()
+	s.StartBackgroundRunners(ctx)
+
+	return nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Shutdown echo server
-	if err := s.e.Shutdown(ctx); err != nil {
+	// Shutdown echo server.
+	if err := s.echoServer.Shutdown(ctx); err != nil {
 		fmt.Printf("failed to shutdown server, error: %v\n", err)
 	}
 
-	// Close database connection
+	// Close database connection.
 	if err := s.Store.Close(); err != nil {
 		fmt.Printf("failed to close database, error: %v\n", err)
 	}
@@ -114,84 +134,29 @@ func (s *Server) Shutdown(ctx context.Context) {
 	fmt.Printf("memos stopped properly\n")
 }
 
-func (s *Server) GetEcho() *echo.Echo {
-	return s.e
+func (s *Server) StartBackgroundRunners(ctx context.Context) {
+	go versionchecker.NewVersionChecker(s.Store, s.Profile).Start(ctx)
 }
 
-func (s *Server) getSystemServerID(ctx context.Context) (string, error) {
-	serverIDSetting, err := s.Store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
-		Name: apiv1.SystemSettingServerIDName.String(),
-	})
+func (s *Server) getOrUpsertWorkspaceBasicSetting(ctx context.Context) (*storepb.WorkspaceBasicSetting, error) {
+	workspaceBasicSetting, err := s.Store.GetWorkspaceBasicSetting(ctx)
 	if err != nil {
-		return "", err
+		return nil, errors.Wrap(err, "failed to get workspace basic setting")
 	}
-	if serverIDSetting == nil || serverIDSetting.Value == "" {
-		serverIDSetting, err = s.Store.UpsertWorkspaceSetting(ctx, &store.WorkspaceSetting{
-			Name:  apiv1.SystemSettingServerIDName.String(),
-			Value: uuid.NewString(),
+	modified := false
+	if workspaceBasicSetting.SecretKey == "" {
+		workspaceBasicSetting.SecretKey = uuid.NewString()
+		modified = true
+	}
+	if modified {
+		workspaceSetting, err := s.Store.UpsertWorkspaceSetting(ctx, &storepb.WorkspaceSetting{
+			Key:   storepb.WorkspaceSettingKey_WORKSPACE_SETTING_BASIC,
+			Value: &storepb.WorkspaceSetting_BasicSetting{BasicSetting: workspaceBasicSetting},
 		})
 		if err != nil {
-			return "", err
+			return nil, errors.Wrap(err, "failed to upsert workspace setting")
 		}
+		workspaceBasicSetting = workspaceSetting.GetBasicSetting()
 	}
-	return serverIDSetting.Value, nil
-}
-
-func (s *Server) getSystemSecretSessionName(ctx context.Context) (string, error) {
-	secretSessionNameValue, err := s.Store.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
-		Name: apiv1.SystemSettingSecretSessionName.String(),
-	})
-	if err != nil {
-		return "", err
-	}
-	if secretSessionNameValue == nil || secretSessionNameValue.Value == "" {
-		secretSessionNameValue, err = s.Store.UpsertWorkspaceSetting(ctx, &store.WorkspaceSetting{
-			Name:  apiv1.SystemSettingSecretSessionName.String(),
-			Value: uuid.NewString(),
-		})
-		if err != nil {
-			return "", err
-		}
-	}
-	return secretSessionNameValue.Value, nil
-}
-
-func grpcRequestSkipper(c echo.Context) bool {
-	return strings.HasPrefix(c.Request().URL.Path, "/memos.api.v2.")
-}
-
-func CORSMiddleware(origins []string) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			if grpcRequestSkipper(c) {
-				return next(c)
-			}
-
-			r := c.Request()
-			w := c.Response().Writer
-
-			requestOrigin := r.Header.Get("Origin")
-			if len(origins) == 0 {
-				w.Header().Set("Access-Control-Allow-Origin", requestOrigin)
-			} else {
-				for _, origin := range origins {
-					if origin == requestOrigin {
-						w.Header().Set("Access-Control-Allow-Origin", origin)
-						break
-					}
-				}
-			}
-
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-			// If it's preflight request, return immediately.
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return nil
-			}
-			return next(c)
-		}
-	}
+	return workspaceBasicSetting, nil
 }

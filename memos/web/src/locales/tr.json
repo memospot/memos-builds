@@ -32,6 +32,7 @@
     "confirm": "Onayla",
     "create": "Oluştur",
     "database": "Veritabanı",
+    "days": "Günler",
     "delete": "Sil",
     "description": "Açıklama",
     "edit": "Düzenle",
@@ -46,6 +47,7 @@
     "learn-more": "Daha fazla bilgi edinin",
     "link": "Link",
     "mark": "Mark",
+    "memos": "Notlar",
     "name": "İsim",
     "new": "Yeni",
     "nickname": "Takma ad",
@@ -53,6 +55,7 @@
     "or": "ya da",
     "password": "Parola",
     "pin": "Sabitle",
+    "pinned": "Sabitlendi",
     "preview": "Önizleme",
     "profile": "Profil",
     "remember-me": "Beni hatırla.",
@@ -85,13 +88,14 @@
   "days": {
     "fri": "Cum",
     "mon": "Paz",
-    "sat": "Cum",
+    "sat": "Cmt",
     "sun": "Paz",
     "thu": "Per",
     "tue": "Sal",
     "wed": "Çar"
   },
   "editor": {
+    "add-your-comment-here": "Yorumunuzu buraya ekleyin...",
     "any-thoughts": "Düşünceleriniz...",
     "save": "Kaydet"
   },
@@ -113,6 +117,7 @@
       "self": "Yorumlar"
     },
     "copy-link": "Bağlantıyı kopyala",
+    "count-memos-in-date": "{{count}}notlar{{date}}",
     "delete-confirm": "Bu notu silmek istediğinizden emin misiniz? BU EYLEM GERI DÖNDÜRÜLEMEZ",
     "delete-memo": "Notu Sil",
     "embed": "Yerleştir",
@@ -127,7 +132,8 @@
       "private": "Sadece sizin için görünür",
       "protected": "Çalışma Alanı",
       "public": "Herkese açık"
-    }
+    },
+    "wrapping": "Paketleme"
   },
   "message": {
     "archived-successfully": "Başarıyla arşivlendi",
@@ -136,6 +142,8 @@
     "click-to-save-the-image": "Kaydetmek için tıklayın",
     "copied": "Kopyalandı",
     "count-selected-resources": "Toplam seçilen",
+    "deleted-successfully": "Başarıyla silindi",
+    "failed-to-embed-memo": "Not yerleştirilemedi",
     "fill-all": "Lütfen tüm alanları doldurun.",
     "fill-form": "Lütfen formu doldurun",
     "fill-server-name": "Lütfen sunucu adını girin",
@@ -168,6 +176,12 @@
     "succeed-vacuum-database": "DB vakumlandı",
     "update-succeed": "Başarıyla güncellendi",
     "user-not-found": "Kullanıcı bulunamadı"
+  },
+  "reference": {
+    "add-references": "Referans ekle",
+    "embedded-usage": "Gömülü İçerik Olarak Kullan",
+    "no-memos-found": "Hiçbir not bulunamadı",
+    "search-bar-placeholder": "İçerik ara"
   },
   "resource": {
     "clear": "Temizle",
@@ -242,8 +256,6 @@
     "preference-section": {
       "default-memo-sort-option": "Yer İşareti Görüntüleme Zamanı",
       "default-memo-visibility": "Varsayılan not görünürlüğü",
-      "telegram-user-id": "Telegram Kullanıcı Kimliği",
-      "telegram-user-id-placeholder": "Telegram Botunuza herhangi bir kelimeyi not olarak gönderin",
       "theme": "Tema"
     },
     "sso": "SSO",
@@ -328,17 +340,18 @@
       "max-upload-size": "Maksimum yükleme boyutu (MiB)",
       "max-upload-size-hint": "Önerilen değer 32 MiB'dir.",
       "server-name": "Uygulama Adı",
-      "telegram-bot-token": "Telegram Bot Token",
-      "telegram-bot-token-description": "Telegram Bot Token or API Proxy like `http…/bot<token>`",
-      "telegram-bot-token-placeholder": "Telegram Bot tokeniniz",
       "vacuum-hint": "Kullanılmayan verileri temizler."
     }
   },
   "tag": {
     "all-tags": "Tüm Etiketler",
     "create-tag": "Etiket Oluştur",
+    "create-tags-guide": "'#tag' girerek etiket oluşturabilirsiniz.",
+    "delete-confirm": "Bu etiketi sileceğinizden emin misiniz?",
+    "delete-tag": "Etiketi Sil",
     "hide": "Gizle",
     "invalid-tag-name": "Geçersiz etiket adı",
+    "no-tag-found": "Etiket bulunamadı",
     "save-all": "Tümünü kaydet",
     "show": "Göster",
     "tag-name": "ETİKET_ADI",

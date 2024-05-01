@@ -1,6 +1,7 @@
 import { Tooltip } from "@mui/joy";
-import classNames from "classnames";
+import clsx from "clsx";
 import { getNormalizedDateString, getDateWithOffset } from "@/helpers/datetime";
+import { useTranslate } from "@/utils/i18n";
 
 interface Props {
   // Format: 2021-1
@@ -25,6 +26,7 @@ const getCellAdditionalStyles = (count: number, maxCount: number) => {
 };
 
 const ActivityCalendar = (props: Props) => {
+  const t = useTranslate();
   const { month: monthStr, data, onClick } = props;
   const year = new Date(monthStr).getUTCFullYear();
   const month = new Date(monthStr).getUTCMonth() + 1;
@@ -45,18 +47,18 @@ const ActivityCalendar = (props: Props) => {
   }
 
   return (
-    <div className={classNames("w-36 h-auto p-0.5 shrink-0 grid grid-cols-7 grid-flow-row gap-1")}>
+    <div className={clsx("w-36 h-auto p-0.5 shrink-0 grid grid-cols-7 grid-flow-row gap-1")}>
       {days.map((day, index) => {
         const date = getNormalizedDateString(
           getDateWithOffset(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`),
         );
         const count = data[date] || 0;
         const isToday = new Date().toDateString() === new Date(date).toDateString();
-        const tooltipText = count ? `${count} memos in ${date}` : date;
+        const tooltipText = count ? t("memo.count-memos-in-date", { count: count, date: date }) : date;
         return day ? (
           <Tooltip className="shrink-0" key={`${date}-${index}`} title={tooltipText} placement="top" arrow>
             <div
-              className={classNames(
+              className={clsx(
                 "w-4 h-4 text-[9px] rounded-md flex justify-center items-center border border-transparent",
                 getCellAdditionalStyles(count, maxCount),
                 isToday && "border-gray-600 dark:!border-gray-500",
@@ -69,7 +71,7 @@ const ActivityCalendar = (props: Props) => {
         ) : (
           <div
             key={`${date}-${index}`}
-            className={classNames(
+            className={clsx(
               "shrink-0 opacity-30 w-4 h-4 rounded-md flex justify-center items-center border border-transparent",
               getCellAdditionalStyles(count, maxCount),
             )}

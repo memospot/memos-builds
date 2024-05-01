@@ -1,6 +1,8 @@
-import classNames from "classnames";
-import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useRef } from "react";
-import { useAutoComplete } from "../hooks";
+import clsx from "clsx";
+import { last } from "lodash-es";
+import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { markdownServiceClient } from "@/grpcweb";
+import { NodeType, OrderedListNode, TaskListNode, UnorderedListNode } from "@/types/proto/api/v1/markdown_service";
 import TagSuggestions from "./TagSuggestions";
 
 export interface EditorRefActions {
@@ -30,6 +32,7 @@ interface Props {
 
 const Editor = forwardRef(function Editor(props: Props, ref: React.ForwardedRef<EditorRefActions>) {
   const { className, initialContent, placeholder, onPaste, onContentChange: handleContentChangeCallback } = props;
+  const [isInIME, setIsInIME] = useState(false);
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -133,8 +136,6 @@ const Editor = forwardRef(function Editor(props: Props, ref: React.ForwardedRef<
     },
   };
 
-  useAutoComplete(editorActions);
-
   useImperativeHandle(ref, () => editorActions, []);
 
   const updateEditorHeight = () => {
@@ -149,9 +150,41 @@ const Editor = forwardRef(function Editor(props: Props, ref: React.ForwardedRef<
     updateEditorHeight();
   }, []);
 
+  const handleEditorKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !isInIME) {
+      if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      const cursorPosition = editorActions.getCursorPosition();
+      const prevContent = editorActions.getContent().substring(0, cursorPosition);
+      const { nodes } = await markdownServiceClient.parseMarkdown({ markdown: prevContent });
+      const lastNode = last(nodes);
+      if (!lastNode) {
+        return;
+      }
+
+      let insertText = "";
+      if (lastNode.type === NodeType.TASK_LIST) {
+        const { complete } = lastNode.taskListNode as TaskListNode;
+        insertText = complete ? "- [x] " : "- [ ] ";
+      } else if (lastNode.type === NodeType.UNORDERED_LIST) {
+        const { symbol } = lastNode.unorderedListNode as UnorderedListNode;
+        insertText = `${symbol} `;
+      } else if (lastNode.type === NodeType.ORDERED_LIST) {
+        const { number } = lastNode.orderedListNode as OrderedListNode;
+        insertText = `${Number(number) + 1}. `;
+      }
+      if (insertText) {
+        editorActions.insertText(`\n${insertText}`);
+        event.preventDefault();
+      }
+    }
+  };
+
   return (
     <div
-      className={classNames(
+      className={clsx(
         "flex flex-col justify-start items-start relative w-full h-auto max-h-[256px] bg-inherit dark:text-gray-300",
         className,
       )}
@@ -163,6 +196,9 @@ const Editor = forwardRef(function Editor(props: Props, ref: React.ForwardedRef<
         ref={editorRef}
         onPaste={onPaste}
         onInput={handleEditorInput}
+        onKeyDown={handleEditorKeyDown}
+        onCompositionStart={() => setIsInIME(true)}
+        onCompositionEnd={() => setTimeout(() => setIsInIME(false))}
       ></textarea>
       <TagSuggestions editorRef={editorRef} editorActions={ref} />
     </div>
