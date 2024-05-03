@@ -86,7 +86,7 @@ ENV MEMOS_METRIC="false"
 EXPOSE 5230
 
 HEALTHCHECK --interval=5m --timeout=10s \
-	CMD wget -qO - http://localhost:${MEMOS_PORT}/api/v1/ping || exit 1
+	CMD wget -qO - http://localhost:${MEMOS_PORT}/healthz || exit 1
 
 WORKDIR /opt/memos
 ENTRYPOINT [ "sh", "./entrypoint.sh" ]
