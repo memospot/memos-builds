@@ -12,7 +12,6 @@ type Driver interface {
 	Close() error
 
 	Migrate(ctx context.Context) error
-	Vacuum(ctx context.Context) error
 
 	// current file is driver
 	GetCurrentDBSize(ctx context.Context) (int64, error)
@@ -28,7 +27,7 @@ type Driver interface {
 	// Resource model related methods.
 	CreateResource(ctx context.Context, create *Resource) (*Resource, error)
 	ListResources(ctx context.Context, find *FindResource) ([]*Resource, error)
-	UpdateResource(ctx context.Context, update *UpdateResource) (*Resource, error)
+	UpdateResource(ctx context.Context, update *UpdateResource) error
 	DeleteResource(ctx context.Context, delete *DeleteResource) error
 
 	// Memo model related methods.
@@ -67,11 +66,6 @@ type Driver interface {
 	ListIdentityProviders(ctx context.Context, find *FindIdentityProvider) ([]*IdentityProvider, error)
 	UpdateIdentityProvider(ctx context.Context, update *UpdateIdentityProvider) (*IdentityProvider, error)
 	DeleteIdentityProvider(ctx context.Context, delete *DeleteIdentityProvider) error
-
-	// Tag model related methods.
-	UpsertTag(ctx context.Context, upsert *Tag) (*Tag, error)
-	ListTags(ctx context.Context, find *FindTag) ([]*Tag, error)
-	DeleteTag(ctx context.Context, delete *DeleteTag) error
 
 	// Inbox model related methods.
 	CreateInbox(ctx context.Context, create *Inbox) (*Inbox, error)

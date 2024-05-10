@@ -77,9 +77,7 @@
   },
   "memo": {
     "archived-at": "Lưu trữ vào",
-    "archived-memos": "Ghi chú đã lưu trữ",
     "comment": {
-      "no-comment": "Không có bình luận",
       "self": "Bình luận"
     },
     "copy-link": "Sao chép liên kết",
@@ -101,40 +99,16 @@
   "message": {
     "archived-successfully": "Lưu trữ thành công",
     "change-memo-created-time": "Thay đổi thời gian tạo ghi chú",
-    "change-resource-filename": "Thay đổi tên tệp tài nguyên",
-    "click-to-save-the-image": "Nhấp vào hình ảnh để lưu.",
     "copied": "Đã sao chép",
-    "count-selected-resources": "Tổng số đã chọn",
     "fill-all": "Vui lòng điền đầy đủ thông tin.",
-    "fill-form": "Vui lòng điền vào biểu mẫu.",
-    "fill-server-name": "Vui lòng điền tên máy chủ.",
-    "generating-the-screenshot": "Đang tạo ảnh chụp màn hình...",
-    "image-load-failed": "Tải hình ảnh thất bại.",
-    "invalid-created-datetime": "Thời gian tạo không hợp lệ.",
-    "invalid-resource-filename": "Tên tệp không hợp lệ.",
-    "login-failed": "Đăng nhập thất bại",
     "maximum-upload-size-is": "Kích thước tải lên tối đa là {{size}} MiB",
     "memo-not-found": "Không tìm thấy ghi chú.",
-    "memo-updated-datetime": "Ghi chú đã được cập nhật thời gian.",
-    "memos-ready": "tất cả ghi chú đã sẵn sàng",
     "new-password-not-match": "Mật khẩu mới không khớp.",
     "no-data": "Không có dữ liệu.",
     "password-changed": "Mật khẩu đã được thay đổi.",
     "password-not-match": "Mật khẩu không khớp.",
-    "private-only": "Bản ghi chú này là riêng tư",
-    "resource-filename-updated": "Tên tệp tài nguyên đã được cập nhật.",
-    "resource-ready": "tất cả tài nguyên đã sẵn sàng",
     "restored-successfully": "Khôi phục thành công",
-    "signup-failed": "Đăng ký thất bại",
-    "succeed-copy-code": "Mã đã được sao chép thành công.",
-    "succeed-copy-content": "Nội dung đã được sao chép thành công.",
     "succeed-copy-link": "Liên kết đã được sao chép thành công.",
-    "succeed-copy-link-not-public": "Nội dung đã được sao chép thành công. Bản ghi chú này không thể truy cập nếu không đăng nhập.",
-    "succeed-copy-resource-link": "Liên kết tài nguyên đã được sao chép thành công.",
-    "succeed-update-additional-script": "Kịch bản bổ sung đã được cập nhật thành công.",
-    "succeed-update-additional-style": "Kiểu bổ sung đã được cập nhật thành công.",
-    "succeed-update-customized-profile": "Hồ sơ tùy chỉnh đã được cập nhật thành công.",
-    "succeed-vacuum-database": "Dọn dẹp cơ sở dữ liệu thành công.",
     "update-succeed": "Cập nhật thành công",
     "user-not-found": "Không tìm thấy người dùng."
   },
@@ -168,11 +142,7 @@
     "no-unused-resources": "Không có tài nguyên không sử dụng",
     "reset-link": "Đặt lại liên kết",
     "reset-link-prompt": "Bạn có chắc chắn muốn đặt lại liên kết?\nĐiều này sẽ làm hỏng tất cả các liên kết hiện tại.\n\nHÀNH ĐỘNG NÀY KHÔNG THỂ ĐƯỢC HOÀN TÁC",
-    "reset-resource-link": "Đặt lại liên kết tài nguyên",
-    "search-bar-placeholder": "Tìm kiếm tài nguyên",
-    "upload-successfully": "Tải lên thành công",
-    "warning-text": "Bạn có chắc chắn muốn xóa tài nguyên này?\n\nHÀNH ĐỘNG NÀY KHÔNG THỂ ĐƯỢC HOÀN TÁC",
-    "warning-text-unused": "Bạn có chắc chắn muốn xóa các tài nguyên không sử dụng này?\n\nHÀNH ĐỘNG NÀY KHÔNG THỂ ĐƯỢC HOÀN TÁC"
+    "reset-resource-link": "Đặt lại liên kết tài nguyên"
   },
   "router": {
     "back-to-top": "Quay lại đầu trang",
@@ -284,7 +254,6 @@
         "locale": "Ngôn ngữ máy chủ",
         "title": "Tùy chỉnh máy chủ"
       },
-      "database-file-size": "Kích thước tệp cơ sở dữ liệu",
       "disable-password-login": "Vô hiệu hóa đăng nhập bằng mật khẩu",
       "disable-password-login-final-warning": "Vui lòng nhập \"CONFIRM\" nếu bạn biết mình đang làm gì.",
       "disable-password-login-warning": "Điều này sẽ vô hiệu hóa đăng nhập bằng mật khẩu cho tất cả người dùng. Không thể đăng nhập nếu không đảo ngược cài đặt này trong cơ sở dữ liệu nếu nhà cung cấp danh tính đã cấu hình của bạn gặp sự cố. Bạn cũng phải cẩn thận hơn khi xóa một nhà cung cấp danh tính",
@@ -294,20 +263,12 @@
       "enable-password-login-warning": "Điều này sẽ cho phép đăng nhập bằng mật khẩu cho tất cả người dùng. Tiếp tục chỉ nếu bạn muốn người dùng có thể đăng nhập bằng cả SSO và mật khẩu",
       "max-upload-size": "Kích thước tải lên tối đa (MiB)",
       "max-upload-size-hint": "Giá trị khuyến nghị là 32 MiB.",
-      "server-name": "Tên máy chủ",
-      "vacuum-hint": "Dọn dẹp dữ liệu không sử dụng."
+      "server-name": "Tên máy chủ"
     }
   },
   "tag": {
     "all-tags": "Tất cả thẻ",
-    "create-tag": "Tạo thẻ",
-    "hide": "Ẩn",
-    "invalid-tag-name": "Tên thẻ không hợp lệ",
-    "save-all": "Lưu tất cả",
-    "show": "Hiển thị",
-    "tag-name": "TÊN_THẺ",
-    "tag-suggestions": "Gợi ý thẻ",
-    "tip-text": "Nhập `#tag` để tạo mới"
+    "create-tag": "Tạo thẻ"
   },
   "timeline": {
     "title": "Dòng thời gian"

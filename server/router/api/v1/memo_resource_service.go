@@ -52,7 +52,7 @@ func (s *APIV1Service) SetMemoResources(ctx context.Context, request *v1pb.SetMe
 			return nil, status.Errorf(codes.InvalidArgument, "invalid resource name: %v", err)
 		}
 		updatedTs := time.Now().Unix() + int64(index)
-		if _, err := s.Store.UpdateResource(ctx, &store.UpdateResource{
+		if err := s.Store.UpdateResource(ctx, &store.UpdateResource{
 			ID:        id,
 			MemoID:    &memoID,
 			UpdatedTs: &updatedTs,
@@ -73,7 +73,7 @@ func (s *APIV1Service) ListMemoResources(ctx context.Context, request *v1pb.List
 		MemoID: &id,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list resources")
+		return nil, status.Errorf(codes.Internal, "failed to list resources: %v", err)
 	}
 
 	response := &v1pb.ListMemoResourcesResponse{

@@ -1,13 +1,4 @@
 {
-  "about": {
-    "about-memos": "Memos について",
-    "memos-description": "Memos は、メモを書き、整理し、共有するために使用できる Web ベースのノートアプリです。",
-    "no-server-description": "このサーバーについての説明は設定されていません",
-    "other-projects": "他のプロジェクト"
-  },
-  "amount-text": {
-    "memo": "MEMO"
-  },
   "auth": {
     "create-your-account": "アカウントを作成",
     "host-tip": "管理者として登録されます。",
@@ -98,24 +89,17 @@
     "any-thoughts": "今思ったことは...",
     "save": "保存"
   },
-  "embed-memo": {
-    "copy": "コピー",
-    "only-public-supported": "公開メモのみ埋め込みできます",
-    "text": "コードをあなたのサイズにコピーペーストすればメモを埋め込めます",
-    "title": "メモを埋め込む"
-  },
   "inbox": {
     "memo-comment": "{{user}} があなたの {{memo}} にコメントしました。",
     "version-update": "新しいバージョン {{version}} が利用可能です!"
   },
   "memo": {
     "archived-at": "アーカイブ:",
-    "archived-memos": "メモをアーカイブする",
     "comment": {
-      "no-comment": "コメントなし",
       "self": "コメント"
     },
     "copy-link": "リンクをコピー",
+    "count-memos-in-date": "{{date}} 日に {{count}} 件のメモ",
     "delete-confirm": "本当に削除しますか？\n\n削除後の復元は不可能です。",
     "delete-memo": "メモを削除する",
     "embed": "埋め込む",
@@ -130,49 +114,31 @@
       "private": "非公開",
       "protected": "メンバーに表示",
       "public": "公開メモ"
-    }
+    },
+    "wrapping": "ラッピング"
   },
   "message": {
+    "archived-successfully": "アーカイブが完了しました",
     "change-memo-created-time": "メモの作成時間が変更されました。",
-    "change-resource-filename": "ファイルの名前を変更する",
-    "click-to-save-the-image": "クリックしてこの画像を保存します",
     "copied": "コピーしました！",
-    "count-selected-resources": "選択された項目の合計",
+    "deleted-successfully": "削除されました",
     "fill-all": "すべての項目を入力してください。",
-    "fill-form": "このフォームに必須事項を入力してください。",
-    "fill-server-name": "サーバーの名前を入力してください。",
-    "generating-the-screenshot": "スクリーンショットを生成中",
-    "image-load-failed": "画像の読み込みに失敗しました",
-    "invalid-created-datetime": "作成された日付が無効です。",
-    "invalid-resource-filename": "無効な名前です。",
-    "login-failed": "ログイン失敗",
     "maximum-upload-size-is": "ファイルの最大サイズは{{size}} MiBです。",
     "memo-not-found": "メモは見つかりませんでした",
-    "memo-updated-datetime": "メモの作成日時が変更されました。",
-    "memos-ready": "これですべてのメモを閲覧できました🎉",
     "new-password-not-match": "新しいパスワードが一致しません",
     "no-data": "ファイルが見つかりませんでした。",
-    "password-changed": "パスワードを変更しました。",
+    "password-changed": "パスワードを変更しました",
     "password-not-match": "パスワードが一致しません。",
-    "private-only": "このメモは非公開です。",
-    "resource-filename-updated": "ファイルの名前を変更しました。",
-    "resource-ready": "これですべてのファイルを閲覧できました🎉",
     "restored-successfully": "リストア成功",
-    "signup-failed": "登録失敗",
-    "succeed-copy-code": "コードのコピーに成功しました",
-    "succeed-copy-content": "コンテンツのコピーに成功しました",
-    "succeed-copy-link": "リンクのコピーに成功しました",
-    "succeed-copy-link-not-public": "リンクのコピーに成功しました。このメモはサインアウトした状態で閲覧できません。",
-    "succeed-copy-resource-link": "ファイルリンクのコピーに成功しました。",
-    "succeed-update-additional-script": "追加スクリプトの保存に成功しました",
-    "succeed-update-additional-style": "追加CSSの保存に成功しました。",
-    "succeed-update-customized-profile": "プロフィール変更の保存に成功しました",
-    "succeed-vacuum-database": "データベースの初期化に成功しました",
-    "update-succeed": "変更は保存されました。",
+    "succeed-copy-link": "リンクのコピーに成功しました。",
+    "update-succeed": "変更は保存されました",
     "user-not-found": "ユーザーが見つかりませんでした"
   },
   "reference": {
-    "no-memos-found": "メモが見つかりません"
+    "add-references": "変更は保存されました",
+    "embedded-usage": "埋め込みとして使用する",
+    "no-memos-found": "メモが見つかりません",
+    "search-placeholder": "内容を検索"
   },
   "resource": {
     "clear": "クリア",
@@ -188,27 +154,23 @@
         "type-placeholder": "ファイルタイプ"
       },
       "local-file": {
-        "choose": "ファイルを選択する",
+        "choose": "ファイルを選択する…",
         "option": "PCからアップロード"
       },
       "title": "ファイルをアップロード",
       "upload-method": "アップロード方法"
     },
     "delete-resource": "ファイルを削除する",
-    "delete-selected-resources": "ファイルは削除されました。",
-    "fetching-data": "データを取得中...",
+    "delete-selected-resources": "選択したファイルを削除",
+    "fetching-data": "データを取得中…",
     "file-drag-drop-prompt": "アップロードするファイルをドラックアンドドロップする",
-    "linked-amount": "Linked amount",
+    "linked-amount": "リンクしているメモの数",
     "no-files-selected": "ファイルが選択されていません",
     "no-resources": "ファイルはありません。",
-    "no-unused-resources": "未使用のファイルはありません。",
+    "no-unused-resources": "未使用のファイルはありません",
     "reset-link": "リンクをリセット",
-    "reset-link-prompt": "本当にリンクをリセットしますか？\n実行すると既存のリンクは無効化されます。\n\n実行後の復元は不可能です。",
-    "reset-resource-link": "リンクをリセットする",
-    "search-bar-placeholder": "ファイルを検索する",
-    "upload-successfully": "アップロードされました",
-    "warning-text": "本当にファイルを削除しますか?\n\n実行すると取り消せません。",
-    "warning-text-unused": "本当に未使用のファイルを削除しますか？\n\n実行すると取り消せません。"
+    "reset-link-prompt": "本当にリンクをリセットしますか？実行すると既存のリンクは無効化されます。操作後、元に戻せません。",
+    "reset-resource-link": "リンクをリセットする"
   },
   "router": {
     "back-to-top": "トップに戻る",
@@ -237,10 +199,10 @@
     "member-list": "メンバーリスト",
     "member-section": {
       "archive-member": "メンバーをゴミ箱に入れる",
-      "archive-warning": "❗本当に{{username}}をゴミ箱に追加していいですか?",
+      "archive-warning": "本当に{{username}}をゴミ箱に追加してよろしいですか?",
       "create-a-member": "メンバーを追加する",
       "delete-member": "メンバーを消去する",
-      "delete-warning": "❗本当に{{username}}を消去していいですか?\n\n消去後、元に戻せません!"
+      "delete-warning": "本当に{{username}}を消去していいですか?\n\n消去後、元に戻せません！"
     },
     "my-account": "アカウント設定",
     "preference": "設定",
@@ -258,7 +220,7 @@
       "create-sso": "SSOを作成する",
       "custom": "カスタム",
       "delete-sso": "削除を確定",
-      "disabled-password-login-warning": "パスワードによるログインが無効になっていますので、アイデンティティプロバイダーを削除する際は特に注意してください❗",
+      "disabled-password-login-warning": "パスワードによるログインが無効になっていますので、アイデンティティプロバイダーを削除する際はご注意ください",
       "display-name": "表示名",
       "identifier": "識別子",
       "identifier-filter": "識別子フィルター",
@@ -284,8 +246,8 @@
       "delete-storage": "ストレージを削除",
       "endpoint": "Endpoint",
       "local-storage-path": "Local storage のパス",
-      "path": "Storage Path",
-      "path-description": "ローカルストレージから、{filename}のような変数を使用することができます。",
+      "path": "ストレージのパス",
+      "path-description": "ローカルストレージから、{filename}のような変数を使用できます。",
       "path-placeholder": "custom/path",
       "presign-placeholder": "署名付きURL（オプション）",
       "region": "Region",
@@ -298,20 +260,20 @@
       "type-local": "Local",
       "update-a-service": "ストレージを更新",
       "update-local-path": "Local Storage のパスを更新",
-      "update-local-path-description": "Local storage のパスは、データベースファイルへの相対パスを登録してください。",
+      "update-local-path-description": "Local storage のパスは、データベースファイルへの相対パスを登録してください",
       "update-storage": "ストレージを更新",
       "url-prefix": "URL prefix",
-      "url-prefix-placeholder": "Custom URL prefix, optional",
-      "url-suffix": "URL suffix",
-      "url-suffix-placeholder": "Custom URL suffix, optional",
-      "warning-text": "本当に\"{{name}}\"を消去しますか?\n\n 消去後、元に戻せません！"
+      "url-prefix-placeholder": "カスタムURLプレフィックス（オプション）",
+      "url-suffix": "URLサフィックス",
+      "url-suffix-placeholder": "カスタムURLサフィックス (オプション)",
+      "warning-text": "本当にストレージサービス\"{{name}}\"を消去しますか? \n\n消去後、元に戻せません！"
     },
     "system": "システム",
     "system-section": {
       "additional-script": "追加スクリプト",
-      "additional-script-placeholder": "Javascriptのコードを追加してください。",
+      "additional-script-placeholder": "Javascriptのコードを追加してください",
       "additional-style": "追加CSS",
-      "additional-style-placeholder": "CSSのコードを追加してください。",
+      "additional-style-placeholder": "CSSのコードを追加してください",
       "allow-user-signup": "ユーザー登録を有効にする",
       "customize-server": {
         "appearance": "サーバーの外観",
@@ -320,30 +282,25 @@
         "locale": "サーバーの言語",
         "title": "サーバーをカスタマイズ"
       },
-      "database-file-size": "データベースのファイルサイズ",
       "disable-password-login": "パスワードでのログインを無効にする",
       "disable-password-login-final-warning": "何をしているか理解している場合は、「CONFIRM」と入力してください。",
-      "disable-password-login-warning": "これにより、すべてのユーザーのパスワードでのログインが無効になります。設定済みのIDプロバイダーが失敗した場合、この設定をデータベースで元に戻さない限り、ログインすることはできません。IDプロバイダーを削除する際も、非常に注意が必要です❗",
+      "disable-password-login-warning": "これにより、すべてのユーザーのパスワードでのログインが無効になります。設定済みのIDプロバイダーが失敗した場合、この設定をデータベースで元に戻さない限り、ログインすることはできません。IDプロバイダーを削除する際も、非常に注意が必要です",
       "disable-public-memos": "公開メモを無効化する",
       "display-with-updated-time": "更新日時を表示する",
       "enable-password-login": "パスワードでのログインを有効にする",
-      "enable-password-login-warning": "これにより、すべてのユーザーのパスワードでのログインが有効になります。SSOとパスワードの両方を使用してログインできるようにしたい場合のみ、続行してください❗",
+      "enable-password-login-warning": "これにより、すべてのユーザーのパスワードでのログインが有効になります。SSOとパスワードの両方を使用してログインできるようにしたい場合のみ、続行してください",
       "max-upload-size": "最大ファイルサイズ(MiB)",
       "max-upload-size-hint": "推奨サイズは32 MiBです。",
-      "server-name": "サーバーの名前",
-      "vacuum-hint": "未使用のデータを削除する"
+      "server-name": "サーバーの名前"
     }
   },
   "tag": {
     "all-tags": "すべてのタグ",
     "create-tag": "タグを作成する",
-    "hide": "非表示",
-    "invalid-tag-name": "無効なタグ名",
-    "save-all": "すべて保存",
-    "show": "表示",
-    "tag-name": "タグの名前",
-    "tag-suggestions": "タグの提案",
-    "tip-text": "作成するには`#tag`のように入力してください"
+    "create-tags-guide": "`#タグ名`と入力することでタグを作成できます。",
+    "delete-confirm": "このタグを削除しますか?",
+    "delete-tag": "タグを削除",
+    "no-tag-found": "タグが見つかりませんでした"
   },
   "timeline": {
     "title": "タイムライン"

@@ -23,7 +23,6 @@ type APIV1Service struct {
 	v1pb.UnimplementedUserServiceServer
 	v1pb.UnimplementedMemoServiceServer
 	v1pb.UnimplementedResourceServiceServer
-	v1pb.UnimplementedTagServiceServer
 	v1pb.UnimplementedInboxServiceServer
 	v1pb.UnimplementedActivityServiceServer
 	v1pb.UnimplementedWebhookServiceServer
@@ -50,7 +49,6 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 	v1pb.RegisterAuthServiceServer(grpcServer, apiv1Service)
 	v1pb.RegisterUserServiceServer(grpcServer, apiv1Service)
 	v1pb.RegisterMemoServiceServer(grpcServer, apiv1Service)
-	v1pb.RegisterTagServiceServer(grpcServer, apiv1Service)
 	v1pb.RegisterResourceServiceServer(grpcServer, apiv1Service)
 	v1pb.RegisterInboxServiceServer(grpcServer, apiv1Service)
 	v1pb.RegisterActivityServiceServer(grpcServer, apiv1Service)
@@ -63,12 +61,11 @@ func NewAPIV1Service(secret string, profile *profile.Profile, store *store.Store
 
 // RegisterGateway registers the gRPC-Gateway with the given Echo instance.
 func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Echo) error {
-	// Create a client connection to the gRPC Server we just started.
-	// This is where the gRPC-Gateway proxies the requests.
 	conn, err := grpc.DialContext(
 		ctx,
 		fmt.Sprintf(":%d", s.Profile.Port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(100*1024*1024)),
 	)
 	if err != nil {
 		return err
@@ -90,9 +87,6 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 	if err := v1pb.RegisterMemoServiceHandler(context.Background(), gwMux, conn); err != nil {
 		return err
 	}
-	if err := v1pb.RegisterTagServiceHandler(context.Background(), gwMux, conn); err != nil {
-		return err
-	}
 	if err := v1pb.RegisterResourceServiceHandler(context.Background(), gwMux, conn); err != nil {
 		return err
 	}
@@ -112,12 +106,12 @@ func (s *APIV1Service) RegisterGateway(ctx context.Context, echoServer *echo.Ech
 		return err
 	}
 	echoServer.Any("/api/v1/*", echo.WrapHandler(gwMux))
-	echoServer.Any("/o/*", echo.WrapHandler(gwMux))
+	echoServer.Any("/file/*", echo.WrapHandler(gwMux))
 
 	// GRPC web proxy.
 	options := []grpcweb.Option{
 		grpcweb.WithCorsForRegisteredEndpointsOnly(false),
-		grpcweb.WithOriginFunc(func(origin string) bool {
+		grpcweb.WithOriginFunc(func(_ string) bool {
 			return true
 		}),
 	}

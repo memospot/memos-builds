@@ -2,18 +2,15 @@ package store
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 
 	"github.com/usememos/memos/internal/util"
-)
-
-const (
-	// thumbnailImagePath is the directory to store image thumbnails.
-	thumbnailImagePath = ".thumbnail_cache"
+	"github.com/usememos/memos/plugin/storage/s3"
+	storepb "github.com/usememos/memos/proto/gen/store"
 )
 
 type Resource struct {
@@ -28,13 +25,16 @@ type Resource struct {
 	UpdatedTs int64
 
 	// Domain specific fields
-	Filename     string
-	Blob         []byte
-	InternalPath string
-	ExternalLink string
-	Type         string
-	Size         int64
-	MemoID       *int32
+	Filename    string
+	Blob        []byte
+	Type        string
+	Size        int64
+	StorageType storepb.ResourceStorageType
+	Reference   string
+	Payload     *storepb.ResourcePayload
+
+	// The related memo ID.
+	MemoID *int32
 }
 
 type FindResource struct {
@@ -45,19 +45,19 @@ type FindResource struct {
 	Filename       *string
 	MemoID         *int32
 	HasRelatedMemo bool
+	StorageType    *storepb.ResourceStorageType
 	Limit          *int
 	Offset         *int
 }
 
 type UpdateResource struct {
-	ID           int32
-	UID          *string
-	UpdatedTs    *int64
-	Filename     *string
-	InternalPath *string
-	ExternalLink *string
-	MemoID       *int32
-	Blob         []byte
+	ID        int32
+	UID       *string
+	UpdatedTs *int64
+	Filename  *string
+	MemoID    *int32
+	Reference *string
+	Payload   *storepb.ResourcePayload
 }
 
 type DeleteResource struct {
@@ -89,9 +89,9 @@ func (s *Store) GetResource(ctx context.Context, find *FindResource) (*Resource,
 	return resources[0], nil
 }
 
-func (s *Store) UpdateResource(ctx context.Context, update *UpdateResource) (*Resource, error) {
+func (s *Store) UpdateResource(ctx context.Context, update *UpdateResource) error {
 	if update.UID != nil && !util.UIDMatcher.MatchString(*update.UID) {
-		return nil, errors.New("invalid uid")
+		return errors.New("invalid uid")
 	}
 	return s.driver.UpdateResource(ctx, update)
 }
@@ -105,20 +105,46 @@ func (s *Store) DeleteResource(ctx context.Context, delete *DeleteResource) erro
 		return errors.Wrap(nil, "resource not found")
 	}
 
-	// Delete the local file.
-	if resource.InternalPath != "" {
-		resourcePath := filepath.FromSlash(resource.InternalPath)
-		if !filepath.IsAbs(resourcePath) {
-			resourcePath = filepath.Join(s.Profile.Data, resourcePath)
+	if resource.StorageType == storepb.ResourceStorageType_LOCAL {
+		if err := func() error {
+			p := filepath.FromSlash(resource.Reference)
+			if !filepath.IsAbs(p) {
+				p = filepath.Join(s.Profile.Data, p)
+			}
+			err := os.Remove(p)
+			if err != nil {
+				return errors.Wrap(err, "failed to delete local file")
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrap(err, "failed to delete local file")
 		}
-		_ = os.Remove(resourcePath)
+	} else if resource.StorageType == storepb.ResourceStorageType_S3 {
+		if err := func() error {
+			s3ObjectPayload := resource.Payload.GetS3Object()
+			if s3ObjectPayload == nil {
+				return errors.Errorf("No s3 object found")
+			}
+			workspaceStorageSetting, err := s.GetWorkspaceStorageSetting(ctx)
+			if err != nil {
+				return errors.Wrap(err, "failed to get workspace storage setting")
+			}
+			s3Config := workspaceStorageSetting.S3Config
+			if s3Config == nil {
+				return errors.Errorf("No actived external storage found")
+			}
+			s3Client, err := s3.NewClient(ctx, s3Config)
+			if err != nil {
+				return errors.Wrap(err, "Failed to create s3 client")
+			}
+			if err := s3Client.DeleteObject(ctx, s3ObjectPayload.Key); err != nil {
+				return errors.Wrap(err, "Failed to delete s3 object")
+			}
+			return nil
+		}(); err != nil {
+			slog.Warn("Failed to delete s3 object", err)
+		}
 	}
 
-	// Delete the thumbnail.
-	if util.HasPrefixes(resource.Type, "image/png", "image/jpeg") {
-		ext := filepath.Ext(resource.Filename)
-		thumbnailPath := filepath.Join(s.Profile.Data, thumbnailImagePath, fmt.Sprintf("%d%s", resource.ID, ext))
-		_ = os.Remove(thumbnailPath)
-	}
 	return s.driver.DeleteResource(ctx, delete)
 }

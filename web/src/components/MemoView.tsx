@@ -4,12 +4,11 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useNavigateTo from "@/hooks/useNavigateTo";
-import { extractMemoIdFromName, useUserStore } from "@/store/v1";
+import { useUserStore } from "@/store/v1";
 import { MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
 import { Memo, Visibility } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityToString } from "@/utils/memo";
-import showChangeMemoCreatedTsDialog from "./ChangeMemoCreatedTsDialog";
 import Icon from "./Icon";
 import MemoActionMenu from "./MemoActionMenu";
 import MemoContent from "./MemoContent";
@@ -23,6 +22,7 @@ import VisibilityIcon from "./VisibilityIcon";
 
 interface Props {
   memo: Memo;
+  displayTimeFormat?: "auto" | "time";
   compact?: boolean;
   showCreator?: boolean;
   showVisibility?: boolean;
@@ -56,12 +56,8 @@ const MemoView: React.FC<Props> = (props: Props) => {
     })();
   }, []);
 
-  const handleGotoMemoDetailPage = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.altKey) {
-      showChangeMemoCreatedTsDialog(extractMemoIdFromName(memo.name));
-    } else {
-      navigateTo(`/m/${memo.uid}`);
-    }
+  const handleGotoMemoDetailPage = () => {
+    navigateTo(`/m/${memo.uid}`);
   };
 
   const handleMemoContentClick = useCallback(async (e: React.MouseEvent) => {
@@ -74,6 +70,13 @@ const MemoView: React.FC<Props> = (props: Props) => {
       }
     }
   }, []);
+
+  const displayTime =
+    props.displayTimeFormat === "time" ? (
+      memo.displayTime?.toLocaleTimeString()
+    ) : (
+      <relative-time datetime={memo.displayTime?.toISOString()} format={relativeTimeFormat} tense="past"></relative-time>
+    );
 
   return (
     <div
@@ -103,13 +106,13 @@ const MemoView: React.FC<Props> = (props: Props) => {
                   className="w-auto -mt-0.5 text-xs leading-tight text-gray-400 dark:text-gray-500 select-none"
                   onClick={handleGotoMemoDetailPage}
                 >
-                  <relative-time datetime={memo.displayTime?.toISOString()} format={relativeTimeFormat} tense="past"></relative-time>
+                  {displayTime}
                 </div>
               </div>
             </div>
           ) : (
             <div className="w-full text-sm leading-tight text-gray-400 dark:text-gray-500 select-none" onClick={handleGotoMemoDetailPage}>
-              <relative-time datetime={memo.displayTime?.toISOString()} format={relativeTimeFormat} tense="past"></relative-time>
+              {displayTime}
             </div>
           )}
         </div>

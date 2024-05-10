@@ -1,9 +1,4 @@
 {
-  "amount-text": {
-    "memo_few": "",
-    "memo_many": "",
-    "memo_one": "NOTATKA"
-  },
   "auth": {
     "create-your-account": "Utwórz swoje konto",
     "host-tip": "Rejestrujesz się jako właściciel strony.",
@@ -83,7 +78,6 @@
   "memo": {
     "archived-at": "Zarchiwizowano",
     "comment": {
-      "no-comment": "Brak komentarzy",
       "self": "Komentarze"
     },
     "copy-link": "Kopiuj odnośnik",
@@ -98,35 +92,14 @@
   },
   "message": {
     "change-memo-created-time": "Zmień datę utworzenia notatki",
-    "change-resource-filename": "Zmień nazwę pliku zasobu",
-    "click-to-save-the-image": "Kliknij aby zapisać obrazek",
     "copied": "Skopiowano",
-    "count-selected-resources": "Wybrano łącznie",
     "fill-all": "Proszę uzupełnij wszystkie pola.",
-    "fill-form": "Proszę uzupełnij formularz",
-    "generating-the-screenshot": "Generowanie zrzutu ekranu...",
-    "image-load-failed": "Nie udało się wczytać obrazka",
-    "invalid-created-datetime": "Niepoprawna data utworzenia.",
-    "invalid-resource-filename": "Niepoprawna nazwa pliku.",
-    "login-failed": "Błąd logowania",
     "memo-not-found": "Nie znaleziono notatki.",
-    "memo-updated-datetime": "Zmieniono datę utworzenia notatki.",
-    "memos-ready": "wszystkie notatki są gotowe 🎉",
     "new-password-not-match": "Nowe hasła się nie zgadzają.",
     "password-changed": "Zmieniono hasło",
     "password-not-match": "Hasła się nie zgadzają.",
-    "private-only": "Ta notatka jest prywatna.",
-    "resource-filename-updated": "Zmieniono nazwę pliku zasobu.",
     "restored-successfully": "Pomyślnie przywrócono",
-    "signup-failed": "Błąd rejestracji",
-    "succeed-copy-code": "Skopiowano kod do schowka.",
-    "succeed-copy-content": "Skopiowano treść do schowka.",
     "succeed-copy-link": "Skopiowano link do schowka.",
-    "succeed-copy-resource-link": "Udało się skopiować link do zasobu do schowka",
-    "succeed-update-additional-script": "Udało się zaktualizować dodatkowy skrypt",
-    "succeed-update-additional-style": "Udało się zaktualizować dodatkowy styl",
-    "succeed-update-customized-profile": "Udało się zaktualizować spersonalizowany profil",
-    "succeed-vacuum-database": "Udało się wyczyścić bazę danych",
     "update-succeed": "Aktualizacja się powiodła",
     "user-not-found": "Nie znaleziono użytkownika"
   },
@@ -154,9 +127,7 @@
     "no-resources": "Brak zasobów.",
     "no-unused-resources": "Brak nieużywanych zasobów",
     "reset-link": "Resetuj odnośnik",
-    "reset-resource-link": "Resetuj odnośnik zasobu",
-    "warning-text": "Czy na pewno chcesz usunąć zasób?\n\nTo działanie jest nieodwracalne!",
-    "warning-text-unused": "Czy na pewno chcesz usunąć te nieużywane zasoby?\n\nTo działanie jest nieodwracalne!"
+    "reset-resource-link": "Resetuj odnośnik zasobu"
   },
   "setting": {
     "account-section": {
@@ -201,13 +172,9 @@
         "icon-url": "URL ikony",
         "title": "Personalizuj serwer"
       },
-      "database-file-size": "Rozmiar bazy danych",
       "disable-public-memos": "Wyłącz publiczne notatki",
       "display-with-updated-time": "Display with updated time",
       "server-name": "Nazwa serwera"
     }
-  },
-  "tag": {
-    "tip-text": "Wprowadź `#tag` aby utworzyć"
   }
 }

@@ -19,6 +19,7 @@ import (
 	apiv1 "github.com/usememos/memos/server/router/api/v1"
 	"github.com/usememos/memos/server/router/frontend"
 	"github.com/usememos/memos/server/router/rss"
+	s3objectpresigner "github.com/usememos/memos/server/service/s3_object_presigner"
 	versionchecker "github.com/usememos/memos/server/service/version_checker"
 	"github.com/usememos/memos/store"
 )
@@ -60,21 +61,21 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 		return c.String(http.StatusOK, "Service ready.")
 	})
 
-	// Only serve frontend when it's enabled.
-	if profile.Frontend {
-		frontendService := frontend.NewFrontendService(profile, store)
-		frontendService.Serve(ctx, echoServer)
-	}
+	// Serve frontend resources.
+	frontend.NewFrontendService(profile, store).Serve(ctx, echoServer)
 
 	rootGroup := echoServer.Group("")
 
 	// Create and register RSS routes.
 	rss.NewRSSService(s.Profile, s.Store).RegisterRoutes(rootGroup)
 
-	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
-		apiv1.NewLoggerInterceptor().LoggerInterceptor,
-		apiv1.NewGRPCAuthInterceptor(store, secret).AuthenticationInterceptor,
-	))
+	grpcServer := grpc.NewServer(
+		// Override the maximum receiving message size to 100M for uploading large resources.
+		grpc.MaxRecvMsgSize(100*1024*1024),
+		grpc.ChainUnaryInterceptor(
+			apiv1.NewLoggerInterceptor().LoggerInterceptor,
+			apiv1.NewGRPCAuthInterceptor(store, secret).AuthenticationInterceptor,
+		))
 	s.grpcServer = grpcServer
 
 	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store, grpcServer)
@@ -136,6 +137,7 @@ func (s *Server) Shutdown(ctx context.Context) {
 
 func (s *Server) StartBackgroundRunners(ctx context.Context) {
 	go versionchecker.NewVersionChecker(s.Store, s.Profile).Start(ctx)
+	go s3objectpresigner.NewS3ObjectPresigner(s.Store).Start(ctx)
 }
 
 func (s *Server) getOrUpsertWorkspaceBasicSetting(ctx context.Context) (*storepb.WorkspaceBasicSetting, error) {
