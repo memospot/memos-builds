@@ -1,13 +1,4 @@
 {
-  "about": {
-    "about-memos": "O Memo aplikaciji",
-    "memos-description": "Memo je web bazirana aplikacija koju možeš koristiti za pisanje, organiziranje i dijeljenje bilješki.",
-    "no-server-description": "Za ovaj server nije konfiguriran opis.",
-    "other-projects": "Drugi projekti"
-  },
-  "amount-text": {
-    "memo": "MEMO"
-  },
   "auth": {
     "create-your-account": "Stvori svoj račun",
     "host-tip": "Registriraš se kao Vlasnik sajta.",
@@ -88,21 +79,13 @@
     "any-thoughts": "Piši... piši mi...",
     "save": "Sačuvaj"
   },
-  "embed-memo": {
-    "copy": "Kopiraj",
-    "only-public-supported": "* Samo javni memoi mogu biti ugrađeni.",
-    "text": "Kopiraj i podijeli kod ispod na svom blogu ili web stranici.",
-    "title": "Ugradi Memo"
-  },
   "inbox": {
     "memo-comment": "{{user}} je komentirao tvoj {{memo}}.",
     "version-update": "Nova verzija {{version}} je dostupna!"
   },
   "memo": {
     "archived-at": "Arhivirano u",
-    "archived-memos": "Arhivirani Memoi",
     "comment": {
-      "no-comment": "Nema komentara",
       "self": "Komentari"
     },
     "copy-link": "Kopiraj Link",
@@ -123,39 +106,16 @@
   },
   "message": {
     "change-memo-created-time": "Promijeni vrijeme stvaranja memoa",
-    "change-resource-filename": "Promijeni ime resursa",
-    "click-to-save-the-image": "Klikni da spremiš sliku",
     "copied": "Kopirano",
-    "count-selected-resources": "Ukupno odabrano",
     "fill-all": "Molimo, popuni sva polja.",
-    "fill-form": "Please fill out this form",
-    "fill-server-name": "Molim, unesi ime servera",
-    "generating-the-screenshot": "Generiranje screenshota...",
-    "image-load-failed": "slika nije uspješno učitana",
-    "invalid-created-datetime": "Datum i vrijeme stvaranja nije valjano uneseno.",
-    "invalid-resource-filename": "Nevaljano ime fajla.",
-    "login-failed": "Prijava nije uspjela",
     "maximum-upload-size-is": "Maximalna dozvoljena veličina fajla je {{size}} MiB",
     "memo-not-found": "Memo nije nađen.",
-    "memo-updated-datetime": "Datum/vrijeme stvaranja memoa je promijenjen.",
-    "memos-ready": "svi memoi su spremni 🎉",
     "new-password-not-match": "Nove lozinke nisu jednake.",
     "no-data": "Nisu nađeni podaci.",
     "password-changed": "Lozinka je promijenjena",
     "password-not-match": "Lozinke nisu jednake.",
-    "private-only": "Ovaj je memo privatan.",
-    "resource-filename-updated": "Resource filename je promijenjeno.",
-    "resource-ready": "svi resursi su spremni 🎉",
     "restored-successfully": "Uspješno vraćeno",
-    "signup-failed": "Registracija nije uspjela",
-    "succeed-copy-code": "Kod je uspješno kopiran.",
-    "succeed-copy-content": "Sadržaj je uspješno kopiran.",
     "succeed-copy-link": "Link je uspješno kopiran.",
-    "succeed-copy-resource-link": "Resource link je uspješno kopiran.",
-    "succeed-update-additional-script": "Dodatna skripta je uspješno izmijenjena.",
-    "succeed-update-additional-style": "Dodatni stil je uspješno obnovljen.",
-    "succeed-update-customized-profile": "Profil je uspješno izmijenjen.",
-    "succeed-vacuum-database": "Vakuumiranje databaze je uspjelo",
     "update-succeed": "Obnavljanje aplikacije je uspjelo!🎉",
     "user-not-found": "Korisnik nije nađen"
   },
@@ -189,11 +149,7 @@
     "no-unused-resources": "Nema neiskorištenih resources",
     "reset-link": "Resetiraj link",
     "reset-link-prompt": "Želiš li sigurno resetirati link?\nOvo će break sve trenutne link usages.\n\nOVO JE NEPOVRATNA AKCIJA❗",
-    "reset-resource-link": "Resetiraj Resource link",
-    "search-bar-placeholder": "Nađi privitke",
-    "upload-successfully": "Upload je uspješan",
-    "warning-text": "Želiš li sigurno izbrisati ovaj resource?\n\nOVO JE NEPOVRATNA AKCIJA❗",
-    "warning-text-unused": "Are you sure to delete these unused resources?\n\nOVO JE NEPOVRATNA AKCIJA❗"
+    "reset-resource-link": "Resetiraj Resource link"
   },
   "router": {
     "back-to-top": "Na vrh",
@@ -303,7 +259,6 @@
         "locale": "Server Locale",
         "title": "Uredi Server"
       },
-      "database-file-size": "Veličina baze podataka",
       "disable-password-login": "Onemogući prijavu putem lozinke",
       "disable-password-login-final-warning": "Molimo unesi \"POTVRDI\" ako znaš što radiš.",
       "disable-public-memos": "Onemogući javne memoe",
@@ -317,13 +272,6 @@
   },
   "tag": {
     "all-tags": "Svi Tagovi",
-    "create-tag": "Stvori Tag",
-    "hide": "Sakrij",
-    "invalid-tag-name": "Ime taga nije valjano",
-    "save-all": "Sačuvaj sve",
-    "show": "Pokaži",
-    "tag-name": "IME_TAGA",
-    "tag-suggestions": "Prijedlozi tagova",
-    "tip-text": "Unesi `#tag` kako bi stvorio"
+    "create-tag": "Stvori Tag"
   }
 }

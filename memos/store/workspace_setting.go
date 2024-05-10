@@ -69,6 +69,9 @@ func (s *Store) ListWorkspaceSettings(ctx context.Context, find *FindWorkspaceSe
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to convert workspace setting")
 		}
+		if workspaceSetting == nil {
+			continue
+		}
 		s.workspaceSettingCache.Store(workspaceSetting.Key.String(), workspaceSetting)
 		workspaceSettings = append(workspaceSettings, workspaceSetting)
 	}
@@ -123,6 +126,11 @@ func (s *Store) GetWorkspaceGeneralSetting(ctx context.Context) (*storepb.Worksp
 	return workspaceGeneralSetting, nil
 }
 
+const (
+	// DefaultContentLengthLimit is the default limit of content length in bytes. 8KB.
+	DefaultContentLengthLimit = 8 * 1024
+)
+
 func (s *Store) GetWorkspaceMemoRelatedSetting(ctx context.Context) (*storepb.WorkspaceMemoRelatedSetting, error) {
 	workspaceSetting, err := s.GetWorkspaceSetting(ctx, &FindWorkspaceSetting{
 		Name: storepb.WorkspaceSettingKey_WORKSPACE_SETTING_MEMO_RELATED.String(),
@@ -134,6 +142,9 @@ func (s *Store) GetWorkspaceMemoRelatedSetting(ctx context.Context) (*storepb.Wo
 	workspaceMemoRelatedSetting := &storepb.WorkspaceMemoRelatedSetting{}
 	if workspaceSetting != nil {
 		workspaceMemoRelatedSetting = workspaceSetting.GetMemoRelatedSetting()
+	}
+	if workspaceMemoRelatedSetting.ContentLengthLimit < DefaultContentLengthLimit {
+		workspaceMemoRelatedSetting.ContentLengthLimit = DefaultContentLengthLimit
 	}
 	return workspaceMemoRelatedSetting, nil
 }
@@ -198,7 +209,8 @@ func convertWorkspaceSettingFromRaw(workspaceSettingRaw *WorkspaceSetting) (*sto
 		}
 		workspaceSetting.Value = &storepb.WorkspaceSetting_MemoRelatedSetting{MemoRelatedSetting: memoRelatedSetting}
 	default:
-		return nil, errors.Errorf("unsupported workspace setting key: %v", workspaceSettingRaw.Name)
+		// Skip unsupported workspace setting key.
+		return nil, nil
 	}
 	return workspaceSetting, nil
 }

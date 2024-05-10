@@ -1,14 +1,4 @@
 {
-  "about": {
-    "about-memos": "Notlar hakkında",
-    "memos-description": "memos, not yazmak, düzenlemek ve paylaşmak için kullanabileceğiniz web tabanlı bir not alma uygulamasıdır.",
-    "no-server-description": "Bu sunucu için yapılandırılmış bir açıklama yok.",
-    "other-projects": "Diğer Projeler"
-  },
-  "amount-text": {
-    "memo_one": "NOT",
-    "memo_other": "NOTLAR"
-  },
   "auth": {
     "create-your-account": "Hesap oluşturun",
     "host-tip": "Site sahibi olarak kaydoluyorsunuz.",
@@ -99,21 +89,13 @@
     "any-thoughts": "Düşünceleriniz...",
     "save": "Kaydet"
   },
-  "embed-memo": {
-    "copy": "Kopyala",
-    "only-public-supported": "* Yalnızca herkese açık notlar gömülebilir.",
-    "text": "Aşağıdaki kodu kopyalayıp blogunuza veya web sitenize yapıştırın.",
-    "title": "Notu Yerleştir"
-  },
   "inbox": {
     "memo-comment": "{{kullanıcı}}'nın {{memo}}'nuz hakkında bir yorumu var.",
     "version-update": "Yeni sürüm {{version}} artık kullanılabilir!"
   },
   "memo": {
     "archived-at": "Arşivlendi",
-    "archived-memos": "Arşivlenmiş Notlar",
     "comment": {
-      "no-comment": "Yorum yok",
       "self": "Yorumlar"
     },
     "copy-link": "Bağlantıyı kopyala",
@@ -138,50 +120,24 @@
   "message": {
     "archived-successfully": "Başarıyla arşivlendi",
     "change-memo-created-time": "Not oluşturma zamanını değiştir",
-    "change-resource-filename": "Dosya adını değiştir",
-    "click-to-save-the-image": "Kaydetmek için tıklayın",
     "copied": "Kopyalandı",
-    "count-selected-resources": "Toplam seçilen",
     "deleted-successfully": "Başarıyla silindi",
-    "failed-to-embed-memo": "Not yerleştirilemedi",
     "fill-all": "Lütfen tüm alanları doldurun.",
-    "fill-form": "Lütfen formu doldurun",
-    "fill-server-name": "Lütfen sunucu adını girin",
-    "generating-the-screenshot": "Ekran görüntüsü oluşturuluyor…",
-    "image-load-failed": "Resim yüklenemedi",
-    "invalid-created-datetime": "Oluşturma zamanı geçersiz.",
-    "invalid-resource-filename": "Geçersiz dosya adı.",
-    "login-failed": "Giriş başarısız",
     "maximum-upload-size-is": "İzin verilen maksimum yükleme boyutu {{size}} MiB",
     "memo-not-found": "Not bulunamadı.",
-    "memo-updated-datetime": "Oluşturma zamanı değiştirildi.",
-    "memos-ready": "daha fazla not yok 🎉",
     "new-password-not-match": "Yeni parolalar eşleşmiyor.",
     "no-data": "Veri bulunamadı.",
     "password-changed": "Şifre değiştirildi",
     "password-not-match": "Parolalar eşleşmiyor.",
-    "private-only": "Bu not özel.",
-    "resource-filename-updated": "Dosya adı güncellendi.",
-    "resource-ready": "tüm kaynaklar hazır",
     "restored-successfully": "Başarıyla geri yüklendi.",
-    "signup-failed": "Kayıt başarısız",
-    "succeed-copy-code": "Kod panosuna kopyalandı",
-    "succeed-copy-content": "Metin panosuna metin kopyalandı.",
     "succeed-copy-link": "Bağlantı panosuna bağlantı kopyalandı.",
-    "succeed-copy-link-not-public": "İçerik başarıyla kopyalandı. Bu nota oturum açmadan erişilemez.",
-    "succeed-copy-resource-link": "Kaynak bağlantısı panosuna kopyalandı",
-    "succeed-update-additional-script": "Ek scriptler başarıyla eklendi",
-    "succeed-update-additional-style": "Stiller başarıyla eklendi",
-    "succeed-update-customized-profile": "Özel profil başarıyla güncellendi",
-    "succeed-vacuum-database": "DB vakumlandı",
     "update-succeed": "Başarıyla güncellendi",
     "user-not-found": "Kullanıcı bulunamadı"
   },
   "reference": {
     "add-references": "Referans ekle",
     "embedded-usage": "Gömülü İçerik Olarak Kullan",
-    "no-memos-found": "Hiçbir not bulunamadı",
-    "search-bar-placeholder": "İçerik ara"
+    "no-memos-found": "Hiçbir not bulunamadı"
   },
   "resource": {
     "clear": "Temizle",
@@ -213,11 +169,7 @@
     "no-unused-resources": "Kullanılmayan kaynak yok",
     "reset-link": "Bağlantıyı Sıfırla",
     "reset-link-prompt": "Bağlantıyı sıfırladığınızdan emin misiniz? Bu, mevcut tüm bağlantı kullanımlarını bozacaktır. BU EYLEM GERI DÖNDÜRÜLEMEZ",
-    "reset-resource-link": "Kaynak Bağlantısını Sıfırla",
-    "search-bar-placeholder": "Kaynak arayın",
-    "upload-successfully": "Başarıyla yüklendi",
-    "warning-text": "Bu kaynağı silmek istediğinizden emin misiniz? BU EYLEM GERI DÖNDÜRÜLEMEZ",
-    "warning-text-unused": "Bu kullanılmayan kaynakları silmek istediğinizden emin misiniz? BU EYLEM GERI DÖNDÜRÜLEMEZ"
+    "reset-resource-link": "Kaynak Bağlantısını Sıfırla"
   },
   "router": {
     "back-to-top": "Başa dön",
@@ -329,7 +281,6 @@
         "locale": "Sunucu Yerel Ayarı",
         "title": "Uygulamayı özelleştir"
       },
-      "database-file-size": "Veritabanı Dosya Boyutu",
       "disable-password-login": "Parola girişini devre dışı bırak",
       "disable-password-login-final-warning": "Ne yaptığınızı biliyorsanız lütfen \"ONAYLA\" yazın.",
       "disable-password-login-warning": "Bu, tüm kullanıcılar için parola girişini devre dışı bırakacaktır. Yapılandırılmış kimlik sağlayıcılarınız başarısız olursa, veritabanındaki bu ayarı geri almadan oturum açmak mümkün değildir. Ayrıca bir kimlik sağlayıcısını kaldırırken ekstra dikkatli olmanız gerekecektir",
@@ -339,8 +290,7 @@
       "enable-password-login-warning": "Bu, tüm kullanıcılar için parola girişini etkinleştirecektir. Yalnızca kullanıcıların hem SSO hem de parola kullanarak oturum açabilmesini istiyorsanız devam edin",
       "max-upload-size": "Maksimum yükleme boyutu (MiB)",
       "max-upload-size-hint": "Önerilen değer 32 MiB'dir.",
-      "server-name": "Uygulama Adı",
-      "vacuum-hint": "Kullanılmayan verileri temizler."
+      "server-name": "Uygulama Adı"
     }
   },
   "tag": {
@@ -349,14 +299,7 @@
     "create-tags-guide": "'#tag' girerek etiket oluşturabilirsiniz.",
     "delete-confirm": "Bu etiketi sileceğinizden emin misiniz?",
     "delete-tag": "Etiketi Sil",
-    "hide": "Gizle",
-    "invalid-tag-name": "Geçersiz etiket adı",
-    "no-tag-found": "Etiket bulunamadı",
-    "save-all": "Tümünü kaydet",
-    "show": "Göster",
-    "tag-name": "ETİKET_ADI",
-    "tag-suggestions": "Etiket önerileri",
-    "tip-text": "Oluşturmak için #etiket girin"
+    "no-tag-found": "Etiket bulunamadı"
   },
   "timeline": {
     "title": "Zaman Çizelgesi"

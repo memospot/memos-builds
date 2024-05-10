@@ -1,15 +1,4 @@
 {
-  "about": {
-    "about-memos": "Informazioni su Memos",
-    "memos-description": "Memos è un'applicazione per prendere appunti basata sul Web che puoi utilizzare per scrivere, organizzare e condividere appunti.",
-    "no-server-description": "Nessuna descrizione configurata per questo server.",
-    "other-projects": "Altri progetti"
-  },
-  "amount-text": {
-    "memo_many": "",
-    "memo_one": "MEMO",
-    "memo_other": "MEMOS"
-  },
   "auth": {
     "host-tip": "Ti stai registrando come proprietario del sito.",
     "new-password": "Nuova password",
@@ -86,15 +75,8 @@
     "any-thoughts": "Qualsiasi cosa pensi...",
     "save": "Salva"
   },
-  "embed-memo": {
-    "copy": "Copia",
-    "only-public-supported": "* È possibile incorporare solo memo pubblici.",
-    "text": "Copia e incolla il codice qui sotto nel tuo blog o sito web.",
-    "title": "Includi memo"
-  },
   "memo": {
     "archived-at": "Archiviato il",
-    "archived-memos": "Memo archiviati",
     "copy-link": "Copia link",
     "delete-confirm": "Sei sicuro di voler eliminare questo memo?\n\nQUESTA AZIONE È IRREVERSIBILE❗",
     "delete-memo": "Elimina Memo",
@@ -113,39 +95,16 @@
   },
   "message": {
     "change-memo-created-time": "Cambia data creazione",
-    "change-resource-filename": "Cambia nome file",
-    "click-to-save-the-image": "Clicca per salvare l’immagine",
     "copied": "Copiato",
-    "count-selected-resources": "Totale selezionato",
     "fill-all": "Per favore riempi tutti i campi",
-    "fill-form": "Per favore riempi il form",
-    "fill-server-name": "Per favore riempi il nome del server",
-    "generating-the-screenshot": "Generando screenshot…",
-    "image-load-failed": "Caricamento immagine fallito",
-    "invalid-created-datetime": "Data creazione non valida",
-    "invalid-resource-filename": "Nome file non valido",
-    "login-failed": "Login fallito",
     "maximum-upload-size-is": "La dimensione massima di upload è {{size}} MiB",
     "memo-not-found": "Memo non trovato",
-    "memo-updated-datetime": "Memo aggiornato con successo",
-    "memos-ready": "Tutti i memo sono stati caricati 🎉",
     "new-password-not-match": "Le nuove password non corrispondono",
     "no-data": "Nessun dato",
     "password-changed": "Password cambiata",
     "password-not-match": "Le password non corrispondono",
-    "private-only": "Questo memo è impostato come privato.",
-    "resource-filename-updated": "Nome file aggiornato",
-    "resource-ready": "Tutte le risorse sono state caricate 🎉",
     "restored-successfully": "Ripristinato con successo",
-    "signup-failed": "Registrazione fallita",
-    "succeed-copy-code": "Codice copiato.",
-    "succeed-copy-content": "Contenuto copiato.",
     "succeed-copy-link": "Link copiato.",
-    "succeed-copy-resource-link": "Link risorsa copiato con successo.",
-    "succeed-update-additional-script": "Script aggiuntivo aggiornato con successo.",
-    "succeed-update-additional-style": "Stile aggiuntivo aggiornato con successo.",
-    "succeed-update-customized-profile": "Profilo personalizzato aggiornato con successo.",
-    "succeed-vacuum-database": "Database ottimizzato con successo.",
     "update-succeed": "Aggiornato con successo",
     "user-not-found": "Utente non trovato"
   },
@@ -179,11 +138,7 @@
     "no-unused-resources": "Nessuna risorsa inutilizzata",
     "reset-link": "Ripristina Link",
     "reset-link-prompt": "Sei sicuro di voler ripristinare questo link?\nQuesto renderà tutti i vecchi link inutilizzabili.\n\nQUESTA AZIONE È IRREVERSIBILE❗",
-    "reset-resource-link": "Ripristina link risorse",
-    "search-bar-placeholder": "Cerca risorse",
-    "upload-successfully": "Caricamento avvenuto con successo",
-    "warning-text": "Sei sicuro di voler eliminare questa risorsa?\n\nQUESTA AZIONE È IRREVERSIBILE❗",
-    "warning-text-unused": "Sei sicuro di voler eliminare le risorse inutilizzate?\n\nQUESTA AZIONE È IRREVERSIBILE❗"
+    "reset-resource-link": "Ripristina link risorse"
   },
   "setting": {
     "account-section": {
@@ -289,7 +244,6 @@
         "locale": "Server Locale",
         "title": "Personalizza server"
       },
-      "database-file-size": "Dimensione file database",
       "disable-password-login": "Disabilita login password",
       "disable-password-login-final-warning": "Digita \"CONFERMA\" se sai cosa stai facendo.",
       "disable-password-login-warning": "Ciò disabiliterà l'accesso tramite password per tutti gli utenti. Non è possibile accedere senza ripristinare questa impostazione nel database se i provider di identità configurati falliscono. Dovrai anche prestare molta attenzione quando rimuovi un provider di identità❗",
@@ -304,9 +258,6 @@
   },
   "tag": {
     "all-tags": "Tutti i Tags",
-    "create-tag": "Crea Tag",
-    "invalid-tag-name": "Nome tag non valido",
-    "tag-name": "NOME_TAG",
-    "tip-text": "Scrivi `#tag` per crearlo"
+    "create-tag": "Crea Tag"
   }
 }

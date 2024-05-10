@@ -31,31 +31,34 @@ const Archived = () => {
     .sort((a, b) => getTimeStampByDate(b.displayTime) - getTimeStampByDate(a.displayTime));
 
   useEffect(() => {
+    setIsRequesting(true);
     nextPageTokenRef.current = undefined;
-    memoList.reset();
-    fetchMemos();
+    setTimeout(async () => {
+      memoList.reset();
+      const nextPageToken = await fetchMemos();
+      nextPageTokenRef.current = nextPageToken;
+      setIsRequesting(false);
+    });
   }, [tagQuery, textQuery]);
 
   const fetchMemos = async () => {
     const filters = [`creator == "${user.name}"`, `row_status == "ARCHIVED"`];
     const contentSearch: string[] = [];
-    if (tagQuery) {
-      contentSearch.push(JSON.stringify(`#${tagQuery}`));
-    }
     if (textQuery) {
       contentSearch.push(JSON.stringify(textQuery));
     }
     if (contentSearch.length > 0) {
       filters.push(`content_search == [${contentSearch.join(", ")}]`);
     }
-    setIsRequesting(true);
-    const data = await memoStore.fetchMemos({
+    if (tagQuery) {
+      filters.push(`tag == "${tagQuery}"`);
+    }
+    const { nextPageToken } = await memoStore.fetchMemos({
       pageSize: DEFAULT_LIST_MEMOS_PAGE_SIZE,
       filter: filters.join(" && "),
       pageToken: nextPageTokenRef.current,
     });
-    setIsRequesting(false);
-    nextPageTokenRef.current = data.nextPageToken;
+    return nextPageToken;
   };
 
   const handleDeleteMemoClick = async (memo: Memo) => {
@@ -91,8 +94,12 @@ const Archived = () => {
       <MobileHeader />
       <div className="w-full px-4 sm:px-6">
         <div className="w-full flex flex-col justify-start items-start">
-          <div className="w-full flex flex-row justify-end items-center mb-2">
-            <div className="w-40">
+          <div className="w-full flex flex-row justify-between items-center mb-2">
+            <div className="flex flex-row justify-start items-center gap-1">
+              <Icon.Archive className="w-5 h-auto opacity-70 shrink-0" />
+              <span className="font-medium">{t("common.archived")}</span>
+            </div>
+            <div className="w-44">
               <SearchBar />
             </div>
           </div>
