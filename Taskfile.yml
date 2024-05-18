@@ -138,7 +138,7 @@ tasks:
     desc: Build without publishing
     summary: Requires a clean git state.
     deps: [build:backend-tidy, build:frontend]
-    cmds: [goreleaser release --clean --skip=publish --timeout 60m]
+    cmds: [goreleaser release --clean --skip=validate --skip=publish --timeout 60m]
 
   release:
     desc: Release binaries to GitHub
@@ -147,7 +147,7 @@ tasks:
       - A git tag must be created right before running this task.
       - Git must be clean.
     deps: [build:backend-tidy, build:frontend]
-    cmds: [goreleaser release --clean --timeout 60m]
+    cmds: [goreleaser release --clean --skip=validate --timeout 60m]
 
   clean:
     desc: Clean-up all build artifacts
