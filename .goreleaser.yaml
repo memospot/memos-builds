@@ -124,7 +124,7 @@ snapshot:
 
 release:
   github:
-    owner: lincolnthalles
+    owner: memospot
     name: memos-builds
 
   # If set to true, will not auto-publish the release.

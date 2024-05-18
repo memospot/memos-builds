@@ -26,7 +26,7 @@ LABEL org.opencontainers.image.title="Memos"
 LABEL org.opencontainers.image.description="A privacy-first, lightweight note-taking service."
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.vendor="Lincoln Nogueira"
-LABEL org.opencontainers.image.source="https://github.com/lincolnthalles/memos-builds"
+LABEL org.opencontainers.image.source="https://github.com/memospot/memos-builds"
 LABEL org.opencontainers.image.url="https://usememos.com"
 
 # Copy tzdata and ca-certificates from Google's distroless image.

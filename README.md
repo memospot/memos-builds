@@ -2,12 +2,12 @@
 
 Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
 
-Some of these builds are utilized by [Memospot](https://github.com/lincolnthalles/memospot), an independent desktop app for Memos available on macOS, Linux, and Windows.
+Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), an independent desktop app for Memos available on macOS, Linux, and Windows.
 
 <div align="center" width="100%" style="display: flex; justify-content: center;">
   <p align="center" width="100%">
 
-[![Downloads](https://img.shields.io/github/downloads/lincolnthalles/memos-builds/total?logo=github)](https://github.com/lincolnthalles/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/lincolnthalles/memos-builds?logo=github)](https://github.com/lincolnthalles/memos-builds)
+[![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
   </p>
 </div>
@@ -96,7 +96,7 @@ Please be aware that Memos does not currently follow a consistent versioning pro
 
 - Nightly images are built daily at 00:00 UTC.
 
-- Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/lincolnthalles/memos-builds/pkgs/container/memos-builds).
+- Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
 |  Platform |         Image         |
 | --------- | --------------------- |
@@ -182,4 +182,4 @@ MEMOS_MODE=prod MEMOS_DATA=. MEMOS_PORT=5230 ./memos
 
 ## Supporting
 
-If you like this project, don't forget to [⭐star](https://github.com/lincolnthalles/memos-builds) it and consider sponsoring it.
+If you like this project, don't forget to [⭐star](https://github.com/memospot/memos-builds) it and consider sponsoring it.

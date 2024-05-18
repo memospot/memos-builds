@@ -237,7 +237,7 @@ jobs:
         with:
           images: |
             lincolnthalles/memos
-            ghcr.io/lincolnthalles/memos-builds
+            ghcr.io/memospot/memos-builds
           tags: |
             type=raw,value=latest
             type=semver,pattern={{version}},value=${{ env.BUILD_VERSION }}
