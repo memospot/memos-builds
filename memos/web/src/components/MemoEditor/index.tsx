@@ -9,7 +9,7 @@ import { isValidUrl } from "@/helpers/utils";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoStore, useResourceStore, useUserStore, useWorkspaceSettingStore } from "@/store/v1";
 import { MemoRelation, MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
-import { Visibility } from "@/types/proto/api/v1/memo_service";
+import { Memo, Visibility } from "@/types/proto/api/v1/memo_service";
 import { Resource } from "@/types/proto/api/v1/resource_service";
 import { UserSetting } from "@/types/proto/api/v1/user_service";
 import { WorkspaceMemoRelatedSetting } from "@/types/proto/api/v1/workspace_setting_service";
@@ -36,8 +36,8 @@ export interface Props {
   parentMemoName?: string;
   relationList?: MemoRelation[];
   autoFocus?: boolean;
+  memoPatchRef?: React.MutableRefObject<Partial<Memo>>;
   onConfirm?: (memoName: string) => void;
-  onEditPrevious?: () => void;
 }
 
 interface State {
@@ -77,7 +77,7 @@ const MemoEditor = (props: Props) => {
       )
     : state.relationList.filter((relation) => relation.type === MemoRelation_Type.REFERENCE);
   const workspaceMemoRelatedSetting =
-    workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.WORKSPACE_SETTING_MEMO_RELATED)?.memoRelatedSetting ||
+    workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.MEMO_RELATED)?.memoRelatedSetting ||
     WorkspaceMemoRelatedSetting.fromPartial({});
 
   useEffect(() => {
@@ -157,12 +157,6 @@ const MemoEditor = (props: Props) => {
       if (selectedContent) {
         editorRef.current.setCursorPosition(cursorPosition + TAB_SPACE_WIDTH);
       }
-      return;
-    }
-
-    if (!!props.onEditPrevious && event.key === "ArrowDown" && !state.isComposing && editorRef.current.getContent() === "") {
-      event.preventDefault();
-      props.onEditPrevious();
       return;
     }
   };
@@ -293,13 +287,18 @@ const MemoEditor = (props: Props) => {
       if (memoName) {
         const prevMemo = await memoStore.getOrFetchMemoByName(memoName);
         if (prevMemo) {
+          const updateMask = ["content", "visibility"];
+          if (props.memoPatchRef?.current?.displayTime) {
+            updateMask.push("display_ts");
+          }
           const memo = await memoStore.updateMemo(
             {
               name: prevMemo.name,
               content,
               visibility: state.memoVisibility,
+              ...props.memoPatchRef?.current,
             },
-            ["content", "visibility"],
+            updateMask,
           );
           await memoServiceClient.setMemoResources({
             name: memo.name,
@@ -412,7 +411,7 @@ const MemoEditor = (props: Props) => {
         <ResourceListView resourceList={state.resourceList} setResourceList={handleSetResourceList} />
         <RelationListView relationList={referenceRelations} setRelationList={handleSetRelationList} />
         <div className="relative w-full flex flex-row justify-between items-center pt-2" onFocus={(e) => e.stopPropagation()}>
-          <div className="flex flex-row justify-start items-center opacity-80">
+          <div className="flex flex-row justify-start items-center opacity-80 dark:opacity-60">
             <TagSelector editorRef={editorRef} />
             <MarkdownMenu editorRef={editorRef} />
             <UploadResourceButton />

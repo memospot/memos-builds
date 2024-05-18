@@ -9,10 +9,6 @@ import "google/api/field_behavior.proto";
 option go_package = "gen/api/v1";
 
 service WorkspaceSettingService {
-  // ListWorkspaceSetting returns the list of settings.
-  rpc ListWorkspaceSettings(ListWorkspaceSettingsRequest) returns (ListWorkspaceSettingsResponse) {
-    option (google.api.http) = {get: "/api/v1/workspace/settings"};
-  }
   // GetWorkspaceSetting returns the setting by name.
   rpc GetWorkspaceSetting(GetWorkspaceSettingRequest) returns (WorkspaceSetting) {
     option (google.api.http) = {get: "/api/v1/workspace/{name=settings/*}"};
@@ -65,12 +61,12 @@ message WorkspaceCustomProfile {
 message WorkspaceStorageSetting {
   enum StorageType {
     STORAGE_TYPE_UNSPECIFIED = 0;
-    // STORAGE_TYPE_DATABASE is the database storage type.
-    STORAGE_TYPE_DATABASE = 1;
-    // STORAGE_TYPE_LOCAL is the local storage type.
-    STORAGE_TYPE_LOCAL = 2;
-    // STORAGE_TYPE_S3 is the S3 storage type.
-    STORAGE_TYPE_S3 = 3;
+    // DATABASE is the database storage type.
+    DATABASE = 1;
+    // LOCAL is the local storage type.
+    LOCAL = 2;
+    // S3 is the S3 storage type.
+    S3 = 3;
   }
   // storage_type is the storage type.
   StorageType storage_type = 1;
@@ -98,12 +94,6 @@ message WorkspaceMemoRelatedSetting {
   bool display_with_update_time = 2;
   // content_length_limit is the limit of content length. Unit is byte.
   int32 content_length_limit = 3;
-}
-
-message ListWorkspaceSettingsRequest {}
-
-message ListWorkspaceSettingsResponse {
-  repeated WorkspaceSetting settings = 1;
 }
 
 message GetWorkspaceSettingRequest {

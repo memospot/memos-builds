@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	"github.com/usememos/memos/internal/util"
+
+	storepb "github.com/usememos/memos/proto/gen/store"
 )
 
 // Visibility is the type of a visibility.
@@ -46,7 +48,7 @@ type Memo struct {
 	// Domain specific fields
 	Content    string
 	Visibility Visibility
-	Tags       []string
+	Payload    *storepb.MemoPayload
 
 	// Composed fields
 	Pinned   bool
@@ -68,7 +70,7 @@ type FindMemo struct {
 	// Domain specific fields
 	ContentSearch   []string
 	VisibilityList  []Visibility
-	Tag             *string
+	PayloadFind     *FindMemoPayload
 	ExcludeContent  bool
 	ExcludeComments bool
 	Random          bool
@@ -80,6 +82,11 @@ type FindMemo struct {
 	OrderByPinned    bool
 }
 
+type FindMemoPayload struct {
+	Raw *string
+	Tag *string
+}
+
 type UpdateMemo struct {
 	ID         int32
 	UID        *string
@@ -88,7 +95,7 @@ type UpdateMemo struct {
 	RowStatus  *RowStatus
 	Content    *string
 	Visibility *Visibility
-	Tags       *[]string
+	Payload    *storepb.MemoPayload
 }
 
 type DeleteMemo struct {

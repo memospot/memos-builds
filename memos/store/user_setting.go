@@ -34,6 +34,9 @@ func (s *Store) UpsertUserSetting(ctx context.Context, upsert *storepb.UserSetti
 	if err != nil {
 		return nil, err
 	}
+	if userSetting == nil {
+		return nil, errors.New("unexpected nil user setting")
+	}
 	s.userSettingCache.Store(getUserSettingCacheKey(userSetting.UserId, userSetting.Key.String()), userSetting)
 	return userSetting, nil
 }
@@ -50,6 +53,9 @@ func (s *Store) ListUserSettings(ctx context.Context, find *FindUserSetting) ([]
 		if err != nil {
 			return nil, err
 		}
+		if userSetting == nil {
+			continue
+		}
 		s.userSettingCache.Store(getUserSettingCacheKey(userSetting.UserId, userSetting.Key.String()), userSetting)
 		userSettings = append(userSettings, userSetting)
 	}
@@ -59,7 +65,10 @@ func (s *Store) ListUserSettings(ctx context.Context, find *FindUserSetting) ([]
 func (s *Store) GetUserSetting(ctx context.Context, find *FindUserSetting) (*storepb.UserSetting, error) {
 	if find.UserID != nil {
 		if cache, ok := s.userSettingCache.Load(getUserSettingCacheKey(*find.UserID, find.Key.String())); ok {
-			return cache.(*storepb.UserSetting), nil
+			userSetting, ok := cache.(*storepb.UserSetting)
+			if ok {
+				return userSetting, nil
+			}
 		}
 	}
 
@@ -83,7 +92,7 @@ func (s *Store) GetUserSetting(ctx context.Context, find *FindUserSetting) (*sto
 func (s *Store) GetUserAccessTokens(ctx context.Context, userID int32) ([]*storepb.AccessTokensUserSetting_AccessToken, error) {
 	userSetting, err := s.GetUserSetting(ctx, &FindUserSetting{
 		UserID: &userID,
-		Key:    storepb.UserSettingKey_USER_SETTING_ACCESS_TOKENS,
+		Key:    storepb.UserSettingKey_ACCESS_TOKENS,
 	})
 	if err != nil {
 		return nil, err
@@ -112,7 +121,7 @@ func (s *Store) RemoveUserAccessToken(ctx context.Context, userID int32, token s
 
 	_, err = s.UpsertUserSetting(ctx, &storepb.UserSetting{
 		UserId: userID,
-		Key:    storepb.UserSettingKey_USER_SETTING_ACCESS_TOKENS,
+		Key:    storepb.UserSettingKey_ACCESS_TOKENS,
 		Value: &storepb.UserSetting_AccessTokens{
 			AccessTokens: &storepb.AccessTokensUserSetting{
 				AccessTokens: newAccessTokens,
@@ -130,20 +139,20 @@ func convertUserSettingFromRaw(raw *UserSetting) (*storepb.UserSetting, error) {
 	}
 
 	switch raw.Key {
-	case storepb.UserSettingKey_USER_SETTING_ACCESS_TOKENS:
+	case storepb.UserSettingKey_ACCESS_TOKENS:
 		accessTokensUserSetting := &storepb.AccessTokensUserSetting{}
 		if err := protojsonUnmarshaler.Unmarshal([]byte(raw.Value), accessTokensUserSetting); err != nil {
 			return nil, err
 		}
 		userSetting.Value = &storepb.UserSetting_AccessTokens{AccessTokens: accessTokensUserSetting}
-	case storepb.UserSettingKey_USER_SETTING_LOCALE:
+	case storepb.UserSettingKey_LOCALE:
 		userSetting.Value = &storepb.UserSetting_Locale{Locale: raw.Value}
-	case storepb.UserSettingKey_USER_SETTING_APPEARANCE:
+	case storepb.UserSettingKey_APPEARANCE:
 		userSetting.Value = &storepb.UserSetting_Appearance{Appearance: raw.Value}
-	case storepb.UserSettingKey_USER_SETTING_MEMO_VISIBILITY:
+	case storepb.UserSettingKey_MEMO_VISIBILITY:
 		userSetting.Value = &storepb.UserSetting_MemoVisibility{MemoVisibility: raw.Value}
 	default:
-		return nil, errors.Errorf("unsupported user setting key: %v", raw.Key)
+		return nil, nil
 	}
 	return userSetting, nil
 }
@@ -155,18 +164,18 @@ func convertUserSettingToRaw(userSetting *storepb.UserSetting) (*UserSetting, er
 	}
 
 	switch userSetting.Key {
-	case storepb.UserSettingKey_USER_SETTING_ACCESS_TOKENS:
+	case storepb.UserSettingKey_ACCESS_TOKENS:
 		accessTokensUserSetting := userSetting.GetAccessTokens()
 		value, err := protojson.Marshal(accessTokensUserSetting)
 		if err != nil {
 			return nil, err
 		}
 		raw.Value = string(value)
-	case storepb.UserSettingKey_USER_SETTING_LOCALE:
+	case storepb.UserSettingKey_LOCALE:
 		raw.Value = userSetting.GetLocale()
-	case storepb.UserSettingKey_USER_SETTING_APPEARANCE:
+	case storepb.UserSettingKey_APPEARANCE:
 		raw.Value = userSetting.GetAppearance()
-	case storepb.UserSettingKey_USER_SETTING_MEMO_VISIBILITY:
+	case storepb.UserSettingKey_MEMO_VISIBILITY:
 		raw.Value = userSetting.GetMemoVisibility()
 	default:
 		return nil, errors.Errorf("unsupported user setting key: %v", userSetting.Key)

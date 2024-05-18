@@ -62,11 +62,13 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 	if len(create.Content) > contentLengthLimit {
 		return nil, status.Errorf(codes.InvalidArgument, "content too long (max %d characters)", contentLengthLimit)
 	}
-	tags, err := ExtractTagsFromContent(create.Content)
+	property, err := getMemoPropertyFromContent(create.Content)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "failed to extract tags")
+		return nil, status.Errorf(codes.Internal, "failed to get memo property: %v", err)
 	}
-	create.Tags = tags
+	create.Payload = &storepb.MemoPayload{
+		Property: property,
+	}
 
 	memo, err := s.Store.CreateMemo(ctx, create)
 	if err != nil {
@@ -91,7 +93,7 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 		ExcludeComments: true,
 	}
 	if err := s.buildMemoFindWithFilter(ctx, memoFind, request.Filter); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter")
+		return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter: %v", err)
 	}
 
 	var limit, offset int
@@ -149,12 +151,12 @@ func (s *APIV1Service) SearchMemos(ctx context.Context, request *v1pb.SearchMemo
 	}
 	err := s.buildMemoFindWithFilter(ctx, memoFind, request.Filter)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter")
+		return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter: %v", err)
 	}
 
 	memos, err := s.Store.ListMemos(ctx, memoFind)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to search memos")
+		return nil, status.Errorf(codes.Internal, "failed to search memos: %v", err)
 	}
 
 	memoMessages := []*v1pb.Memo{}
@@ -246,11 +248,14 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 				return nil, status.Errorf(codes.InvalidArgument, "content too long (max %d characters)", contentLengthLimit)
 			}
 			update.Content = &request.Memo.Content
-			tags, err := ExtractTagsFromContent(*update.Content)
+
+			property, err := getMemoPropertyFromContent(*update.Content)
 			if err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "failed to extract tags")
+				return nil, status.Errorf(codes.Internal, "failed to get memo property: %v", err)
 			}
-			update.Tags = &tags
+			payload := memo.Payload
+			payload.Property = property
+			update.Payload = payload
 		} else if path == "uid" {
 			update.UID = &request.Memo.Name
 			if !util.UIDMatcher.MatchString(*update.UID) {
@@ -272,6 +277,17 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 		} else if path == "created_ts" {
 			createdTs := request.Memo.CreateTime.AsTime().Unix()
 			update.CreatedTs = &createdTs
+		} else if path == "display_ts" {
+			displayTs := request.Memo.DisplayTime.AsTime().Unix()
+			memoRelatedSetting, err := s.Store.GetWorkspaceMemoRelatedSetting(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to get workspace memo related setting")
+			}
+			if memoRelatedSetting.DisplayWithUpdateTime {
+				update.UpdatedTs = &displayTs
+			} else {
+				update.CreatedTs = &displayTs
+			}
 		} else if path == "pinned" {
 			if _, err := s.Store.UpsertMemoOrganizer(ctx, &store.MemoOrganizer{
 				MemoID: id,
@@ -403,7 +419,7 @@ func (s *APIV1Service) CreateMemoComment(ctx context.Context, request *v1pb.Crea
 			ReceiverID: relatedMemo.CreatorID,
 			Status:     store.UNREAD,
 			Message: &storepb.InboxMessage{
-				Type:       storepb.InboxMessage_TYPE_MEMO_COMMENT,
+				Type:       storepb.InboxMessage_MEMO_COMMENT,
 				ActivityId: &activity.ID,
 			},
 		}); err != nil {
@@ -514,7 +530,7 @@ func (s *APIV1Service) ExportMemos(ctx context.Context, request *v1pb.ExportMemo
 		ExcludeComments: true,
 	}
 	if err := s.buildMemoFindWithFilter(ctx, memoFind, request.Filter); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to build find memos with filter: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter: %v", err)
 	}
 
 	memos, err := s.Store.ListMemos(ctx, memoFind)
@@ -547,7 +563,7 @@ func (s *APIV1Service) ExportMemos(ctx context.Context, request *v1pb.ExportMemo
 	}, nil
 }
 
-func (s *APIV1Service) ListMemoTags(ctx context.Context, request *v1pb.ListMemoTagsRequest) (*v1pb.ListMemoTagsResponse, error) {
+func (s *APIV1Service) RebuildMemoProperty(ctx context.Context, request *v1pb.RebuildMemoPropertyRequest) (*emptypb.Empty, error) {
 	user, err := getCurrentUser(ctx, s.Store)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
@@ -556,6 +572,42 @@ func (s *APIV1Service) ListMemoTags(ctx context.Context, request *v1pb.ListMemoT
 	normalRowStatus := store.Normal
 	memoFind := &store.FindMemo{
 		CreatorID:       &user.ID,
+		RowStatus:       &normalRowStatus,
+		ExcludeComments: true,
+	}
+	if (request.Name) != "memos/-" {
+		memoID, err := ExtractMemoIDFromName(request.Name)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
+		}
+		memoFind.ID = &memoID
+	}
+
+	memos, err := s.Store.ListMemos(ctx, memoFind)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list memos")
+	}
+
+	for _, memo := range memos {
+		property, err := getMemoPropertyFromContent(memo.Content)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get memo property: %v", err)
+		}
+		memo.Payload.Property = property
+		if err := s.Store.UpdateMemo(ctx, &store.UpdateMemo{
+			ID:      memo.ID,
+			Payload: memo.Payload,
+		}); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to update memo")
+		}
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *APIV1Service) ListMemoTags(ctx context.Context, request *v1pb.ListMemoTagsRequest) (*v1pb.ListMemoTagsResponse, error) {
+	normalRowStatus := store.Normal
+	memoFind := &store.FindMemo{
 		RowStatus:       &normalRowStatus,
 		ExcludeComments: true,
 		// Default exclude content for performance.
@@ -568,36 +620,20 @@ func (s *APIV1Service) ListMemoTags(ctx context.Context, request *v1pb.ListMemoT
 		}
 		memoFind.ID = &memoID
 	}
-	if request.Rebuild {
-		// If rebuild is true, include content to extract tags.
-		memoFind.ExcludeContent = false
+	if err := s.buildMemoFindWithFilter(ctx, memoFind, request.Filter); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter: %v", err)
 	}
 
 	memos, err := s.Store.ListMemos(ctx, memoFind)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list memos")
 	}
-
-	if request.Rebuild {
-		for _, memo := range memos {
-			tags, err := ExtractTagsFromContent(memo.Content)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to extract tags")
-			}
-			memo.Tags = tags
-			if err := s.Store.UpdateMemo(ctx, &store.UpdateMemo{
-				ID:   memo.ID,
-				Tags: &tags,
-			}); err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to update memo")
-			}
-		}
-	}
-
 	tagAmounts := map[string]int32{}
 	for _, memo := range memos {
-		for _, tag := range memo.Tags {
-			tagAmounts[tag]++
+		if memo.Payload.Property != nil {
+			for _, tag := range memo.Payload.Property.Tags {
+				tagAmounts[tag]++
+			}
 		}
 	}
 	return &v1pb.ListMemoTagsResponse{
@@ -613,7 +649,7 @@ func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMe
 
 	memoFind := &store.FindMemo{
 		CreatorID:       &user.ID,
-		Tag:             &request.OldTag,
+		PayloadFind:     &store.FindMemoPayload{Tag: &request.OldTag},
 		ExcludeComments: true,
 	}
 	if (request.Parent) != "memos/-" {
@@ -640,11 +676,17 @@ func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMe
 			}
 		})
 		content := restore.Restore(nodes)
-		tags := util.ReplaceString(memo.Tags, request.OldTag, request.NewTag)
+
+		property, err := getMemoPropertyFromContent(content)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get memo property: %v", err)
+		}
+		payload := memo.Payload
+		payload.Property = property
 		if err := s.Store.UpdateMemo(ctx, &store.UpdateMemo{
 			ID:      memo.ID,
 			Content: &content,
-			Tags:    &tags,
+			Payload: payload,
 		}); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to update memo: %v", err)
 		}
@@ -661,7 +703,7 @@ func (s *APIV1Service) DeleteMemoTag(ctx context.Context, request *v1pb.DeleteMe
 
 	memoFind := &store.FindMemo{
 		CreatorID:       &user.ID,
-		Tag:             &request.Tag,
+		PayloadFind:     &store.FindMemoPayload{Tag: &request.Tag},
 		ExcludeContent:  true,
 		ExcludeComments: true,
 	}
@@ -746,7 +788,6 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		Content:     memo.Content,
 		Nodes:       convertFromASTNodes(nodes),
 		Visibility:  convertVisibilityFromStore(memo.Visibility),
-		Tags:        memo.Tags,
 		Pinned:      memo.Pinned,
 		ParentId:    memo.ParentID,
 		Relations:   listMemoRelationsResponse.Relations,
@@ -782,7 +823,6 @@ func convertVisibilityToStore(visibility v1pb.Visibility) store.Visibility {
 }
 
 func (s *APIV1Service) buildMemoFindWithFilter(ctx context.Context, find *store.FindMemo, filter string) error {
-	user, _ := getCurrentUser(ctx, s.Store)
 	if find == nil {
 		find = &store.FindMemo{}
 	}
@@ -798,7 +838,10 @@ func (s *APIV1Service) buildMemoFindWithFilter(ctx context.Context, find *store.
 			find.VisibilityList = filter.Visibilities
 		}
 		if filter.Tag != nil {
-			find.Tag = filter.Tag
+			if find.PayloadFind == nil {
+				find.PayloadFind = &store.FindMemoPayload{}
+			}
+			find.PayloadFind.Tag = filter.Tag
 		}
 		if filter.OrderByPinned {
 			find.OrderByPinned = filter.OrderByPinned
@@ -858,6 +901,7 @@ func (s *APIV1Service) buildMemoFindWithFilter(ctx context.Context, find *store.
 		}
 	}
 
+	user, _ := getCurrentUser(ctx, s.Store)
 	// If the user is not authenticated, only public memos are visible.
 	if user == nil {
 		if filter == "" {
@@ -998,21 +1042,27 @@ func findSearchMemosField(callExpr *expr.Expr_Call, filter *SearchMemosFilter) {
 	}
 }
 
-func ExtractTagsFromContent(content string) ([]string, error) {
+func getMemoPropertyFromContent(content string) (*storepb.MemoPayload_Property, error) {
 	nodes, err := parser.Parse(tokenizer.Tokenize(content))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse content")
 	}
-	tags := []string{}
+
+	property := &storepb.MemoPayload_Property{}
 	TraverseASTNodes(nodes, func(node ast.Node) {
-		if tagNode, ok := node.(*ast.Tag); ok {
-			tag := tagNode.Content
-			if !slices.Contains(tags, tag) {
-				tags = append(tags, tag)
+		switch n := node.(type) {
+		case *ast.Tag:
+			tag := n.Content
+			if !slices.Contains(property.Tags, tag) {
+				property.Tags = append(property.Tags, tag)
 			}
+		case *ast.Link, *ast.AutoLink:
+			property.HasLink = true
+		case *ast.TaskList:
+			property.HasTaskList = true
 		}
 	})
-	return tags, nil
+	return property, nil
 }
 
 func TraverseASTNodes(nodes []ast.Node, fn func(ast.Node)) {
