@@ -691,21 +691,6 @@ paths:
             $ref: '#/definitions/googlerpcStatus'
       tags:
         - WorkspaceService
-  /api/v1/workspace/settings:
-    get:
-      summary: ListWorkspaceSetting returns the list of settings.
-      operationId: WorkspaceSettingService_ListWorkspaceSettings
-      responses:
-        "200":
-          description: A successful response.
-          schema:
-            $ref: '#/definitions/v1ListWorkspaceSettingsResponse'
-        default:
-          description: An unexpected error response.
-          schema:
-            $ref: '#/definitions/googlerpcStatus'
-      tags:
-        - WorkspaceSettingService
   /api/v1/workspace/{name}:
     get:
       summary: GetWorkspaceSetting returns the setting by name.
@@ -1477,6 +1462,36 @@ paths:
           pattern: users/[^/]+
       tags:
         - UserService
+  /api/v1/{name}:rebuild:
+    post:
+      summary: RebuildMemoProperty rebuilds a memo property.
+      operationId: MemoService_RebuildMemoProperty
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            type: object
+            properties: {}
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      parameters:
+        - name: name
+          description: |-
+            The name of the memo.
+            Format: memos/{id}. Use "memos/-" to rebuild all memos.
+          in: path
+          required: true
+          type: string
+          pattern: memos/[^/]+
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/MemoServiceRebuildMemoPropertyBody'
+      tags:
+        - MemoService
   /api/v1/{parent}/tags:
     get:
       summary: ListMemoTags lists tags for a memo.
@@ -1499,11 +1514,13 @@ paths:
           required: true
           type: string
           pattern: memos/[^/]+
-        - name: rebuild
-          description: Rebuild the tags.
+        - name: filter
+          description: |-
+            Filter is used to filter memos.
+            Format: "creator == users/{uid} && visibilities == ['PUBLIC', 'PROTECTED']"
           in: query
           required: false
-          type: boolean
+          type: string
       tags:
         - MemoService
   /api/v1/{parent}/tags/{tag}:
@@ -1780,6 +1797,8 @@ paths:
       tags:
         - UserService
 definitions:
+  MemoServiceRebuildMemoPropertyBody:
+    type: object
   MemoServiceRenameMemoTagBody:
     type: object
     properties:
@@ -1831,6 +1850,20 @@ definitions:
       expiresAt:
         type: string
         format: date-time
+  WorkspaceStorageSettingS3Config:
+    type: object
+    properties:
+      accessKeyId:
+        type: string
+      accessKeySecret:
+        type: string
+      endpoint:
+        type: string
+      region:
+        type: string
+      bucket:
+        type: string
+    title: 'Reference: https://developers.cloudflare.com/r2/examples/aws/aws-sdk-go/'
   apiHttpBody:
     type: object
     properties:
@@ -2067,34 +2100,20 @@ definitions:
         format: int64
         description: The max upload size in megabytes.
       s3Config:
-        $ref: '#/definitions/apiv1WorkspaceStorageSettingS3Config'
+        $ref: '#/definitions/WorkspaceStorageSettingS3Config'
         description: The S3 config.
-  apiv1WorkspaceStorageSettingS3Config:
-    type: object
-    properties:
-      accessKeyId:
-        type: string
-      accessKeySecret:
-        type: string
-      endpoint:
-        type: string
-      region:
-        type: string
-      bucket:
-        type: string
-    title: 'Reference: https://developers.cloudflare.com/r2/examples/aws/aws-sdk-go/'
   apiv1WorkspaceStorageSettingStorageType:
     type: string
     enum:
       - STORAGE_TYPE_UNSPECIFIED
-      - STORAGE_TYPE_DATABASE
-      - STORAGE_TYPE_LOCAL
-      - STORAGE_TYPE_S3
+      - DATABASE
+      - LOCAL
+      - S3
     default: STORAGE_TYPE_UNSPECIFIED
     description: |2-
-       - STORAGE_TYPE_DATABASE: STORAGE_TYPE_DATABASE is the database storage type.
-       - STORAGE_TYPE_LOCAL: STORAGE_TYPE_LOCAL is the local storage type.
-       - STORAGE_TYPE_S3: STORAGE_TYPE_S3 is the S3 storage type.
+       - DATABASE: DATABASE is the database storage type.
+       - LOCAL: LOCAL is the local storage type.
+       - S3: S3 is the S3 storage type.
   googlerpcStatus:
     type: object
     properties:
@@ -2137,8 +2156,7 @@ definitions:
 
           Note: this functionality is not currently available in the official
           protobuf release, and it is not used for type URLs beginning with
-          type.googleapis.com. As of May 2023, there are no widely used type server
-          implementations and no plans to implement one.
+          type.googleapis.com.
 
           Schemes other than `http`, `https` (or the empty scheme) might be
           used with implementation specific semantics.
@@ -2173,7 +2191,7 @@ definitions:
             foo = any.unpack(Foo.getDefaultInstance());
           }
 
-       Example 3: Pack and unpack a message in Python.
+      Example 3: Pack and unpack a message in Python.
 
           foo = Foo(...)
           any = Any()
@@ -2183,7 +2201,7 @@ definitions:
             any.Unpack(foo)
             ...
 
-       Example 4: Pack and unpack a message in Go
+      Example 4: Pack and unpack a message in Go
 
            foo := &pb.Foo{...}
            any, err := anypb.New(foo)
@@ -2203,7 +2221,7 @@ definitions:
       name "y.z".
 
       JSON
-      ====
+
       The JSON representation of an `Any` value uses the regular
       representation of the deserialized, embedded message, with an
       additional field `@type` which contains the type URL. Example:
@@ -2410,8 +2428,8 @@ definitions:
     type: string
     enum:
       - TYPE_UNSPECIFIED
-      - TYPE_MEMO_COMMENT
-      - TYPE_VERSION_UPDATE
+      - MEMO_COMMENT
+      - VERSION_UPDATE
     default: TYPE_UNSPECIFIED
   v1ItalicNode:
     type: object
@@ -2543,14 +2561,6 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1Webhook'
-  v1ListWorkspaceSettingsResponse:
-    type: object
-    properties:
-      settings:
-        type: array
-        items:
-          type: object
-          $ref: '#/definitions/apiv1WorkspaceSetting'
   v1MathBlockNode:
     type: object
     properties:

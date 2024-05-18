@@ -2,27 +2,28 @@ package mysql
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/store"
 )
 
 func (d *DB) CreateMemo(ctx context.Context, create *store.Memo) (*store.Memo, error) {
 	fields := []string{"`uid`", "`creator_id`", "`content`", "`visibility`", "`tags`", "`payload`"}
 	placeholder := []string{"?", "?", "?", "?", "?", "?"}
-	tags := "[]"
-	if len(create.Tags) != 0 {
-		tagsBytes, err := json.Marshal(create.Tags)
+	payload := "{}"
+	if create.Payload != nil {
+		payloadBytes, err := protojson.Marshal(create.Payload)
 		if err != nil {
 			return nil, err
 		}
-		tags = string(tagsBytes)
+		payload = string(payloadBytes)
 	}
-	args := []any{create.UID, create.CreatorID, create.Content, create.Visibility, tags, "{}"}
+	args := []any{create.UID, create.CreatorID, create.Content, create.Visibility, "[]", payload}
 
 	stmt := "INSERT INTO `memo` (" + strings.Join(fields, ", ") + ") VALUES (" + strings.Join(placeholder, ", ") + ")"
 	result, err := d.db.ExecContext(ctx, stmt, args...)
@@ -85,8 +86,13 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		}
 		where = append(where, fmt.Sprintf("`memo`.`visibility` in (%s)", strings.Join(placeholder, ",")))
 	}
-	if v := find.Tag; v != nil {
-		where, args = append(where, "JSON_CONTAINS(`memo`.`tags`, ?, '$')"), append(args, *v)
+	if v := find.PayloadFind; v != nil {
+		if v.Raw != nil {
+			where, args = append(where, "`memo`.`payload` = ?"), append(args, *v.Raw)
+		}
+		if v.Tag != nil {
+			where, args = append(where, "JSON_CONTAINS(JSON_EXTRACT(`memo`.`payload`, '$.property.tags'), ?)"), append(args, fmt.Sprintf(`["%s"]`, *v.Tag))
+		}
 	}
 	if find.ExcludeComments {
 		having = append(having, "`parent_id` IS NULL")
@@ -114,7 +120,7 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		"UNIX_TIMESTAMP(`memo`.`updated_ts`) AS `updated_ts`",
 		"`memo`.`row_status` AS `row_status`",
 		"`memo`.`visibility` AS `visibility`",
-		"`memo`.`tags` AS `tags`",
+		"`memo`.`payload` AS `payload`",
 		"IFNULL(`memo_organizer`.`pinned`, 0) AS `pinned`",
 		"`memo_relation`.`related_memo_id` AS `parent_id`",
 	}
@@ -139,7 +145,7 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 	list := make([]*store.Memo, 0)
 	for rows.Next() {
 		var memo store.Memo
-		var tagsBytes []byte
+		var payloadBytes []byte
 		dests := []any{
 			&memo.ID,
 			&memo.UID,
@@ -148,7 +154,7 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 			&memo.UpdatedTs,
 			&memo.RowStatus,
 			&memo.Visibility,
-			&tagsBytes,
+			&payloadBytes,
 			&memo.Pinned,
 			&memo.ParentID,
 		}
@@ -158,9 +164,11 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		if err := rows.Scan(dests...); err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(tagsBytes, &memo.Tags); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal tags")
+		payload := &storepb.MemoPayload{}
+		if err := protojsonUnmarshaler.Unmarshal(payloadBytes, payload); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal payload")
 		}
+		memo.Payload = payload
 		list = append(list, &memo)
 	}
 
@@ -204,12 +212,12 @@ func (d *DB) UpdateMemo(ctx context.Context, update *store.UpdateMemo) error {
 	if v := update.Visibility; v != nil {
 		set, args = append(set, "`visibility` = ?"), append(args, *v)
 	}
-	if v := update.Tags; v != nil {
-		tagsBytes, err := json.Marshal(v)
+	if v := update.Payload; v != nil {
+		payloadBytes, err := protojson.Marshal(v)
 		if err != nil {
 			return err
 		}
-		set, args = append(set, "`tags` = ?"), append(args, string(tagsBytes))
+		set, args = append(set, "`payload` = ?"), append(args, string(payloadBytes))
 	}
 	args = append(args, update.ID)
 

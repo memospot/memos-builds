@@ -62,6 +62,7 @@ func (s *Store) ListIdentityProviders(ctx context.Context, find *FindIdentityPro
 		if err != nil {
 			return nil, err
 		}
+		identityProviders = append(identityProviders, identityProvider)
 		s.idpCache.Store(identityProvider.Id, identityProvider)
 	}
 	return identityProviders, nil
@@ -70,7 +71,10 @@ func (s *Store) ListIdentityProviders(ctx context.Context, find *FindIdentityPro
 func (s *Store) GetIdentityProvider(ctx context.Context, find *FindIdentityProvider) (*storepb.IdentityProvider, error) {
 	if find.ID != nil {
 		if cache, ok := s.idpCache.Load(*find.ID); ok {
-			return cache.(*storepb.IdentityProvider), nil
+			identityProvider, ok := cache.(*storepb.IdentityProvider)
+			if ok {
+				return identityProvider, nil
+			}
 		}
 	}
 
