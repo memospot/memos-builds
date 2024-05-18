@@ -176,7 +176,7 @@ jobs:
 
       ### Front-end ###
       - name: Wait for the front-end build to finish
-        uses: yogeshlonkar/wait-for-jobs@a3da3762e16de4d3b205ce3439c15c50f8cd922f
+        uses: yogeshlonkar/wait-for-jobs@7635a6a07ac5a83e1d8d9afbd841d632f2a3c0b9
         with:
           jobs: "Build front-end"
           interval: "2000"
