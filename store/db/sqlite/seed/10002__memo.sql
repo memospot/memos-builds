@@ -34,7 +34,7 @@ VALUES
 - [ ] Read *📖 The Little Prince*;',
     101,
     'PROTECTED',
-    '{"property": {"tags": ["TODO"]}}'
+    '{"property": {"tags": ["TODO"], "hasTaskList": true}}'
   );
 
 INSERT INTO
@@ -43,16 +43,18 @@ INSERT INTO
     `uid`,
     `content`,
     `creator_id`,
-    `visibility`
+    `visibility`,
+    `payload`
   )
 VALUES
   (
     3,
     "ZvH7a6VWMuX5aArtECTj4N",
-    '**[Memos](https://github.com/usememos/memos)**: A lightweight, self-hosted memo hub. Open Source and Free forever. 
+    '**[Memos](https://github.com/usememos/memos)**: A lightweight, self-hosted memo hub. Open Source and Free to Use. 
 **[Slash](https://github.com/yourselfhosted/slash)**: An open source, self-hosted bookmarks and link sharing platform. Save and share your links very easily.',
     101,
-    'PUBLIC'
+    'PUBLIC',
+    '{"property": {"hasLink": true}}'
   );
 
 INSERT INTO
@@ -74,7 +76,7 @@ VALUES
 - [ ] Watch *👦 The Boys*;',
     102,
     'PROTECTED',
-    '{"property": {"tags": ["TODO"]}}'
+    '{"property": {"tags": ["TODO"], "hasTaskList": true}}'
   );
 
 INSERT INTO

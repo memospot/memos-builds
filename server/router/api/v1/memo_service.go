@@ -34,12 +34,9 @@ const (
 )
 
 func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoRequest) (*v1pb.Memo, error) {
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
-	}
-	if user == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
 
 	create := &store.Memo{
@@ -189,7 +186,7 @@ func (s *APIV1Service) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 	if memo.Visibility != store.Public {
-		user, err := getCurrentUser(ctx, s.Store)
+		user, err := s.GetCurrentUser(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to get user")
 		}
@@ -225,7 +222,7 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -336,7 +333,10 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 		return nil, status.Errorf(codes.NotFound, "memo not found")
 	}
 
-	user, _ := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get current user")
+	}
 	if memo.CreatorID != user.ID {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
@@ -563,8 +563,46 @@ func (s *APIV1Service) ExportMemos(ctx context.Context, request *v1pb.ExportMemo
 	}, nil
 }
 
+func (s *APIV1Service) ListMemoProperties(ctx context.Context, request *v1pb.ListMemoPropertiesRequest) (*v1pb.ListMemoPropertiesResponse, error) {
+	user, err := s.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get current user")
+	}
+
+	normalRowStatus := store.Normal
+	memoFind := &store.FindMemo{
+		CreatorID:       &user.ID,
+		RowStatus:       &normalRowStatus,
+		ExcludeComments: true,
+		// Default exclude content for performance.
+		ExcludeContent: true,
+	}
+	if request.Name != "memos/-" {
+		memoID, err := ExtractMemoIDFromName(request.Name)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid memo name: %v", err)
+		}
+		memoFind.ID = &memoID
+	}
+
+	memos, err := s.Store.ListMemos(ctx, memoFind)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list memos")
+	}
+
+	properties := []*v1pb.MemoProperty{}
+	for _, memo := range memos {
+		if memo.Payload.Property != nil {
+			properties = append(properties, convertMemoPropertyFromStore(memo.Payload.Property))
+		}
+	}
+	return &v1pb.ListMemoPropertiesResponse{
+		Properties: properties,
+	}, nil
+}
+
 func (s *APIV1Service) RebuildMemoProperty(ctx context.Context, request *v1pb.RebuildMemoPropertyRequest) (*emptypb.Empty, error) {
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -642,7 +680,7 @@ func (s *APIV1Service) ListMemoTags(ctx context.Context, request *v1pb.ListMemoT
 }
 
 func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMemoTagRequest) (*emptypb.Empty, error) {
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -696,7 +734,7 @@ func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMe
 }
 
 func (s *APIV1Service) DeleteMemoTag(ctx context.Context, request *v1pb.DeleteMemoTagRequest) (*emptypb.Empty, error) {
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
@@ -777,7 +815,7 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		return nil, errors.Wrap(err, "failed to parse content")
 	}
 
-	return &v1pb.Memo{
+	memoMessage := &v1pb.Memo{
 		Name:        name,
 		Uid:         memo.UID,
 		RowStatus:   convertRowStatusFromStore(memo.RowStatus),
@@ -789,11 +827,30 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		Nodes:       convertFromASTNodes(nodes),
 		Visibility:  convertVisibilityFromStore(memo.Visibility),
 		Pinned:      memo.Pinned,
-		ParentId:    memo.ParentID,
 		Relations:   listMemoRelationsResponse.Relations,
 		Resources:   listMemoResourcesResponse.Resources,
 		Reactions:   listMemoReactionsResponse.Reactions,
-	}, nil
+	}
+	if memo.Payload != nil {
+		memoMessage.Property = convertMemoPropertyFromStore(memo.Payload.Property)
+	}
+	if memo.ParentID != nil {
+		parent := fmt.Sprintf("%s%d", MemoNamePrefix, *memo.ParentID)
+		memoMessage.Parent = &parent
+	}
+	return memoMessage, nil
+}
+
+func convertMemoPropertyFromStore(property *storepb.MemoPayload_Property) *v1pb.MemoProperty {
+	if property == nil {
+		return nil
+	}
+	return &v1pb.MemoProperty{
+		Tags:        property.Tags,
+		HasLink:     property.HasLink,
+		HasTaskList: property.HasTaskList,
+		HasCode:     property.HasCode,
+	}
 }
 
 func convertVisibilityFromStore(visibility store.Visibility) v1pb.Visibility {
@@ -825,6 +882,9 @@ func convertVisibilityToStore(visibility v1pb.Visibility) store.Visibility {
 func (s *APIV1Service) buildMemoFindWithFilter(ctx context.Context, find *store.FindMemo, filter string) error {
 	if find == nil {
 		find = &store.FindMemo{}
+	}
+	if find.PayloadFind == nil {
+		find.PayloadFind = &store.FindMemoPayload{}
 	}
 	if filter != "" {
 		filter, err := parseSearchMemosFilter(filter)
@@ -899,14 +959,26 @@ func (s *APIV1Service) buildMemoFindWithFilter(ctx context.Context, find *store.
 		if filter.IncludeComments {
 			find.ExcludeComments = false
 		}
+		if filter.HasLink {
+			find.PayloadFind.HasLink = true
+		}
+		if filter.HasTaskList {
+			find.PayloadFind.HasTaskList = true
+		}
+		if filter.HasCode {
+			find.PayloadFind.HasCode = true
+		}
 	}
 
-	user, _ := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "failed to get current user")
+	}
 	// If the user is not authenticated, only public memos are visible.
 	if user == nil {
 		if filter == "" {
 			// If no filter is provided, return an error.
-			return status.Errorf(codes.InvalidArgument, "filter is required")
+			return status.Errorf(codes.InvalidArgument, "filter is required for unauthenticated user")
 		}
 
 		find.VisibilityList = []store.Visibility{store.Public}
@@ -946,6 +1018,9 @@ var SearchMemosFilterCELAttributes = []cel.EnvOption{
 	cel.Variable("random", cel.BoolType),
 	cel.Variable("limit", cel.IntType),
 	cel.Variable("include_comments", cel.BoolType),
+	cel.Variable("has_link", cel.BoolType),
+	cel.Variable("has_task_list", cel.BoolType),
+	cel.Variable("has_code", cel.BoolType),
 }
 
 type SearchMemosFilter struct {
@@ -961,6 +1036,9 @@ type SearchMemosFilter struct {
 	Random            bool
 	Limit             *int
 	IncludeComments   bool
+	HasLink           bool
+	HasTaskList       bool
+	HasCode           bool
 }
 
 func parseSearchMemosFilter(expression string) (*SearchMemosFilter, error) {
@@ -1030,6 +1108,15 @@ func findSearchMemosField(callExpr *expr.Expr_Call, filter *SearchMemosFilter) {
 			} else if idExpr.Name == "include_comments" {
 				value := callExpr.Args[1].GetConstExpr().GetBoolValue()
 				filter.IncludeComments = value
+			} else if idExpr.Name == "has_link" {
+				value := callExpr.Args[1].GetConstExpr().GetBoolValue()
+				filter.HasLink = value
+			} else if idExpr.Name == "has_task_list" {
+				value := callExpr.Args[1].GetConstExpr().GetBoolValue()
+				filter.HasTaskList = value
+			} else if idExpr.Name == "has_code" {
+				value := callExpr.Args[1].GetConstExpr().GetBoolValue()
+				filter.HasCode = value
 			}
 			return
 		}
@@ -1060,6 +1147,8 @@ func getMemoPropertyFromContent(content string) (*storepb.MemoPayload_Property, 
 			property.HasLink = true
 		case *ast.TaskList:
 			property.HasTaskList = true
+		case *ast.Code, *ast.CodeBlock:
+			property.HasCode = true
 		}
 	})
 	return property, nil
@@ -1135,6 +1224,10 @@ func convertMemoToWebhookPayload(memo *v1pb.Memo) (*webhook.WebhookPayload, erro
 	return &webhook.WebhookPayload{
 		CreatorID: creatorID,
 		CreatedTs: time.Now().Unix(),
-		Memo:      memo,
+		Memo: &webhook.Memo{
+			Name:    memo.Name,
+			Creator: memo.Creator,
+			Content: memo.Content,
+		},
 	}, nil
 }

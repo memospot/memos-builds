@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -24,7 +25,7 @@ import (
 )
 
 func (s *APIV1Service) GetAuthStatus(ctx context.Context, _ *v1pb.GetAuthStatusRequest) (*v1pb.User, error) {
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to get current user: %v", err)
 	}
@@ -214,6 +215,17 @@ func (s *APIV1Service) SignUp(ctx context.Context, request *v1pb.SignUpRequest) 
 }
 
 func (s *APIV1Service) SignOut(ctx context.Context, _ *v1pb.SignOutRequest) (*emptypb.Empty, error) {
+	accessToken, ok := ctx.Value(accessTokenContextKey).(string)
+	// Try to delete the access token from the store.
+	if ok {
+		_, err := s.DeleteUserAccessToken(ctx, &v1pb.DeleteUserAccessTokenRequest{
+			AccessToken: accessToken,
+		})
+		if err != nil {
+			slog.Error("failed to delete access token", err)
+		}
+	}
+
 	if err := s.clearAccessTokenCookie(ctx); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to set grpc header, error: %v", err)
 	}
@@ -261,4 +273,18 @@ func (*APIV1Service) buildAccessTokenCookie(ctx context.Context, accessToken str
 		attrs = append(attrs, "SameSite=Strict")
 	}
 	return strings.Join(attrs, "; "), nil
+}
+
+func (s *APIV1Service) GetCurrentUser(ctx context.Context) (*store.User, error) {
+	username, ok := ctx.Value(usernameContextKey).(string)
+	if !ok {
+		return nil, nil
+	}
+	user, err := s.Store.GetUser(ctx, &store.FindUser{
+		Username: &username,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

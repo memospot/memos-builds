@@ -46,6 +46,17 @@ func (s *APIV1Service) GetWorkspaceSetting(ctx context.Context, request *v1pb.Ge
 		return nil, status.Errorf(codes.NotFound, "workspace setting not found")
 	}
 
+	// For storage setting, only host can get it.
+	if workspaceSetting.Key == storepb.WorkspaceSettingKey_STORAGE {
+		user, err := s.GetCurrentUser(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+		}
+		if user == nil || user.Role != store.RoleHost {
+			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		}
+	}
+
 	return convertWorkspaceSettingFromStore(workspaceSetting), nil
 }
 
@@ -54,7 +65,7 @@ func (s *APIV1Service) SetWorkspaceSetting(ctx context.Context, request *v1pb.Se
 		return nil, status.Errorf(codes.InvalidArgument, "setting workspace setting is not allowed in demo mode")
 	}
 
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -121,7 +132,6 @@ func convertWorkspaceGeneralSettingFromStore(setting *storepb.WorkspaceGeneralSe
 		return nil
 	}
 	generalSetting := &v1pb.WorkspaceGeneralSetting{
-		InstanceUrl:           setting.InstanceUrl,
 		DisallowSignup:        setting.DisallowSignup,
 		DisallowPasswordLogin: setting.DisallowPasswordLogin,
 		AdditionalScript:      setting.AdditionalScript,
@@ -144,7 +154,6 @@ func convertWorkspaceGeneralSettingToStore(setting *v1pb.WorkspaceGeneralSetting
 		return nil
 	}
 	generalSetting := &storepb.WorkspaceGeneralSetting{
-		InstanceUrl:           setting.InstanceUrl,
 		DisallowSignup:        setting.DisallowSignup,
 		DisallowPasswordLogin: setting.DisallowPasswordLogin,
 		AdditionalScript:      setting.AdditionalScript,
@@ -212,6 +221,8 @@ func convertWorkspaceMemoRelatedSettingFromStore(setting *storepb.WorkspaceMemoR
 		DisallowPublicVisible: setting.DisallowPublicVisible,
 		DisplayWithUpdateTime: setting.DisplayWithUpdateTime,
 		ContentLengthLimit:    setting.ContentLengthLimit,
+		EnableAutoCompact:     setting.EnableAutoCompact,
+		EnableDoubleClickEdit: setting.EnableDoubleClickEdit,
 	}
 }
 
@@ -223,5 +234,7 @@ func convertWorkspaceMemoRelatedSettingToStore(setting *v1pb.WorkspaceMemoRelate
 		DisallowPublicVisible: setting.DisallowPublicVisible,
 		DisplayWithUpdateTime: setting.DisplayWithUpdateTime,
 		ContentLengthLimit:    setting.ContentLengthLimit,
+		EnableAutoCompact:     setting.EnableAutoCompact,
+		EnableDoubleClickEdit: setting.EnableDoubleClickEdit,
 	}
 }
