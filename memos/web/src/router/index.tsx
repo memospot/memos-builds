@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "@/App";
-import HomeLayout from "@/layouts/HomeLayout";
+import RootLayout from "@/layouts/RootLayout";
 import SuspenseWrapper from "@/layouts/SuspenseWrapper";
 import About from "@/pages/About";
 import Archived from "@/pages/Archived";
@@ -19,7 +19,8 @@ import Timeline from "@/pages/Timeline";
 import UserProfile from "@/pages/UserProfile";
 
 export enum Routes {
-  HOME = "/",
+  ROOT = "/",
+  HOME = "/home",
   TIMELINE = "/timeline",
   RESOURCES = "/resources",
   INBOX = "/inbox",
@@ -54,8 +55,8 @@ const router = createBrowserRouter([
         ],
       },
       {
-        path: "/",
-        element: <HomeLayout />,
+        path: Routes.ROOT,
+        element: <RootLayout />,
         children: [
           {
             path: Routes.HOME,

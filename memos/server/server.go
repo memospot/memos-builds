@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
@@ -43,6 +45,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	echoServer.Debug = true
 	echoServer.HideBanner = true
 	echoServer.HidePort = true
+	echoServer.Use(middleware.Recover())
 	s.echoServer = echoServer
 
 	workspaceBasicSetting, err := s.getOrUpsertWorkspaceBasicSetting(ctx)
@@ -74,6 +77,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 		grpc.MaxRecvMsgSize(100*1024*1024),
 		grpc.ChainUnaryInterceptor(
 			apiv1.NewLoggerInterceptor().LoggerInterceptor,
+			grpc_recovery.UnaryServerInterceptor(),
 			apiv1.NewGRPCAuthInterceptor(store, secret).AuthenticationInterceptor,
 		))
 	s.grpcServer = grpcServer

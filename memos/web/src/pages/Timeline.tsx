@@ -2,6 +2,7 @@ import { Button, IconButton } from "@mui/joy";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import useLocalStorage from "react-use/lib/useLocalStorage";
 import ActivityCalendar from "@/components/ActivityCalendar";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
@@ -17,6 +18,7 @@ import useCurrentUser from "@/hooks/useCurrentUser";
 import useFilterWithUrlParams from "@/hooks/useFilterWithUrlParams";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
 import i18n from "@/i18n";
+import { Routes } from "@/router";
 import { useMemoList, useMemoStore } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 
@@ -26,7 +28,8 @@ const Timeline = () => {
   const user = useCurrentUser();
   const memoStore = useMemoStore();
   const memoList = useMemoList();
-  const { tag: tagQuery, text: textQuery } = useFilterWithUrlParams();
+  const [, setLastVisited] = useLocalStorage<string>("lastVisited", Routes.TIMELINE);
+  const filter = useFilterWithUrlParams();
   const [activityStats, setActivityStats] = useState<Record<string, number>>({});
   const [selectedDateString, setSelectedDateString] = useState<string>(new Date().toDateString());
   const [isRequesting, setIsRequesting] = useState(true);
@@ -35,23 +38,17 @@ const Timeline = () => {
   const monthString = dayjs(selectedDateString).format("YYYY-MM");
 
   useEffect(() => {
+    setLastVisited(Routes.TIMELINE);
+  }, []);
+
+  useEffect(() => {
     memoList.reset();
     fetchMemos("");
-  }, [selectedDateString, tagQuery, textQuery]);
+  }, [selectedDateString, filter.text, filter.tag, filter.memoPropertyFilter]);
 
   useEffect(() => {
     (async () => {
       const filters = [`row_status == "NORMAL"`];
-      const contentSearch: string[] = [];
-      if (textQuery) {
-        contentSearch.push(JSON.stringify(textQuery));
-      }
-      if (contentSearch.length > 0) {
-        filters.push(`content_search == [${contentSearch.join(", ")}]`);
-      }
-      if (tagQuery) {
-        filters.push(`tag == "${tagQuery}"`);
-      }
       const { stats } = await memoServiceClient.getUserMemosStats({
         name: user.name,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -72,14 +69,25 @@ const Timeline = () => {
     setIsRequesting(true);
     const filters = [`creator == "${user.name}"`, `row_status == "NORMAL"`];
     const contentSearch: string[] = [];
-    if (textQuery) {
-      contentSearch.push(JSON.stringify(textQuery));
+    if (filter.text) {
+      contentSearch.push(JSON.stringify(filter.text));
     }
     if (contentSearch.length > 0) {
       filters.push(`content_search == [${contentSearch.join(", ")}]`);
     }
-    if (tagQuery) {
-      filters.push(`tag == "${tagQuery}"`);
+    if (filter.tag) {
+      filters.push(`tag == "${filter.tag}"`);
+    }
+    if (filter.memoPropertyFilter) {
+      if (filter.memoPropertyFilter.hasLink) {
+        filters.push(`has_link == true`);
+      }
+      if (filter.memoPropertyFilter.hasTaskList) {
+        filters.push(`has_task_list == true`);
+      }
+      if (filter.memoPropertyFilter.hasCode) {
+        filters.push(`has_code == true`);
+      }
     }
     if (selectedDateString) {
       const selectedDateStamp = getTimeStampByDate(selectedDateString);
@@ -160,25 +168,13 @@ const Timeline = () => {
                 </div>
 
                 <div className={clsx("w-full flex flex-col justify-start items-start")}>
-                  {sortedMemos.map((memo, index) => (
-                    <div
+                  {sortedMemos.map((memo) => (
+                    <MemoView
                       key={`${memo.name}-${memo.displayTime}`}
-                      className={clsx("relative w-full flex flex-col justify-start items-start pl-4 sm:pl-10 pt-0")}
-                    >
-                      <MemoView
-                        className="!border max-w-full !border-gray-100 dark:!border-zinc-700"
-                        memo={memo}
-                        displayTimeFormat="time"
-                      />
-                      <div className="absolute -left-2 sm:left-2 top-4 h-full">
-                        {index !== sortedMemos.length - 1 && (
-                          <div className="absolute top-2 left-[7px] h-full w-0.5 bg-gray-200 dark:bg-gray-700 block"></div>
-                        )}
-                        <div className="border-4 rounded-full border-white relative dark:border-zinc-800">
-                          <Icon.Circle className="w-2 h-auto bg-gray-200 text-gray-200 dark:bg-gray-700 dark:text-gray-700 rounded-full" />
-                        </div>
-                      </div>
-                    </div>
+                      className="!border w-full !border-gray-100 dark:!border-zinc-700"
+                      memo={memo}
+                      displayTimeFormat="time"
+                    />
                   ))}
                 </div>
               </div>
