@@ -1,56 +1,57 @@
 import { Divider, Tooltip } from "@mui/joy";
+import clsx from "clsx";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { memoServiceClient } from "@/grpcweb";
 import useAsyncEffect from "@/hooks/useAsyncEffect";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import { useFilterStore } from "@/store/module";
 import { useMemoStore } from "@/store/v1";
-import { User } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 
-interface Props {
-  user: User;
-}
-
 interface UserMemoStats {
-  links: number;
-  todos: number;
+  link: number;
+  taskList: number;
   code: number;
+  incompleteTasks: number;
 }
 
-const UserStatisticsView = (props: Props) => {
-  const { user } = props;
+const UserStatisticsView = () => {
   const t = useTranslate();
+  const currentUser = useCurrentUser();
   const memoStore = useMemoStore();
   const filterStore = useFilterStore();
   const [memoAmount, setMemoAmount] = useState(0);
   const [isRequesting, setIsRequesting] = useState(false);
-  const [memoStats, setMemoStats] = useState<UserMemoStats>({ links: 0, todos: 0, code: 0 });
-  const days = Math.ceil((Date.now() - user.createTime!.getTime()) / 86400000);
-  const memos = Object.values(memoStore.getState().memoMapByName);
+  const [memoStats, setMemoStats] = useState<UserMemoStats>({ link: 0, taskList: 0, code: 0, incompleteTasks: 0 });
+  const days = Math.ceil((Date.now() - currentUser.createTime!.getTime()) / 86400000);
+  const filter = filterStore.state;
 
   useAsyncEffect(async () => {
     setIsRequesting(true);
     const { properties } = await memoServiceClient.listMemoProperties({
       name: `memos/-`,
     });
-    const memoStats: UserMemoStats = { links: 0, todos: 0, code: 0 };
+    const memoStats: UserMemoStats = { link: 0, taskList: 0, code: 0, incompleteTasks: 0 };
     properties.forEach((property) => {
       if (property.hasLink) {
-        memoStats.links += 1;
+        memoStats.link += 1;
       }
       if (property.hasTaskList) {
-        memoStats.todos += 1;
+        memoStats.taskList += 1;
       }
       if (property.hasCode) {
         memoStats.code += 1;
+      }
+      if (property.hasIncompleteTasks) {
+        memoStats.incompleteTasks += 1;
       }
     });
     setMemoStats(memoStats);
     setMemoAmount(properties.length);
     setIsRequesting(false);
-  }, [memos.length, user.name]);
+  }, [memoStore.stateId]);
 
   const handleRebuildMemoTags = async () => {
     await memoServiceClient.rebuildMemoProperty({
@@ -91,28 +92,51 @@ const UserStatisticsView = (props: Props) => {
         <Divider className="!my-1 opacity-50" />
         <div className="w-full mt-1 flex flex-row justify-start items-center gap-x-2 gap-y-1 flex-wrap">
           <div
-            className="w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center cursor-pointer hover:opacity-80"
-            onClick={() => filterStore.setMemoPropertyFilter({ hasLink: true })}
+            className={clsx(
+              "w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center cursor-pointer hover:shadow",
+              filter.memoPropertyFilter?.hasLink ? "bg-blue-50 dark:bg-blue-900 shadow" : "",
+            )}
+            onClick={() => filterStore.setMemoPropertyFilter({ hasLink: !filter.memoPropertyFilter?.hasLink })}
           >
             <div className="w-auto flex justify-start items-center mr-1">
               <Icon.Link className="w-4 h-auto mr-1" />
               <span className="block text-sm">{t("memo.links")}</span>
             </div>
-            <span className="text-sm truncate">{memoStats.links}</span>
+            <span className="text-sm truncate">{memoStats.link}</span>
           </div>
           <div
-            className="w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center cursor-pointer hover:opacity-80"
-            onClick={() => filterStore.setMemoPropertyFilter({ hasTaskList: true })}
+            className={clsx(
+              "w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center cursor-pointer hover:shadow",
+              filter.memoPropertyFilter?.hasTaskList ? "bg-blue-50 dark:bg-blue-900 shadow" : "",
+            )}
+            onClick={() => filterStore.setMemoPropertyFilter({ hasTaskList: !filter.memoPropertyFilter?.hasTaskList })}
           >
             <div className="w-auto flex justify-start items-center mr-1">
-              <Icon.CheckCircle className="w-4 h-auto mr-1" />
+              {memoStats.incompleteTasks > 0 ? (
+                <Icon.ListTodo className="w-4 h-auto mr-1" />
+              ) : (
+                <Icon.CheckCircle className="w-4 h-auto mr-1" />
+              )}
               <span className="block text-sm">{t("memo.to-do")}</span>
             </div>
-            <span className="text-sm truncate">{memoStats.todos}</span>
+            {memoStats.incompleteTasks > 0 ? (
+              <Tooltip title={"Done / Total"} placement="top" arrow>
+                <div className="text-sm flex flex-row items-start justify-center">
+                  <span className="truncate">{memoStats.taskList - memoStats.incompleteTasks}</span>
+                  <span className="font-mono opacity-50">/</span>
+                  <span className="truncate">{memoStats.taskList}</span>
+                </div>
+              </Tooltip>
+            ) : (
+              <span className="text-sm truncate">{memoStats.taskList}</span>
+            )}
           </div>
           <div
-            className="w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center cursor-pointer hover:opacity-80"
-            onClick={() => filterStore.setMemoPropertyFilter({ hasCode: true })}
+            className={clsx(
+              "w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center cursor-pointer hover:shadow",
+              filter.memoPropertyFilter?.hasCode ? "bg-blue-50 dark:bg-blue-900 shadow" : "",
+            )}
+            onClick={() => filterStore.setMemoPropertyFilter({ hasCode: !filter.memoPropertyFilter?.hasCode })}
           >
             <div className="w-auto flex justify-start items-center mr-1">
               <Icon.Code2 className="w-4 h-auto mr-1" />
