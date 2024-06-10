@@ -5,7 +5,6 @@ import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
-import MemoFilter from "@/components/MemoFilter";
 import MemoView from "@/components/MemoView";
 import MobileHeader from "@/components/MobileHeader";
 import UserAvatar from "@/components/UserAvatar";
@@ -131,9 +130,8 @@ const UserProfile = () => {
                   </p>
                 </div>
               </div>
-              <MemoFilter className="px-2 pb-3" />
               {sortedMemos.map((memo) => (
-                <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned />
+                <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact />
               ))}
               {isRequesting ? (
                 <div className="flex flex-row justify-center items-center w-full my-4 text-gray-400">

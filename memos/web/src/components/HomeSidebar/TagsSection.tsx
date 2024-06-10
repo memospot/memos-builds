@@ -1,10 +1,10 @@
 import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
+import clsx from "clsx";
 import toast from "react-hot-toast";
 import { useLocation } from "react-router-dom";
 import useDebounce from "react-use/lib/useDebounce";
 import { memoServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { Routes } from "@/router";
 import { useFilterStore } from "@/store/module";
 import { useMemoList, useTagStore } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
@@ -20,6 +20,7 @@ const TagsSection = (props: Props) => {
   const t = useTranslate();
   const location = useLocation();
   const user = useCurrentUser();
+  const filterStore = useFilterStore();
   const tagStore = useTagStore();
   const memoList = useMemoList();
   const tagAmounts = Object.entries(tagStore.getState().tagAmounts)
@@ -29,16 +30,32 @@ const TagsSection = (props: Props) => {
   useDebounce(() => fetchTags(), 300, [memoList.size(), location.pathname]);
 
   const fetchTags = async () => {
-    const filters = [`row_status == "NORMAL"`];
-    if (user) {
-      if (location.pathname === Routes.EXPLORE) {
-        filters.push(`visibilities == ["PUBLIC", "PROTECTED"]`);
-      }
-      filters.push(`creator == "${user.name}"`);
+    await tagStore.fetchTags({ user, location });
+  };
+
+  const handleTagClick = (tag: string) => {
+    if (filterStore.getState().tag === tag) {
+      filterStore.setTagFilter(undefined);
     } else {
-      filters.push(`visibilities == ["PUBLIC"]`);
+      filterStore.setTagFilter(tag);
     }
-    await tagStore.fetchTags(filters.join(" && "));
+  };
+
+  const handleDeleteTag = async (tag: string) => {
+    showCommonDialog({
+      title: t("tag.delete-tag"),
+      content: t("tag.delete-confirm"),
+      style: "danger",
+      dialogName: "delete-tag-dialog",
+      onConfirm: async () => {
+        await memoServiceClient.deleteMemoTag({
+          parent: "memos/-",
+          tag: tag,
+        });
+        await tagStore.fetchTags({ location, user }, { skipCache: true });
+        toast.success(t("message.deleted-successfully"));
+      },
+    });
   };
 
   return (
@@ -50,7 +67,39 @@ const TagsSection = (props: Props) => {
       {tagAmounts.length > 0 ? (
         <div className="w-full flex flex-row justify-start items-center relative flex-wrap gap-x-2 gap-y-1">
           {tagAmounts.map(([tag, amount]) => (
-            <TagContainer key={tag} tag={tag} amount={amount} />
+            <div
+              key={tag}
+              className="shrink-0 w-auto max-w-full text-sm rounded-md leading-6 flex flex-row justify-start items-center select-none hover:opacity-80 text-gray-600 dark:text-gray-400 dark:border-zinc-800"
+            >
+              <Dropdown>
+                <MenuButton slots={{ root: "div" }}>
+                  <div className="shrink-0 group">
+                    <Icon.Hash className="group-hover:hidden w-4 h-auto shrink-0 opacity-40" />
+                    <Icon.MoreVertical className="hidden group-hover:block w-4 h-auto shrink-0 opacity-60" />
+                  </div>
+                </MenuButton>
+                <Menu size="sm" placement="bottom-start">
+                  <MenuItem onClick={() => showRenameTagDialog({ tag: tag })}>
+                    <Icon.Edit3 className="w-4 h-auto" />
+                    {t("common.rename")}
+                  </MenuItem>
+                  <MenuItem color="danger" onClick={() => handleDeleteTag(tag)}>
+                    <Icon.Trash className="w-4 h-auto" />
+                    {t("common.delete")}
+                  </MenuItem>
+                </Menu>
+              </Dropdown>
+              <div
+                className={clsx(
+                  "inline-flex flex-nowrap ml-0.5 gap-0.5 cursor-pointer max-w-[calc(100%-16px)]",
+                  filterStore.state.tag === tag && "text-blue-600 dark:text-blue-400",
+                )}
+                onClick={() => handleTagClick(tag)}
+              >
+                <span className="truncate dark:opacity-80">{tag}</span>
+                {amount > 1 && <span className="opacity-60 shrink-0">({amount})</span>}
+              </div>
+            </div>
           ))}
         </div>
       ) : (
@@ -61,72 +110,6 @@ const TagsSection = (props: Props) => {
           </div>
         )
       )}
-    </div>
-  );
-};
-
-interface TagContainerProps {
-  tag: string;
-  amount: number;
-}
-
-const TagContainer: React.FC<TagContainerProps> = (props: TagContainerProps) => {
-  const t = useTranslate();
-  const filterStore = useFilterStore();
-  const tagStore = useTagStore();
-  const { tag, amount } = props;
-
-  const handleTagClick = () => {
-    if (filterStore.getState().tag === tag) {
-      filterStore.setTagFilter(undefined);
-    } else {
-      filterStore.setTagFilter(tag);
-    }
-  };
-
-  const handleDeleteTag = async () => {
-    showCommonDialog({
-      title: t("tag.delete-tag"),
-      content: t("tag.delete-confirm"),
-      style: "danger",
-      dialogName: "delete-tag-dialog",
-      onConfirm: async () => {
-        await memoServiceClient.deleteMemoTag({
-          parent: "memos/-",
-          tag: tag,
-        });
-        await tagStore.fetchTags(undefined, { skipCache: true });
-        toast.success(t("message.deleted-successfully"));
-      },
-    });
-  };
-
-  return (
-    <div
-      className={`shrink-0 w-auto max-w-full text-sm rounded-md leading-6 flex flex-row justify-start items-center select-none hover:opacity-80 text-gray-600 dark:text-gray-400 dark:border-zinc-800`}
-    >
-      <Dropdown>
-        <MenuButton slots={{ root: "div" }}>
-          <div className="shrink-0 group">
-            <Icon.Hash className="group-hover:hidden w-4 h-auto shrink-0 opacity-40" />
-            <Icon.MoreVertical className="hidden group-hover:block w-4 h-auto shrink-0 opacity-60" />
-          </div>
-        </MenuButton>
-        <Menu size="sm" placement="bottom-start">
-          <MenuItem onClick={() => showRenameTagDialog({ tag: tag })}>
-            <Icon.Edit3 className="w-4 h-auto" />
-            {t("common.rename")}
-          </MenuItem>
-          <MenuItem color="danger" onClick={handleDeleteTag}>
-            <Icon.Trash className="w-4 h-auto" />
-            {t("common.delete")}
-          </MenuItem>
-        </Menu>
-      </Dropdown>
-      <div className="inline-flex flex-nowrap ml-0.5 gap-0.5 cursor-pointer max-w-[calc(100%-16px)]" onClick={handleTagClick}>
-        <span className="truncate dark:opacity-80">{tag}</span>
-        {amount > 1 && <span className="opacity-60 shrink-0">({amount})</span>}
-      </div>
     </div>
   );
 };

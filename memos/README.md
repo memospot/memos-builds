@@ -39,10 +39,6 @@ Learn more about [other installation methods](https://www.usememos.com/docs/inst
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. We greatly appreciate any contributions you make. Thank you for being a part of our community! 🥰
 
-<a href="https://github.com/usememos/memos/graphs/contributors">
-  <img src="https://contri-graphy.yourselfhosted.com/graph?repo=usememos/memos&format=svg" />
-</a>
-
 ## Internationalization
 
 Memos supports multiple languages. You can help us translate Memos into your language. We use Weblate to manage translations.
@@ -58,4 +54,4 @@ Memos supports multiple languages. You can help us translate Memos into your lan
 ## Other projects
 
 - [**Slash**](https://github.com/yourselfhosted/slash): An open source, self-hosted bookmarks and link sharing platform. Save and share your links very easily.
-- [**Gomark**](https://github.com/yourselfhosted/gomark): A markdown parser written in Go for Memos. And its [WebAssembly version](https://github.com/yourselfhosted/gomark-wasm) is also available.
+- [**Gomark**](https://github.com/usememos/gomark): A markdown parser written in Go for Memos. And its [WebAssembly version](https://github.com/usememos/gomark-wasm) is also available.
