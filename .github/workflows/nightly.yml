@@ -141,7 +141,7 @@ jobs:
         with:
           repo: goreleaser/goreleaser
           cache: enable
-          tag: "v1.24.0"
+          tag: "v2.0.0"
       # /setup deps
 
       - name: Pull latest changes from usememos/memos:main to subtree

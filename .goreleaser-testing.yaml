@@ -1,5 +1,7 @@
 #* These settings are intended to create local Docker test builds with `task build:testing:docker`.
 
+version: 2
+
 project_name: memos
 dist: build/backend
 builds:

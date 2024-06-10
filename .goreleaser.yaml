@@ -1,5 +1,6 @@
 # https://goreleaser.com
 
+version: 2
 project_name: memos
 dist: build/backend
 builds:
@@ -115,7 +116,7 @@ checksum:
   algorithm: sha256 # [sha256] sha512 sha1 crc32 md5 sha224 sha384
 
 # Generates a full build, but neither validate anything nor upload it to anywhere.
-# goreleaser --snapshot --skip=publish --rm-dist
+# goreleaser --snapshot --skip=publish --skip=validate --clean
 snapshot:
   # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
   name_template: "{{ incpatch .Version }}-pre"
