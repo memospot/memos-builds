@@ -37,6 +37,11 @@ service MemoService {
     option (google.api.http) = {get: "/api/v1/{name=memos/*}"};
     option (google.api.method_signature) = "name";
   }
+  // GetMemoByUid gets a memo by uid
+  rpc GetMemoByUid(GetMemoByUidRequest) returns (Memo) {
+    option (google.api.http) = {get: "/api/v1/memos:by-uid/{uid}"};
+    option (google.api.method_signature) = "uid";
+  }
   // UpdateMemo updates a memo.
   rpc UpdateMemo(UpdateMemoRequest) returns (Memo) {
     option (google.api.http) = {
@@ -53,7 +58,7 @@ service MemoService {
   // ExportMemos exports memos.
   rpc ExportMemos(ExportMemosRequest) returns (ExportMemosResponse) {
     option (google.api.http) = {
-      post: "/api/v1/memos:export",
+      post: "/api/v1/memos:export"
       body: "*"
     };
   }
@@ -112,7 +117,7 @@ service MemoService {
   // CreateMemoComment creates a comment for a memo.
   rpc CreateMemoComment(CreateMemoCommentRequest) returns (Memo) {
     option (google.api.http) = {
-      post: "/api/v1/{name=memos/*}/comments",
+      post: "/api/v1/{name=memos/*}/comments"
       body: "comment"
     };
     option (google.api.method_signature) = "name";
@@ -135,7 +140,7 @@ service MemoService {
   // UpsertMemoReaction upserts a reaction for a memo.
   rpc UpsertMemoReaction(UpsertMemoReactionRequest) returns (Reaction) {
     option (google.api.http) = {
-      post: "/api/v1/{name=memos/*}/reactions",
+      post: "/api/v1/{name=memos/*}/reactions"
       body: "*"
     };
     option (google.api.method_signature) = "name";
@@ -201,6 +206,9 @@ message Memo {
   // The name of the parent memo.
   // Format: memos/{id}
   optional string parent = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The snippet of the memo content. Plain text only.
+  string snippet = 19;
 }
 
 message MemoProperty {
@@ -252,6 +260,11 @@ message GetMemoRequest {
   // The name of the memo.
   // Format: memos/{id}
   string name = 1;
+}
+
+message GetMemoByUidRequest {
+  // The uid of the memo.
+  string uid = 1;
 }
 
 message UpdateMemoRequest {

@@ -35,8 +35,8 @@ const MemoRelatedSettings = () => {
       <div className="w-full flex flex-row justify-between items-center">
         <span>{t("setting.system-section.disable-public-memos")}</span>
         <Switch
-          checked={memoRelatedSetting.disallowPublicVisible}
-          onChange={(event) => updatePartialSetting({ disallowPublicVisible: event.target.checked })}
+          checked={memoRelatedSetting.disallowPublicVisibility}
+          onChange={(event) => updatePartialSetting({ disallowPublicVisibility: event.target.checked })}
         />
       </div>
       <div className="w-full flex flex-row justify-between items-center">
@@ -51,6 +51,13 @@ const MemoRelatedSettings = () => {
         <Switch
           checked={memoRelatedSetting.enableAutoCompact}
           onChange={(event) => updatePartialSetting({ enableAutoCompact: event.target.checked })}
+        />
+      </div>
+      <div className="w-full flex flex-row justify-between items-center">
+        <span>Enable link preview</span>
+        <Switch
+          checked={memoRelatedSetting.enableLinkPreview}
+          onChange={(event) => updatePartialSetting({ enableLinkPreview: event.target.checked })}
         />
       </div>
       <div className="w-full flex flex-row justify-between items-center">

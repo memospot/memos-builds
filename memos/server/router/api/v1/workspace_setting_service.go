@@ -132,10 +132,8 @@ func convertWorkspaceGeneralSettingFromStore(setting *storepb.WorkspaceGeneralSe
 		return nil
 	}
 	generalSetting := &v1pb.WorkspaceGeneralSetting{
-		DisallowSignup:        setting.DisallowSignup,
-		DisallowPasswordLogin: setting.DisallowPasswordLogin,
-		AdditionalScript:      setting.AdditionalScript,
-		AdditionalStyle:       setting.AdditionalStyle,
+		AdditionalScript: setting.AdditionalScript,
+		AdditionalStyle:  setting.AdditionalStyle,
 	}
 	if setting.CustomProfile != nil {
 		generalSetting.CustomProfile = &v1pb.WorkspaceCustomProfile{
@@ -154,10 +152,8 @@ func convertWorkspaceGeneralSettingToStore(setting *v1pb.WorkspaceGeneralSetting
 		return nil
 	}
 	generalSetting := &storepb.WorkspaceGeneralSetting{
-		DisallowSignup:        setting.DisallowSignup,
-		DisallowPasswordLogin: setting.DisallowPasswordLogin,
-		AdditionalScript:      setting.AdditionalScript,
-		AdditionalStyle:       setting.AdditionalStyle,
+		AdditionalScript: setting.AdditionalScript,
+		AdditionalStyle:  setting.AdditionalStyle,
 	}
 	if setting.CustomProfile != nil {
 		generalSetting.CustomProfile = &storepb.WorkspaceCustomProfile{
@@ -218,11 +214,12 @@ func convertWorkspaceMemoRelatedSettingFromStore(setting *storepb.WorkspaceMemoR
 		return nil
 	}
 	return &v1pb.WorkspaceMemoRelatedSetting{
-		DisallowPublicVisible: setting.DisallowPublicVisible,
-		DisplayWithUpdateTime: setting.DisplayWithUpdateTime,
-		ContentLengthLimit:    setting.ContentLengthLimit,
-		EnableAutoCompact:     setting.EnableAutoCompact,
-		EnableDoubleClickEdit: setting.EnableDoubleClickEdit,
+		DisallowPublicVisibility: setting.DisallowPublicVisibility,
+		DisplayWithUpdateTime:    setting.DisplayWithUpdateTime,
+		ContentLengthLimit:       setting.ContentLengthLimit,
+		EnableAutoCompact:        setting.EnableAutoCompact,
+		EnableDoubleClickEdit:    setting.EnableDoubleClickEdit,
+		EnableLinkPreview:        setting.EnableLinkPreview,
 	}
 }
 
@@ -231,10 +228,11 @@ func convertWorkspaceMemoRelatedSettingToStore(setting *v1pb.WorkspaceMemoRelate
 		return nil
 	}
 	return &storepb.WorkspaceMemoRelatedSetting{
-		DisallowPublicVisible: setting.DisallowPublicVisible,
-		DisplayWithUpdateTime: setting.DisplayWithUpdateTime,
-		ContentLengthLimit:    setting.ContentLengthLimit,
-		EnableAutoCompact:     setting.EnableAutoCompact,
-		EnableDoubleClickEdit: setting.EnableDoubleClickEdit,
+		DisallowPublicVisibility: setting.DisallowPublicVisibility,
+		DisplayWithUpdateTime:    setting.DisplayWithUpdateTime,
+		ContentLengthLimit:       setting.ContentLengthLimit,
+		EnableAutoCompact:        setting.EnableAutoCompact,
+		EnableDoubleClickEdit:    setting.EnableDoubleClickEdit,
+		EnableLinkPreview:        setting.EnableLinkPreview,
 	}
 }

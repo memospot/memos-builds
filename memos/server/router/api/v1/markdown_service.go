@@ -7,6 +7,7 @@ import (
 	"github.com/usememos/gomark/ast"
 	"github.com/usememos/gomark/parser"
 	"github.com/usememos/gomark/parser/tokenizer"
+	"github.com/usememos/gomark/renderer"
 	"github.com/usememos/gomark/restore"
 
 	"github.com/usememos/memos/plugin/httpgetter"
@@ -25,10 +26,18 @@ func (*APIV1Service) ParseMarkdown(_ context.Context, request *v1pb.ParseMarkdow
 	}, nil
 }
 
-func (*APIV1Service) RestoreMarkdown(_ context.Context, request *v1pb.RestoreMarkdownRequest) (*v1pb.RestoreMarkdownResponse, error) {
+func (*APIV1Service) RestoreMarkdownNodes(_ context.Context, request *v1pb.RestoreMarkdownNodesRequest) (*v1pb.RestoreMarkdownNodesResponse, error) {
 	markdown := restore.Restore(convertToASTNodes(request.Nodes))
-	return &v1pb.RestoreMarkdownResponse{
+	return &v1pb.RestoreMarkdownNodesResponse{
 		Markdown: markdown,
+	}, nil
+}
+
+func (*APIV1Service) StringifyMarkdownNodes(_ context.Context, request *v1pb.StringifyMarkdownNodesRequest) (*v1pb.StringifyMarkdownNodesResponse, error) {
+	stringRenderer := renderer.NewStringRenderer()
+	plainText := stringRenderer.Render(convertToASTNodes(request.Nodes))
+	return &v1pb.StringifyMarkdownNodesResponse{
+		PlainText: plainText,
 	}, nil
 }
 
@@ -116,6 +125,8 @@ func convertFromASTNode(rawNode ast.Node) *v1pb.Node {
 		node.Node = &v1pb.Node_ReferencedContentNode{ReferencedContentNode: &v1pb.ReferencedContentNode{ResourceName: n.ResourceName, Params: n.Params}}
 	case *ast.Spoiler:
 		node.Node = &v1pb.Node_SpoilerNode{SpoilerNode: &v1pb.SpoilerNode{Content: n.Content}}
+	case *ast.HTMLElement:
+		node.Node = &v1pb.Node_HtmlElementNode{HtmlElementNode: &v1pb.HTMLElementNode{TagName: n.TagName, Attributes: n.Attributes}}
 	default:
 		node.Node = &v1pb.Node_TextNode{TextNode: &v1pb.TextNode{}}
 	}
@@ -133,11 +144,11 @@ func convertFromASTNodes(rawNodes []ast.Node) []*v1pb.Node {
 
 func convertTableFromASTNode(node *ast.Table) *v1pb.TableNode {
 	table := &v1pb.TableNode{
-		Header:    node.Header,
+		Header:    convertFromASTNodes(node.Header),
 		Delimiter: node.Delimiter,
 	}
 	for _, row := range node.Rows {
-		table.Rows = append(table.Rows, &v1pb.TableNode_Row{Cells: row})
+		table.Rows = append(table.Rows, &v1pb.TableNode_Row{Cells: convertFromASTNodes(row)})
 	}
 	return table
 }
@@ -209,6 +220,8 @@ func convertToASTNode(node *v1pb.Node) ast.Node {
 		return &ast.ReferencedContent{ResourceName: n.ReferencedContentNode.ResourceName, Params: n.ReferencedContentNode.Params}
 	case *v1pb.Node_SpoilerNode:
 		return &ast.Spoiler{Content: n.SpoilerNode.Content}
+	case *v1pb.Node_HtmlElementNode:
+		return &ast.HTMLElement{TagName: n.HtmlElementNode.TagName, Attributes: n.HtmlElementNode.Attributes}
 	default:
 		return &ast.Text{}
 	}
@@ -225,11 +238,11 @@ func convertToASTNodes(nodes []*v1pb.Node) []ast.Node {
 
 func convertTableToASTNode(node *v1pb.TableNode) *ast.Table {
 	table := &ast.Table{
-		Header:    node.Header,
+		Header:    convertToASTNodes(node.Header),
 		Delimiter: node.Delimiter,
 	}
 	for _, row := range node.Rows {
-		table.Rows = append(table.Rows, row.Cells)
+		table.Rows = append(table.Rows, convertToASTNodes(row.Cells))
 	}
 	return table
 }

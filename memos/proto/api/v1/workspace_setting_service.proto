@@ -17,7 +17,7 @@ service WorkspaceSettingService {
   // SetWorkspaceSetting updates the setting.
   rpc SetWorkspaceSetting(SetWorkspaceSettingRequest) returns (WorkspaceSetting) {
     option (google.api.http) = {
-      patch: "/api/v1/workspace/{setting.name=settings/*}",
+      patch: "/api/v1/workspace/{setting.name=settings/*}"
       body: "setting"
     };
     option (google.api.method_signature) = "setting";
@@ -36,10 +36,6 @@ message WorkspaceSetting {
 }
 
 message WorkspaceGeneralSetting {
-  // disallow_signup is the flag to disallow signup.
-  bool disallow_signup = 1;
-  // disallow_password_login is the flag to disallow password login.
-  bool disallow_password_login = 2;
   // additional_script is the additional script.
   string additional_script = 3;
   // additional_style is the additional style.
@@ -86,8 +82,8 @@ message WorkspaceStorageSetting {
 }
 
 message WorkspaceMemoRelatedSetting {
-  // disallow_public_share disallows set memo as public visible.
-  bool disallow_public_visible = 1;
+  // disallow_public_visibility disallows set memo as public visibility.
+  bool disallow_public_visibility = 1;
   // display_with_update_time orders and displays memo with update time.
   bool display_with_update_time = 2;
   // content_length_limit is the limit of content length. Unit is byte.
@@ -96,6 +92,8 @@ message WorkspaceMemoRelatedSetting {
   bool enable_auto_compact = 4;
   // enable_double_click_edit enables editing on double click.
   bool enable_double_click_edit = 5;
+  // enable_link_preview enables links preview.
+  bool enable_link_preview = 6;
 }
 
 message GetWorkspaceSettingRequest {
