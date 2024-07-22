@@ -238,9 +238,51 @@ paths:
           type: string
       tags:
         - MarkdownService
-  /api/v1/markdown/parse:
+  /api/v1/markdown/node:restore:
     post:
-      summary: Parses the given markdown content and returns a list of nodes.
+      summary: RestoreMarkdownNodes restores the given nodes to markdown content.
+      operationId: MarkdownService_RestoreMarkdownNodes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RestoreMarkdownNodesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1RestoreMarkdownNodesRequest'
+      tags:
+        - MarkdownService
+  /api/v1/markdown/node:stringify:
+    post:
+      summary: StringifyMarkdownNodes stringify the given nodes to plain text content.
+      operationId: MarkdownService_StringifyMarkdownNodes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1StringifyMarkdownNodesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1StringifyMarkdownNodesRequest'
+      tags:
+        - MarkdownService
+  /api/v1/markdown:parse:
+    post:
+      summary: ParseMarkdown parses the given markdown content and returns a list of nodes.
       operationId: MarkdownService_ParseMarkdown
       responses:
         "200":
@@ -257,27 +299,6 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/v1ParseMarkdownRequest'
-      tags:
-        - MarkdownService
-  /api/v1/markdown:restore:
-    post:
-      summary: Restores the given nodes to markdown content.
-      operationId: MarkdownService_RestoreMarkdown
-      responses:
-        "200":
-          description: A successful response.
-          schema:
-            $ref: '#/definitions/v1RestoreMarkdownResponse'
-        default:
-          description: An unexpected error response.
-          schema:
-            $ref: '#/definitions/googlerpcStatus'
-      parameters:
-        - name: body
-          in: body
-          required: true
-          schema:
-            $ref: '#/definitions/v1RestoreMarkdownRequest'
       tags:
         - MarkdownService
   /api/v1/memos:
@@ -369,6 +390,27 @@ paths:
           description: Same as ListMemosRequest.filter
           in: query
           required: false
+          type: string
+      tags:
+        - MemoService
+  /api/v1/memos:by-uid/{uid}:
+    get:
+      summary: GetMemoByUid gets a memo by uid
+      operationId: MemoService_GetMemoByUid
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1Memo'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      parameters:
+        - name: uid
+          description: The uid of the memo.
+          in: path
+          required: true
           type: string
       tags:
         - MemoService
@@ -471,6 +513,27 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/v1Resource'
+      tags:
+        - ResourceService
+  /api/v1/resources:by-uid/{uid}:
+    get:
+      summary: GetResourceByUid returns a resource by uid.
+      operationId: ResourceService_GetResourceByUid
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1Resource'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      parameters:
+        - name: uid
+          description: The uid of the resource.
+          in: path
+          required: true
+          type: string
       tags:
         - ResourceService
   /api/v1/resources:search:
@@ -934,6 +997,9 @@ paths:
                   The name of the parent memo.
                   Format: memos/{id}
                 readOnly: true
+              snippet:
+                type: string
+                description: The snippet of the memo content. Plain text only.
       tags:
         - MemoService
   /api/v1/{name_1}:
@@ -1871,7 +1937,8 @@ definitions:
       cells:
         type: array
         items:
-          type: string
+          type: object
+          $ref: '#/definitions/v1Node'
   UserRole:
     type: string
     enum:
@@ -2077,12 +2144,6 @@ definitions:
   apiv1WorkspaceGeneralSetting:
     type: object
     properties:
-      disallowSignup:
-        type: boolean
-        description: disallow_signup is the flag to disallow signup.
-      disallowPasswordLogin:
-        type: boolean
-        description: disallow_password_login is the flag to disallow password login.
       additionalScript:
         type: string
         description: additional_script is the additional script.
@@ -2095,9 +2156,9 @@ definitions:
   apiv1WorkspaceMemoRelatedSetting:
     type: object
     properties:
-      disallowPublicVisible:
+      disallowPublicVisibility:
         type: boolean
-        description: disallow_public_share disallows set memo as public visible.
+        description: disallow_public_visibility disallows set memo as public visibility.
       displayWithUpdateTime:
         type: boolean
         description: display_with_update_time orders and displays memo with update time.
@@ -2111,6 +2172,9 @@ definitions:
       enableDoubleClickEdit:
         type: boolean
         description: enable_double_click_edit enables editing on double click.
+      enableLinkPreview:
+        type: boolean
+        description: enable_link_preview enables links preview.
   apiv1WorkspaceSetting:
     type: object
     properties:
@@ -2197,7 +2261,8 @@ definitions:
 
           Note: this functionality is not currently available in the official
           protobuf release, and it is not used for type URLs beginning with
-          type.googleapis.com.
+          type.googleapis.com. As of May 2023, there are no widely used type server
+          implementations and no plans to implement one.
 
           Schemes other than `http`, `https` (or the empty scheme) might be
           used with implementation specific semantics.
@@ -2232,7 +2297,7 @@ definitions:
             foo = any.unpack(Foo.getDefaultInstance());
           }
 
-      Example 3: Pack and unpack a message in Python.
+       Example 3: Pack and unpack a message in Python.
 
           foo = Foo(...)
           any = Any()
@@ -2242,7 +2307,7 @@ definitions:
             any.Unpack(foo)
             ...
 
-      Example 4: Pack and unpack a message in Go
+       Example 4: Pack and unpack a message in Go
 
            foo := &pb.Foo{...}
            any, err := anypb.New(foo)
@@ -2262,7 +2327,7 @@ definitions:
       name "y.z".
 
       JSON
-
+      ====
       The JSON representation of an `Any` value uses the regular
       representation of the deserialized, embedded message, with an
       additional field `@type` which contains the type URL. Example:
@@ -2406,6 +2471,15 @@ definitions:
         description: |-
           stats is the stats of memo creating/updating activities.
           key is the year-month-day string. e.g. "2020-01-01".
+  v1HTMLElementNode:
+    type: object
+    properties:
+      tagName:
+        type: string
+      attributes:
+        type: object
+        additionalProperties:
+          type: string
   v1HeadingNode:
     type: object
     properties:
@@ -2695,6 +2769,9 @@ definitions:
           The name of the parent memo.
           Format: memos/{id}
         readOnly: true
+      snippet:
+        type: string
+        description: The snippet of the memo content. Plain text only.
   v1MemoProperty:
     type: object
     properties:
@@ -2795,6 +2872,8 @@ definitions:
         $ref: '#/definitions/v1ReferencedContentNode'
       spoilerNode:
         $ref: '#/definitions/v1SpoilerNode'
+      htmlElementNode:
+        $ref: '#/definitions/v1HTMLElementNode'
   v1NodeType:
     type: string
     enum:
@@ -2828,6 +2907,7 @@ definitions:
       - SUPERSCRIPT
       - REFERENCED_CONTENT
       - SPOILER
+      - HTML_ELEMENT
     default: NODE_UNSPECIFIED
   v1OrderedListNode:
     type: object
@@ -2935,7 +3015,7 @@ definitions:
         title: |-
           The related memo.
           Format: memos/{id}
-  v1RestoreMarkdownRequest:
+  v1RestoreMarkdownNodesRequest:
     type: object
     properties:
       nodes:
@@ -2943,7 +3023,7 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1Node'
-  v1RestoreMarkdownResponse:
+  v1RestoreMarkdownNodesResponse:
     type: object
     properties:
       markdown:
@@ -2989,6 +3069,19 @@ definitions:
     properties:
       content:
         type: string
+  v1StringifyMarkdownNodesRequest:
+    type: object
+    properties:
+      nodes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Node'
+  v1StringifyMarkdownNodesResponse:
+    type: object
+    properties:
+      plainText:
+        type: string
   v1SubscriptNode:
     type: object
     properties:
@@ -3005,7 +3098,8 @@ definitions:
       header:
         type: array
         items:
-          type: string
+          type: object
+          $ref: '#/definitions/v1Node'
       delimiter:
         type: array
         items:
@@ -3143,3 +3237,6 @@ definitions:
       mode:
         type: string
         description: mode is the instance mode (e.g. "prod", "dev" or "demo").
+      public:
+        type: boolean
+        description: public is a flag that the instance is open for other users.

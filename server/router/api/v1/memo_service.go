@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"slices"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/cel-go/cel"
 	"github.com/lithammer/shortuuid/v4"
@@ -15,6 +16,7 @@ import (
 	"github.com/usememos/gomark/ast"
 	"github.com/usememos/gomark/parser"
 	"github.com/usememos/gomark/parser/tokenizer"
+	"github.com/usememos/gomark/renderer"
 	"github.com/usememos/gomark/restore"
 	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/grpc/codes"
@@ -49,7 +51,7 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get workspace memo related setting")
 	}
-	if workspaceMemoRelatedSetting.DisallowPublicVisible && create.Visibility == store.Public {
+	if workspaceMemoRelatedSetting.DisallowPublicVisibility && create.Visibility == store.Public {
 		return nil, status.Errorf(codes.PermissionDenied, "disable public memos system setting is enabled")
 	}
 	contentLengthLimit, err := s.getContentLengthLimit(ctx)
@@ -78,7 +80,7 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 	}
 	// Try to dispatch webhook when memo is created.
 	if err := s.DispatchMemoCreatedWebhook(ctx, memoMessage); err != nil {
-		slog.Warn("Failed to dispatch memo created webhook", err)
+		slog.Warn("Failed to dispatch memo created webhook", slog.Any("err", err))
 	}
 
 	return memoMessage, nil
@@ -205,6 +207,37 @@ func (s *APIV1Service) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest
 	return memoMessage, nil
 }
 
+//nolint:all
+func (s *APIV1Service) GetMemoByUid(ctx context.Context, request *v1pb.GetMemoByUidRequest) (*v1pb.Memo, error) {
+	memo, err := s.Store.GetMemo(ctx, &store.FindMemo{
+		UID: &request.Uid,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if memo == nil {
+		return nil, status.Errorf(codes.NotFound, "memo not found")
+	}
+	if memo.Visibility != store.Public {
+		user, err := s.GetCurrentUser(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get user")
+		}
+		if user == nil {
+			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		}
+		if memo.Visibility == store.Private && memo.CreatorID != user.ID {
+			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		}
+	}
+
+	memoMessage, err := s.convertMemoFromStore(ctx, memo)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert memo")
+	}
+	return memoMessage, nil
+}
+
 func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoRequest) (*v1pb.Memo, error) {
 	id, err := ExtractMemoIDFromName(request.Memo.Name)
 	if err != nil {
@@ -254,7 +287,7 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 			payload.Property = property
 			update.Payload = payload
 		} else if path == "uid" {
-			update.UID = &request.Memo.Name
+			update.UID = &request.Memo.Uid
 			if !util.UIDMatcher.MatchString(*update.UID) {
 				return nil, status.Errorf(codes.InvalidArgument, "invalid resource name")
 			}
@@ -264,17 +297,17 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 				return nil, status.Errorf(codes.Internal, "failed to get workspace memo related setting")
 			}
 			visibility := convertVisibilityToStore(request.Memo.Visibility)
-			if workspaceMemoRelatedSetting.DisallowPublicVisible && visibility == store.Public {
+			if workspaceMemoRelatedSetting.DisallowPublicVisibility && visibility == store.Public {
 				return nil, status.Errorf(codes.PermissionDenied, "disable public memos system setting is enabled")
 			}
 			update.Visibility = &visibility
 		} else if path == "row_status" {
 			rowStatus := convertRowStatusToStore(request.Memo.RowStatus)
 			update.RowStatus = &rowStatus
-		} else if path == "created_ts" {
+		} else if path == "create_time" {
 			createdTs := request.Memo.CreateTime.AsTime().Unix()
 			update.CreatedTs = &createdTs
-		} else if path == "display_ts" {
+		} else if path == "display_time" {
 			displayTs := request.Memo.DisplayTime.AsTime().Unix()
 			memoRelatedSetting, err := s.Store.GetWorkspaceMemoRelatedSetting(ctx)
 			if err != nil {
@@ -312,7 +345,7 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 	}
 	// Try to dispatch webhook when memo is updated.
 	if err := s.DispatchMemoUpdatedWebhook(ctx, memoMessage); err != nil {
-		slog.Warn("Failed to dispatch memo updated webhook", err)
+		slog.Warn("Failed to dispatch memo updated webhook", slog.Any("err", err))
 	}
 
 	return memoMessage, nil
@@ -344,7 +377,7 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 	if memoMessage, err := s.convertMemoFromStore(ctx, memo); err == nil {
 		// Try to dispatch webhook when memo is deleted.
 		if err := s.DispatchMemoDeletedWebhook(ctx, memoMessage); err != nil {
-			slog.Warn("Failed to dispatch memo deleted webhook", err)
+			slog.Warn("Failed to dispatch memo deleted webhook", slog.Any("err", err))
 		}
 	}
 
@@ -568,7 +601,7 @@ func (s *APIV1Service) ExportMemos(ctx context.Context, request *v1pb.ExportMemo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to convert memo")
 		}
-		file, err := writer.Create(time.Unix(memo.CreatedTs, 0).Format(time.RFC3339) + "-" + string(memo.Visibility) + ".md")
+		file, err := writer.Create(time.Unix(memo.CreatedTs, 0).Format(time.RFC3339) + "-" + memo.UID + "-" + string(memo.Visibility) + ".md")
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to create memo file")
 		}
@@ -838,6 +871,11 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		return nil, errors.Wrap(err, "failed to parse content")
 	}
 
+	snippet, err := getMemoContentSnippet(memo.Content)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get memo content snippet")
+	}
+
 	memoMessage := &v1pb.Memo{
 		Name:        name,
 		Uid:         memo.UID,
@@ -847,6 +885,7 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		UpdateTime:  timestamppb.New(time.Unix(memo.UpdatedTs, 0)),
 		DisplayTime: timestamppb.New(time.Unix(displayTs, 0)),
 		Content:     memo.Content,
+		Snippet:     snippet,
 		Nodes:       convertFromASTNodes(nodes),
 		Visibility:  convertVisibilityFromStore(memo.Visibility),
 		Pinned:      memo.Pinned,
@@ -968,9 +1007,6 @@ func (s *APIV1Service) buildMemoFindWithFilter(ctx context.Context, find *store.
 			}
 			find.CreatorID = &user.ID
 		}
-		if filter.UID != nil {
-			find.UID = filter.UID
-		}
 		if filter.RowStatus != nil {
 			find.RowStatus = filter.RowStatus
 		}
@@ -1059,7 +1095,6 @@ type SearchMemosFilter struct {
 	DisplayTimeBefore  *int64
 	DisplayTimeAfter   *int64
 	Creator            *string
-	UID                *string
 	RowStatus          *store.RowStatus
 	Random             bool
 	Limit              *int
@@ -1122,9 +1157,6 @@ func findSearchMemosField(callExpr *expr.Expr_Call, filter *SearchMemosFilter) {
 			} else if idExpr.Name == "creator" {
 				creator := callExpr.Args[1].GetConstExpr().GetStringValue()
 				filter.Creator = &creator
-			} else if idExpr.Name == "uid" {
-				uid := callExpr.Args[1].GetConstExpr().GetStringValue()
-				filter.UID = &uid
 			} else if idExpr.Name == "row_status" {
 				rowStatus := store.RowStatus(callExpr.Args[1].GetConstExpr().GetStringValue())
 				filter.RowStatus = &rowStatus
@@ -1261,4 +1293,36 @@ func convertMemoToWebhookPayload(memo *v1pb.Memo) (*v1pb.WebhookRequestPayload, 
 		CreateTime: timestamppb.New(time.Now()),
 		Memo:       memo,
 	}, nil
+}
+
+func getMemoContentSnippet(content string) (string, error) {
+	nodes, err := parser.Parse(tokenizer.Tokenize(content))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse content")
+	}
+
+	plainText := renderer.NewStringRenderer().Render(nodes)
+	if len(plainText) > 100 {
+		return substring(plainText, 100) + "...", nil
+	}
+	return plainText, nil
+}
+
+func substring(s string, length int) string {
+	if length <= 0 {
+		return ""
+	}
+
+	runeCount := 0
+	byteIndex := 0
+	for byteIndex < len(s) {
+		_, size := utf8.DecodeRuneInString(s[byteIndex:])
+		byteIndex += size
+		runeCount++
+		if runeCount == length {
+			break
+		}
+	}
+
+	return s[:byteIndex]
 }

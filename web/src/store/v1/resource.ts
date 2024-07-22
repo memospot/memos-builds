@@ -15,16 +15,14 @@ export const useResourceStore = create(
   combine(getDefaultState(), (set, get) => ({
     setState: (state: State) => set(state),
     getState: () => get(),
-    searchResources: async (filter: string) => {
-      const { resources } = await resourceServiceClient.searchResources({
-        filter,
+    fetchResourceByUID: async (uid: string) => {
+      const resource = await resourceServiceClient.getResourceByUid({
+        uid,
       });
       const resourceMap = get().resourceMapByName;
-      for (const resource of resources) {
-        resourceMap[resource.name] = resource;
-      }
+      resourceMap[resource.name] = resource;
       set({ resourceMapByName: resourceMap });
-      return resources;
+      return resource;
     },
     getResourceByName: (name: string) => {
       const resourceMap = get().resourceMapByName;
