@@ -1,6 +1,6 @@
 import { Tooltip } from "@mui/joy";
 import clsx from "clsx";
-import { getNormalizedDateString, getDateWithOffset } from "@/helpers/datetime";
+import dayjs from "dayjs";
 import { useTranslate } from "@/utils/i18n";
 
 interface Props {
@@ -18,19 +18,19 @@ const getCellAdditionalStyles = (count: number, maxCount: number) => {
 
   const ratio = count / maxCount;
   if (ratio > 0.7) {
-    return "bg-blue-600 text-gray-100 dark:opacity-80";
+    return "bg-teal-700 text-gray-100 dark:opacity-80";
   } else if (ratio > 0.4) {
-    return "bg-blue-400 text-gray-200 dark:opacity-80";
+    return "bg-teal-600 text-gray-100 dark:opacity-80";
   } else {
-    return "bg-blue-300 text-gray-600 dark:opacity-80";
+    return "bg-teal-500 text-gray-100 dark:opacity-70";
   }
 };
 
 const ActivityCalendar = (props: Props) => {
   const t = useTranslate();
   const { month: monthStr, data, onClick } = props;
-  const year = new Date(monthStr).getFullYear();
-  const month = new Date(monthStr).getMonth() + 1;
+  const year = dayjs(monthStr).toDate().getFullYear();
+  const month = dayjs(monthStr).toDate().getMonth() + 1;
   const dayInMonth = new Date(year, month, 0).getDate();
   const firstDay = new Date(year, month - 1, 1).getDay();
   const lastDay = new Date(year, month - 1, dayInMonth).getDay();
@@ -48,39 +48,51 @@ const ActivityCalendar = (props: Props) => {
   }
 
   return (
-    <div className={clsx("w-36 h-auto p-0.5 shrink-0 grid grid-cols-7 grid-flow-row gap-1")}>
+    <div className={clsx("w-full h-auto shrink-0 grid grid-cols-7 grid-flow-row gap-1")}>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>Su</div>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>Mo</div>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>Tu</div>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>We</div>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>Th</div>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>Fr</div>
+      <div className={clsx("w-6 h-5 text-xs flex justify-center items-center cursor-default opacity-60")}>Sa</div>
       {days.map((day, index) => {
-        const date = getNormalizedDateString(
-          getDateWithOffset(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`),
-        );
+        const date = dayjs(`${year}-${month}-${day}`).format("YYYY-MM-DD");
         const count = data[date] || 0;
-        const isToday = new Date().toDateString() === new Date(date).toDateString();
+        const isToday = dayjs().format("YYYY-MM-DD") === date;
         const tooltipText = count ? t("memo.count-memos-in-date", { count: count, date: date }) : date;
-        const isSelected = new Date(props.selectedDate).toDateString() === new Date(date).toDateString();
+        const isSelected = dayjs(props.selectedDate).format("YYYY-MM-DD") === date;
         return day ? (
-          <Tooltip className="shrink-0" key={`${date}-${index}`} title={tooltipText} placement="top" arrow>
+          count > 0 ? (
+            <Tooltip className="shrink-0" key={`${date}-${index}`} title={tooltipText} placement="top" arrow>
+              <div
+                className={clsx(
+                  "w-6 h-6 text-xs rounded-xl flex justify-center items-center border cursor-default",
+                  getCellAdditionalStyles(count, maxCount),
+                  isToday && "border-zinc-400 dark:border-zinc-300",
+                  isSelected && "font-bold border-zinc-400 dark:border-zinc-300",
+                  !isToday && !isSelected && "border-transparent",
+                )}
+                onClick={() => count && onClick && onClick(date)}
+              >
+                {day}
+              </div>
+            </Tooltip>
+          ) : (
             <div
+              key={`${date}-${index}`}
               className={clsx(
-                "w-4 h-4 text-[9px] rounded-md flex justify-center items-center border",
-                getCellAdditionalStyles(count, maxCount),
-                isToday && "border-gray-600 dark:border-zinc-300",
-                isSelected && "font-bold border-gray-600 dark:border-zinc-300",
+                "w-6 h-6 text-xs rounded-xl flex justify-center items-center border cursor-default",
+                "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-gray-500",
+                isToday && "border-zinc-400 dark:border-zinc-500",
                 !isToday && !isSelected && "border-transparent",
-                count > 0 ? "cursor-pointer" : "cursor-default",
               )}
-              onClick={() => count && onClick && onClick(new Date(date).toDateString())}
             >
               {day}
             </div>
-          </Tooltip>
+          )
         ) : (
-          <div
-            key={`${date}-${index}`}
-            className={clsx(
-              "shrink-0 opacity-30 w-4 h-4 rounded-md flex justify-center items-center border border-transparent",
-              getCellAdditionalStyles(count, maxCount),
-            )}
-          ></div>
+          <div key={`${date}-${index}`} className={clsx("shrink-0 w-6 h-6 opacity-0", getCellAdditionalStyles(count, maxCount))}></div>
         );
       })}
     </div>
