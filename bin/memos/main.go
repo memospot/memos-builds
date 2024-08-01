@@ -14,6 +14,7 @@ import (
 
 	"github.com/usememos/memos/server"
 	"github.com/usememos/memos/server/profile"
+	"github.com/usememos/memos/server/version"
 	"github.com/usememos/memos/store"
 	"github.com/usememos/memos/store/db"
 )
@@ -30,43 +31,49 @@ const (
 )
 
 var (
-	mode            string
-	addr            string
-	port            int
-	data            string
-	driver          string
-	dsn             string
-	public          bool
-	instanceProfile *profile.Profile
-
 	rootCmd = &cobra.Command{
 		Use:   "memos",
 		Short: `An open source, lightweight note-taking service. Easily capture and share your great thoughts.`,
 		Run: func(_ *cobra.Command, _ []string) {
+			instanceProfile := &profile.Profile{
+				Mode:         viper.GetString("mode"),
+				Addr:         viper.GetString("addr"),
+				Port:         viper.GetInt("port"),
+				Data:         viper.GetString("data"),
+				Driver:       viper.GetString("driver"),
+				DSN:          viper.GetString("dsn"),
+				Public:       viper.GetBool("public"),
+				PasswordAuth: viper.GetBool("password-auth"),
+				Version:      version.GetCurrentVersion(viper.GetString("mode")),
+			}
+			if err := instanceProfile.Validate(); err != nil {
+				panic(err)
+			}
+
 			ctx, cancel := context.WithCancel(context.Background())
 			dbDriver, err := db.NewDBDriver(instanceProfile)
 			if err != nil {
 				cancel()
-				slog.Error("failed to create db driver", err)
+				slog.Error("failed to create db driver", "error", err)
 				return
 			}
 			if err := dbDriver.Migrate(ctx); err != nil {
 				cancel()
-				slog.Error("failed to migrate database", err)
+				slog.Error("failed to migrate database", "error", err)
 				return
 			}
 
 			storeInstance := store.New(dbDriver, instanceProfile)
 			if err := storeInstance.MigrateManually(ctx); err != nil {
 				cancel()
-				slog.Error("failed to migrate manually", err)
+				slog.Error("failed to migrate manually", "error", err)
 				return
 			}
 
 			s, err := server.NewServer(ctx, instanceProfile, storeInstance)
 			if err != nil {
 				cancel()
-				slog.Error("failed to create server", err)
+				slog.Error("failed to create server", "error", err)
 				return
 			}
 
@@ -78,12 +85,12 @@ var (
 
 			if err := s.Start(ctx); err != nil {
 				if err != http.ErrServerClosed {
-					slog.Error("failed to start server", err)
+					slog.Error("failed to start server", "error", err)
 					cancel()
 				}
 			}
 
-			printGreetings()
+			printGreetings(instanceProfile)
 
 			go func() {
 				<-c
@@ -97,20 +104,22 @@ var (
 	}
 )
 
-func Execute() error {
-	return rootCmd.Execute()
-}
-
 func init() {
-	cobra.OnInitialize(initConfig)
+	viper.SetDefault("mode", "demo")
+	viper.SetDefault("driver", "sqlite")
+	viper.SetDefault("addr", "")
+	viper.SetDefault("port", 8081)
+	viper.SetDefault("public", false)
+	viper.SetDefault("password-auth", true)
 
-	rootCmd.PersistentFlags().StringVarP(&mode, "mode", "m", "demo", `mode of server, can be "prod" or "dev" or "demo"`)
-	rootCmd.PersistentFlags().StringVarP(&addr, "addr", "a", "", "address of server")
-	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 8081, "port of server")
-	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "", "data directory")
-	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "", "", "database driver")
-	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "database source name(aka. DSN)")
-	rootCmd.PersistentFlags().BoolVarP(&public, "public", "", true, "")
+	rootCmd.PersistentFlags().String("mode", "demo", `mode of server, can be "prod" or "dev" or "demo"`)
+	rootCmd.PersistentFlags().String("addr", "", "address of server")
+	rootCmd.PersistentFlags().Int("port", 8081, "port of server")
+	rootCmd.PersistentFlags().String("data", "", "data directory")
+	rootCmd.PersistentFlags().String("driver", "sqlite", "database driver")
+	rootCmd.PersistentFlags().String("dsn", "", "database source name(aka. DSN)")
+	rootCmd.PersistentFlags().Bool("public", false, "")
+	rootCmd.PersistentFlags().Bool("password-auth", true, "")
 
 	err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
 	if err != nil {
@@ -140,24 +149,19 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
-	viper.SetDefault("mode", "demo")
-	viper.SetDefault("driver", "sqlite")
-	viper.SetDefault("addr", "")
-	viper.SetDefault("port", 8081)
-	viper.SetDefault("public", true)
-	viper.SetEnvPrefix("memos")
-}
-
-func initConfig() {
-	viper.AutomaticEnv()
-	var err error
-	instanceProfile, err = profile.GetProfile()
+	err = viper.BindPFlag("password-auth", rootCmd.PersistentFlags().Lookup("password-auth"))
 	if err != nil {
-		slog.Error("failed to get profile", err)
-		return
+		panic(err)
 	}
 
+	viper.SetEnvPrefix("memos")
+	viper.AutomaticEnv()
+	if err := viper.BindEnv("password-auth", "MEMOS_PASSWORD_AUTH"); err != nil {
+		panic(err)
+	}
+}
+
+func printGreetings(profile *profile.Profile) {
 	fmt.Printf(`---
 Server profile
 version: %s
@@ -166,17 +170,17 @@ dsn: %s
 addr: %s
 port: %d
 mode: %s
+public: %t
+password-auth: %t
 driver: %s
 ---
-`, instanceProfile.Version, instanceProfile.Data, instanceProfile.DSN, instanceProfile.Addr, instanceProfile.Port, instanceProfile.Mode, instanceProfile.Driver)
-}
+`, profile.Version, profile.Data, profile.DSN, profile.Addr, profile.Port, profile.Mode, profile.Public, profile.PasswordAuth, profile.Driver)
 
-func printGreetings() {
 	print(greetingBanner)
-	if len(instanceProfile.Addr) == 0 {
-		fmt.Printf("Version %s has been started on port %d\n", instanceProfile.Version, instanceProfile.Port)
+	if len(profile.Addr) == 0 {
+		fmt.Printf("Version %s has been started on port %d\n", profile.Version, profile.Port)
 	} else {
-		fmt.Printf("Version %s has been started on address '%s' and port %d\n", instanceProfile.Version, instanceProfile.Addr, instanceProfile.Port)
+		fmt.Printf("Version %s has been started on address '%s' and port %d\n", profile.Version, profile.Addr, profile.Port)
 	}
 	fmt.Printf(`---
 See more in:
@@ -187,8 +191,7 @@ See more in:
 }
 
 func main() {
-	err := Execute()
-	if err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		panic(err)
 	}
 }

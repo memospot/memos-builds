@@ -1,18 +1,18 @@
 import { Button } from "@mui/joy";
 import copy from "copy-to-clipboard";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
+import MemoFilters from "@/components/MemoFilters";
 import MemoView from "@/components/MemoView";
 import MobileHeader from "@/components/MobileHeader";
 import UserAvatar from "@/components/UserAvatar";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
-import { getTimeStampByDate } from "@/helpers/datetime";
-import useFilterWithUrlParams from "@/hooks/useFilterWithUrlParams";
 import useLoading from "@/hooks/useLoading";
-import { useMemoList, useMemoStore, useUserStore } from "@/store/v1";
+import { useMemoFilterStore, useMemoList, useMemoStore, useUserStore } from "@/store/v1";
 import { User } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 
@@ -24,11 +24,11 @@ const UserProfile = () => {
   const [user, setUser] = useState<User>();
   const memoStore = useMemoStore();
   const memoList = useMemoList();
+  const memoFilterStore = useMemoFilterStore();
   const [isRequesting, setIsRequesting] = useState(true);
   const [nextPageToken, setNextPageToken] = useState<string>("");
-  const { tag: tagQuery, text: textQuery } = useFilterWithUrlParams();
   const sortedMemos = memoList.value
-    .sort((a, b) => getTimeStampByDate(b.displayTime) - getTimeStampByDate(a.displayTime))
+    .sort((a, b) => dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix())
     .sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
   useEffect(() => {
@@ -60,7 +60,7 @@ const UserProfile = () => {
 
     memoList.reset();
     fetchMemos("");
-  }, [user, tagQuery, textQuery]);
+  }, [user, memoFilterStore.filters]);
 
   const fetchMemos = async (nextPageToken: string) => {
     if (!user) {
@@ -70,14 +70,19 @@ const UserProfile = () => {
     setIsRequesting(true);
     const filters = [`creator == "${user.name}"`, `row_status == "NORMAL"`, `order_by_pinned == true`];
     const contentSearch: string[] = [];
-    if (textQuery) {
-      contentSearch.push(JSON.stringify(textQuery));
+    const tagSearch: string[] = [];
+    for (const filter of memoFilterStore.filters) {
+      if (filter.factor === "contentSearch") {
+        contentSearch.push(`"${filter.value}"`);
+      } else if (filter.factor === "tagSearch") {
+        tagSearch.push(`"${filter.value}"`);
+      }
     }
     if (contentSearch.length > 0) {
       filters.push(`content_search == [${contentSearch.join(", ")}]`);
     }
-    if (tagQuery) {
-      filters.push(`tag == "${tagQuery}"`);
+    if (tagSearch.length > 0) {
+      filters.push(`tag_search == [${tagSearch.join(", ")}]`);
     }
     const response = await memoStore.fetchMemos({
       pageSize: DEFAULT_LIST_MEMOS_PAGE_SIZE,
@@ -105,11 +110,6 @@ const UserProfile = () => {
           (user ? (
             <>
               <div className="my-4 w-full flex justify-end items-center gap-2">
-                <a className="" href={`/u/${encodeURIComponent(user?.username)}/rss.xml`} target="_blank" rel="noopener noreferrer">
-                  <Button color="neutral" variant="outlined" endDecorator={<Icon.Rss className="w-4 h-auto opacity-60" />}>
-                    RSS
-                  </Button>
-                </a>
                 <Button
                   color="neutral"
                   variant="outlined"
@@ -130,6 +130,7 @@ const UserProfile = () => {
                   </p>
                 </div>
               </div>
+              <MemoFilters />
               {sortedMemos.map((memo) => (
                 <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact />
               ))}

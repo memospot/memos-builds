@@ -9,38 +9,30 @@ import useCurrentUser from "@/hooks/useCurrentUser";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
 import Loading from "@/pages/Loading";
 import { Routes } from "@/router";
+import { useMemoFilterStore } from "@/store/v1";
 
 const RootLayout = () => {
   const location = useLocation();
   const { sm } = useResponsiveWidth();
   const currentUser = useCurrentUser();
-  const [lastVisited] = useLocalStorage<string>("lastVisited", "/home");
+  const memoFilterStore = useMemoFilterStore();
   const [collapsed, setCollapsed] = useLocalStorage<boolean>("navigation-collapsed", false);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (!currentUser) {
-      if (
-        ([Routes.ROOT, Routes.HOME, Routes.TIMELINE, Routes.RESOURCES, Routes.INBOX, Routes.ARCHIVED, Routes.SETTING] as string[]).includes(
-          location.pathname,
-        )
-      ) {
+      if (([Routes.ROOT, Routes.RESOURCES, Routes.INBOX, Routes.ARCHIVED, Routes.SETTING] as string[]).includes(location.pathname)) {
         window.location.href = Routes.EXPLORE;
         return;
       }
-    } else {
-      if (location.pathname === Routes.ROOT) {
-        if (lastVisited && ([Routes.HOME, Routes.TIMELINE] as string[]).includes(lastVisited)) {
-          window.location.href = lastVisited;
-        } else {
-          window.location.href = Routes.HOME;
-        }
-        return;
-      }
     }
-
     setInitialized(true);
   }, []);
+
+  useEffect(() => {
+    // When the route changes, remove all filters.
+    memoFilterStore.removeFilter(() => true);
+  }, [location.pathname]);
 
   return !initialized ? (
     <Loading />
