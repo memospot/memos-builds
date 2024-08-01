@@ -194,7 +194,7 @@ jobs:
 
             Release assets may be overwritten by the daily automated builds if the upstream Memos version hasn't changed.
 
-            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.MEMOS_VERSION }}...main)**
+            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/v${{ env.MEMOS_VERSION }}...main)**
           tag_name: ${{ env.BUILD_VERSION }}
           draft: false
           prerelease: true
