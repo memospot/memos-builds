@@ -6,18 +6,18 @@
 #
 # 	By specifying the platform flag, it's possible to compatibilize different images without changing
 # the build command, which would imply changing the published platforms formats for this image.
-FROM --platform=${BUILDPLATFORM:-linux/amd64} 	gcr.io/distroless/static:latest as distroless
-FROM 											alpine:latest 					as target-386
-FROM  											alpine:latest 					as target-amd64
-FROM --platform=amd64  							alpine:latest 					as target-amd64v2
-FROM --platform=amd64							alpine:latest 					as target-amd64v3
-FROM --platform=linux/arm/v5 					busybox:stable-uclibc 			as target-armv5
-FROM --platform=linux/arm/v6 					alpine:latest 					as target-armv6
-FROM --platform=linux/arm/v7 					alpine:latest 					as target-armv7
-FROM  											alpine:latest 					as target-arm64
-FROM  											alpine:latest 					as target-ppc64le
-FROM  											alpine:edge 					as target-riscv64
-FROM  											alpine:latest 					as target-s390x
+FROM --platform=${BUILDPLATFORM:-linux/amd64} 	gcr.io/distroless/static:latest AS distroless
+FROM 											alpine:3.20 					AS target-386
+FROM  											alpine:3.20 					AS target-amd64
+FROM --platform=amd64  							alpine:3.20 					AS target-amd64v2
+FROM --platform=amd64							alpine:3.20 					AS target-amd64v3
+FROM --platform=linux/arm/v5 					busybox:stable-uclibc 			AS target-armv5
+FROM --platform=linux/arm/v6 					alpine:3.20  					AS target-armv6
+FROM --platform=linux/arm/v7 					alpine:3.20  					AS target-armv7
+FROM  											alpine:3.20  					AS target-arm64
+FROM  											alpine:3.20  					AS target-ppc64le
+FROM  											alpine:3.20 					AS target-riscv64
+FROM  											alpine:3.20  					AS target-s390x
 
 # Select appropriate base image and setup container OS.
 FROM target-${TARGETARCH}${TARGETVARIANT}
@@ -36,33 +36,33 @@ COPY --from=distroless /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=distroless /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ARG TARGETPLATFORM TARGETARCH TARGETVARIANT
+SHELL [ "/bin/ash", "-euo", "pipefail", "-c" ]
 RUN <<SH
-	set -eu
-	if ! [ -f /etc/os-release ]; then
-		# Setup os-release file for BusyBox.
-		busybox=$(ls --help 2>&1 | head -1)
-		if [ "$(echo $busybox | cut -d' ' -f1)" = "BusyBox" ]; then
-			echo "PRETTY_NAME=\"$busybox\"" > /etc/os-release
-		fi
-	fi
+    if ! [ -f /etc/os-release ]; then
+        # Setup os-release file for BusyBox.
+        busybox=$(find --help 2>&1 | head -1)
+        if [ "$(echo "$busybox" | cut -d' ' -f1)" = "BusyBox" ]; then
+            echo "PRETTY_NAME=\"$busybox\"" > /etc/os-release
+        fi
+    fi
 
-	# Run distro-specific commands.
-	RELEASE=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2 | cut -d' ' -f1);
-	case $RELEASE in
-		Alpine)
-			apk upgrade --no-cache
-			;;
-		BusyBox)
-			# Nothing to do but validate as supported.
-			;;
-		*)
-			echo "Unsupported distro: $RELEASE"
-			exit 1
-			;;
-	esac
+    # Run distro-specific commands.
+    RELEASE=$(grep PRETTY_NAME < /etc/os-release | cut -d'"' -f2 | cut -d' ' -f1);
+    case $RELEASE in
+        Alpine)
+            apk upgrade --no-cache
+            ;;
+        BusyBox)
+            # Nothing to do but validate as supported.
+            ;;
+        *)
+            echo "Unsupported distro: $RELEASE"
+            exit 1
+            ;;
+    esac
 
-	mkdir -p /opt/memos
-	echo "TARGETPLATFORM=${TARGETPLATFORM}" >> /opt/memos/buildinfo
+    mkdir -p /opt/memos
+    echo "TARGETPLATFORM=${TARGETPLATFORM}" >> /opt/memos/buildinfo
 SH
 
 # Find appropriate Memos binary and copy it.

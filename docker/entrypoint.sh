@@ -1,15 +1,15 @@
-#!/usr/bin/env bash
+#!/usr/bin/env ash
+# shellcheck shell=dash
 # This custom entry point makes debugging image builds easier.
 
 MAIN=/opt/memos/memos
 
 set -eu
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime || true
-printf "$TZ\n" > /etc/timezone
+ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime || true
+printf %s "$TZ" >/etc/timezone
 
-release=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)
-platform=$(cat /opt/memos/buildinfo | grep TARGETPLATFORM | cut -d'=' -f2)
-machinearch=$(uname -m)
+release=$(grep PRETTY_NAME </etc/os-release | cut -d'"' -f2)
+platform=$(grep TARGETPLATFORM </opt/memos/buildinfo | cut -d'=' -f2)
 bindate=$(stat -c %y ${MAIN} | cut -d'.' -f1)
 checksum=$(sha256sum ${MAIN} | cut -d' ' -f1)
 
@@ -19,13 +19,11 @@ magenta="\033[35m"
 yellow="\033[33m"
 reset="\033[0m"
 
-printf "${magenta}Timezone:          ${green}$TZ${reset}\n"
-printf "${magenta}Base image:        ${green}$release${reset}\n"
-printf "${yellow}Target platform:   ${green}$platform${reset}\n"
-printf "${yellow}Host Architecture: ${green}$machinearch${reset}\n"
-printf "\n"
-printf "${cyan}Main binary date:     ${green}$bindate${reset}\n"
-printf "${cyan}Main binary checksum: ${green}$checksum${reset}\n"
-printf "\n"
+printf "\n%bTimezone:             %b%s%b\n" "$magenta" "$green" "$TZ" "$reset"
+printf "%bBase image:           %b%s%b\n" "$magenta" "$green" "$release" "$reset"
+printf "%bTarget platform:      %b%s%b\n" "$yellow" "$green" "$platform" "$reset"
+printf "%bHost Architecture:    %b%s%b\n" "$yellow" "$green" "$(uname -m)" "$reset"
+printf "%bMain binary date:     %b%s%b\n" "$cyan" "$green" "$bindate" "$reset"
+printf "%bMain binary checksum: %b%s%b\n" "$cyan" "$green" "$checksum" "$reset"
 
-exec ${MAIN}
+exec ${MAIN} "$@"
