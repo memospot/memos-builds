@@ -14,12 +14,6 @@ on:
           The action will fail if a matching tag already exists on this repository.
         required: false
         type: string
-      memos-release:
-        description: |
-          Upstream release to build.
-          The action will fail if a matching tag already exists on this repository.
-        required: false
-        type: string
 
 env:
   DOCKER_PLATFORMS: |
@@ -59,12 +53,9 @@ jobs:
           fetch-depth: 0
 
       # setup deps
-      - name: Setup Task
-        uses: jaxxstorm/action-install-gh-release@25d5e2dd555cd74f1fab9ac1e6ea117acde2c0c4
-        with:
-          repo: go-task/task
-          cache: enable
-          tag: "v3.34.1"
+      - name: Setup Just
+        uses: taiki-e/install-action@331a600f1b10a3fed8dc56f925012bede91ae51f
+        with: { tool: just@1.34.0 }
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
@@ -81,30 +72,26 @@ jobs:
 
       # When running the workflow manually, allows to build a specific tag or release.
       # If the build is triggered by other events, will build whatever is already commited to the subtree.
-      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-release == '' && github.event.inputs.memos-tag != ''  }}
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-tag != ''  }}
         name: Pull usememos/memos:tags/${{ inputs.memos-tag }} to subtree
-        run: python scripts/ci.py pull-subtree --branch=tags/${{ inputs.memos-tag }}
-      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-tag == '' && github.event.inputs.memos-release != '' }}
-        name: Pull usememos/memos:releases/${{ inputs.memos-release }} to subtree
-        run: python scripts/ci.py pull-subtree --branch=heads/release/${{ inputs.memos-release }}
+        run: |
+          just setup-env
+          just git-commit-any
+          just git-subtree-pull-tag "${{ inputs.memos-tag }}"
 
-      # Run after subtree pull, in case version.go changed.
-      - name: Setup environment variables
-        run: python scripts/ci.py setup-env
+      # Run again after subtree pull, in case version.go changed.
+      - name: Setup environment
+        run: just setup-env
 
       - name: Cache front-end build
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
-          path: |
-            memos/server/router/frontend/dist/
-            .task/checksum/build-frontend
-          key: |
-            frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
-          restore-keys: |
-            frontend-${{env.BUILD_VERSION}}-
+          path: memos/server/router/frontend/dist/
+          key: frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
+          restore-keys: frontend-${{env.BUILD_VERSION}}-
 
       - name: Build front-end
-        run: task build:frontend
+        run: just build-frontend
 
       - name: Upload front-end artifact
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
@@ -112,9 +99,7 @@ jobs:
           name: frontend_${{env.BUILD_VERSION}}
           compression-level: 9
           if-no-files-found: error
-          path: |
-            memos/server/router/frontend/dist/
-            .task/checksum/build-frontend
+          path: memos/server/router/frontend/dist/
 
   goreleaser:
     name: Build back-end and Release
@@ -131,12 +116,9 @@ jobs:
           fetch-depth: 0
 
       # setup deps
-      - name: Setup Task
-        uses: jaxxstorm/action-install-gh-release@25d5e2dd555cd74f1fab9ac1e6ea117acde2c0c4
-        with:
-          repo: go-task/task
-          cache: enable
-          tag: "v3.34.1"
+      - name: Setup Just
+        uses: taiki-e/install-action@331a600f1b10a3fed8dc56f925012bede91ae51f
+        with: { tool: just@1.34.0 }
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@35c243d7f2a909b1d4e40399b348a7fdab27d78d
@@ -159,20 +141,17 @@ jobs:
 
       # When running the workflow manually, allows to build a specific tag or release.
       # If the build is triggered by other events, will build whatever is already commited to the subtree.
-      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-release == '' && github.event.inputs.memos-tag != ''  }}
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-tag != ''  }}
         name: Pull usememos/memos:tags/${{ inputs.memos-tag }} to subtree
         run: |
-          python scripts/ci.py pull-subtree --branch=tags/${{ inputs.memos-tag }}
-          python scripts/ci.py retag --tag=v${{ inputs.memos-tag }} --push
-      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.memos-tag == '' && github.event.inputs.memos-release != '' }}
-        name: Pull usememos/memos:releases/${{ inputs.memos-release }} to subtree
-        run: |
-          python scripts/ci.py pull-subtree --branch=heads/release/${{ inputs.memos-release }}
-          python scripts/ci.py retag --tag=${{ inputs.memos-release }} --push
+          just setup-env
+          just git-commit-any
+          just git-subtree-pull-tag "${{ inputs.memos-tag }}"
+          just git-retag "${{ inputs.memos-tag }}" --push
 
-      # Run after subtree pull, in case version.go changed.
-      - name: Setup environment variables
-        run: python scripts/ci.py setup-env
+      # Run again after subtree pull, in case version.go changed.
+      - name: Setup environment
+        run: just setup-env
 
       ### Front-end ###
       - name: Wait for the front-end build to finish
@@ -189,9 +168,9 @@ jobs:
       ### /Front-end ###
 
       - name: go.mod tidy
-        run: task build:backend-tidy
+        run: just build-backend-tidy
       - name: Generate protobuf-related code
-        run: task build:buf
+        run: just build-buf
 
       - name: Build and release with Goreleaser
         uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200
@@ -204,7 +183,7 @@ jobs:
 
       ### Docker ###
       - name: Rename goreleaser builds to the format expected by current Dockerfile
-        run: python scripts/ci.py rename-to-docker
+        run: just rename-to-docker
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3

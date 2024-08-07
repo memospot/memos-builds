@@ -1,0 +1,8 @@
+{
+  "editor.formatOnSave": true,
+  "editor.wordBasedSuggestions": "off",
+  "editor.quickSuggestionsDelay": 200,
+  "search.exclude": {
+    "**/memos/**": true
+  }
+}

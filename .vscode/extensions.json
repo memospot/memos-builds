@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "EditorConfig.EditorConfig",
+    "exiasr.hadolint",
+    "nefrob.vscode-just-syntax",
+    "oderwat.indent-rainbow",
+    "timonwong.shellcheck"
+  ],
+  "unwantedRecommendations": []
+}

@@ -1,19 +1,14 @@
 ### Project-specific ###
 build/
 node_modules/
-memos/*
-
-# ci scripts
-__pycache__/
-.ruff_cache/
+*_grpc.pb.go
+*_grpc.pb.gw.go
+memos/server/router/frontend/dist/index.html
 .GITHUB_ENV
+__pycache__/
 
 # Task
 .task
-
-# Air (hot reload) generated
-.air
-bin/air
 
 # temp folder
 tmp

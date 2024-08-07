@@ -48,12 +48,9 @@ jobs:
           fetch-depth: 0
 
       # setup deps
-      - name: Setup Task
-        uses: jaxxstorm/action-install-gh-release@25d5e2dd555cd74f1fab9ac1e6ea117acde2c0c4
-        with:
-          repo: go-task/task
-          cache: enable
-          tag: "v3.34.1"
+      - name: Setup Just
+        uses: taiki-e/install-action@331a600f1b10a3fed8dc56f925012bede91ae51f
+        with: { tool: just@1.34.0 }
 
       - name: Setup pnpm
         uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2
@@ -68,24 +65,22 @@ jobs:
           cache-dependency-path: "memos/web/pnpm-lock.yaml"
       # /setup deps
 
-      - name: Pull latest changes from usememos/memos:main to subtree
-        run: python scripts/ci.py pull-subtree --branch=main
       - name: Setup environment variables
-        run: python scripts/ci.py setup-env --nightly
+        run: just setup-env --nightly
+      - name: Pull latest changes from usememos/memos:main to subtree
+        run: |
+          just git-commit-any
+          just git-subtree-pull main
 
       - name: Cache front-end build
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
-          path: |
-            memos/server/router/frontend/dist/
-            .task/checksum/build-frontend
-          key: |
-            frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
-          restore-keys: |
-            frontend-${{env.BUILD_VERSION}}-
+          path: memos/server/router/frontend/dist/
+          key: frontend-${{env.BUILD_VERSION}}-${{ env.CACHE_KEY }}
+          restore-keys: frontend-${{env.BUILD_VERSION}}-
 
       - name: Build front-end
-        run: task build:frontend
+        run: just build-frontend
 
       - name: Upload front-end artifact
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
@@ -93,9 +88,7 @@ jobs:
           name: frontend_${{env.BUILD_VERSION}}
           compression-level: 9
           if-no-files-found: error
-          path: |
-            memos/server/router/frontend/dist/
-            .task/checksum/build-frontend
+          path: memos/server/router/frontend/dist/
 
   goreleaser:
     name: Build
@@ -111,12 +104,9 @@ jobs:
           fetch-depth: 0
 
       # setup deps
-      - name: Setup Task
-        uses: jaxxstorm/action-install-gh-release@25d5e2dd555cd74f1fab9ac1e6ea117acde2c0c4
-        with:
-          repo: go-task/task
-          cache: enable
-          tag: "v3.34.1"
+      - name: Setup Just
+        uses: taiki-e/install-action@331a600f1b10a3fed8dc56f925012bede91ae51f
+        with: { tool: just@1.34.0 }
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@35c243d7f2a909b1d4e40399b348a7fdab27d78d
@@ -141,13 +131,15 @@ jobs:
         with:
           repo: goreleaser/goreleaser
           cache: enable
-          tag: "v2.0.0"
+          tag: "v2.1.0"
       # /setup deps
 
-      - name: Pull latest changes from usememos/memos:main to subtree
-        run: python scripts/ci.py pull-subtree --branch=main
       - name: Setup environment variables
-        run: python scripts/ci.py setup-env --nightly
+        run: just setup-env --nightly
+      - name: Pull latest changes from usememos/memos:main to subtree
+        run: |
+          just git-commit-any
+          just git-subtree-pull main
 
       ### Front-end ###
       - name: Wait for the front-end build to finish
@@ -166,16 +158,12 @@ jobs:
       - name: Cache back-end build
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
-          path: |
-            build/backend
-            ./task/checksum/build-backend-nightly
-          key: |
-            nightly-backend-${{ env.BUILD_VERSION }}-${{ env.CACHE_KEY }}
-          restore-keys: |
-            nightly-backend-${{ env.BUILD_VERSION }}-
+          path: build/backend
+          key: nightly-backend-${{ env.BUILD_VERSION }}-${{ env.CACHE_KEY }}
+          restore-keys: nightly-backend-${{ env.BUILD_VERSION }}-
 
       - name: Nightly build
-        run: task build:backend-nightly
+        run: just build-nightly-backend-only
 
       - name: Create pre-release
         uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
@@ -201,7 +189,7 @@ jobs:
 
       ### Docker ###
       - name: Rename goreleaser builds to the format expected by current Dockerfile
-        run: python scripts/ci.py rename-to-docker
+        run: just rename-to-docker
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
