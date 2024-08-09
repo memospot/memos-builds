@@ -2,7 +2,7 @@
 
 Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
 
-Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), an independent desktop app for Memos available on macOS, Linux, and Windows.
+Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), a self-contained desktop app for Memos, available on macOS, Linux, and Windows.
 
 <div align="center" width="100%" style="display: flex; justify-content: center;">
   <p align="center" width="100%">
@@ -39,18 +39,20 @@ Some of these builds are utilized by [Memospot](https://github.com/memospot/memo
   </p>
 </div>
 
+![demo](https://www.usememos.com/demo.png)
+
 ## Docker
 
-This project provides optimized Memos images for the following platforms:
+This project also provides optimized Memos images for the following platforms:
 |      amd64     |     arm32    |     other     |
 | -------------- | ------------ | ------------- |
 |  linux/amd64   | linux/arm/v5 |   linux/386   |
-| linux/amd64/v2 | linux/arm/v6 |  linux/arm64  |
-| linux/amd64/v3 | linux/arm/v7 | linux/ppc64le |
-|                |              | linux/riscv64 |
-|                |              |  linux/s390x  |
+| linux/amd64/v2 | linux/arm/v6 | linux/ppc64le |
+| linux/amd64/v3 | linux/arm/v7 | linux/riscv64 |
+|                | linux/arm64  |  linux/s390x  |
 
-To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants)
+
+To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants).
 
 ### Quick start
 
@@ -86,9 +88,7 @@ docker run --detach --name watchtower \
 
 ### About images
 
-Please be aware that Memos does not currently follow a consistent versioning process. This means that sometimes a new release may include changes without updating the patch version. As a result, extra effort may be required to keep builds up to date, and there may be differences when compared to official images.
-
-- Versioned images are checked out to Memos's upstream `release/version` branch.
+- Versioned images are checked out to the matching Memos upstream tag.
 
 - Nightly images use whatever is available at Memos's `main` branch at build time.
 
@@ -100,9 +100,9 @@ Please be aware that Memos does not currently follow a consistent versioning pro
 
 |  Platform |         Image         |
 | --------- | --------------------- |
-|  arm/v5   | busybox:stable-uclibc |
-|  riscv64  |      alpine:edge      |
-| All other |     alpine:latest     |
+|   armv5   | busybox:stable-uclibc |
+|  riscv64  |      alpine:3.20      |
+| All other |      alpine:3.20      |
 
 > Up to v0.19.0, `arm32v5` images were based on debian:stable-slim.
 
@@ -112,23 +112,17 @@ There are multiple builds for `arm` and `amd64` platforms, with different hardwa
 
 Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` or `aarch64` CPU, use the ARM64 build.
 
-⚠ Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders the performance of several applications.
+⚠ Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders the performance of applications that were not specifically written to this architecture.
 
-### amd64
-
-| Suffix | Target CPUs                                            |
-| ------ | ------------------------------------------------------ |
-| v1     | Runs on all AMD64/Intel 64 CPUs                        |
-| v2     | Intel Nehalem (1st gen from 2009) / AMD Jaguar (2013+) |
-| v3     | Intel Haswell (4th gen) / AMD Excavator (2015+)        |
-
-### arm
-
-| Suffix | Target CPUs                                   |
-| ------ | --------------------------------------------- |
-| v5     | Older ARM without VFP (Vector Floating Point) |
-| v6     | VFPv1 only: ARM11 or better cores             |
-| v7     | VFPv3: Cortex-A cores                         |
+| Variant  | Target CPUs                                            |
+| -------- | ------------------------------------------------------ |
+| amd64    | Runs on all AMD64/Intel 64 CPUs. Also known as x86_64  |
+| amd64/v2 | Intel Nehalem (1st gen from 2009) / AMD Jaguar (2013+) |
+| amd64/v3 | Intel Haswell (4th gen) / AMD Excavator (2015+)        |
+| arm/v5   | Older ARM without VFP (Vector Floating Point)          |
+| arm/v6   | VFPv1 only: ARM11 or better cores                      |
+| arm/v7   | VFPv3: Cortex-A cores                                  |
+| arm64    | Recent ARM64/AArch64 CPUs                              |
 
 ## Notes
 
@@ -139,7 +133,7 @@ It's currently not possible to build Memos for Windows i386 and any sort of MIPS
 ## Support
 
 Memos official first-class [support](https://github.com/usememos/memos/issues) is for its [Docker container](https://hub.docker.com/r/neosmemo/memos).
-These binaries and images are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your own discretion.
+These binaries and images are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your discretion.
 
 Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the official Docker container.
 
@@ -161,7 +155,7 @@ To run Memos using [Termux](https://play.google.com/store/apps/details?id=com.te
 
 Run this on Termux:
 
-```sh
+```bash
 # This will prompt you for storage access permission
 termux-setup-storage
 
