@@ -67,7 +67,7 @@ SH
 
 # Find appropriate Memos binary and copy it.
 # Binaries are built with goreleaser and then renamed upfront to match this format.
-COPY build/backend/memos_linux_${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
+COPY build/memos_linux_${TARGETARCH}${TARGETVARIANT}/memos /opt/memos/
 
 # Copy front-end files.
 # COPY memos/server/router/frontend/dist /opt/memos/dist/

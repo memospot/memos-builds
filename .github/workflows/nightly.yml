@@ -151,9 +151,9 @@ jobs:
         uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
         with:
           files: |
-            build/backend/*.tar.gz
-            build/backend/*.zip
-            build/backend/*.txt
+            build/*.tar.gz
+            build/*.zip
+            build/*.txt
           body: |
             This is an **untested** pre-release, built with bleeding-edge upstream Memos code.
             It is strongly recommended that you do *not* use it in production.

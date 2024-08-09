@@ -230,7 +230,7 @@ rename-to-docker:
     go_to_docker["amd64_v([2-4])"]="amd64v\1"
     go_to_docker["arm_([5-7])"]="armv\1"
     echo -e "\n${MAGENTA}: Renaming goreleaser builds to the format expected by the Dockerfile…${RESET}"
-    for folder in $(find ./build/backend/memos* -type d); do
+    for folder in $(find ./build/memos* -type d); do
         folder_name=$(basename $folder)
         for go in "${!go_to_docker[@]}"; do
             if [[ $folder_name =~ $go ]]; then
@@ -243,7 +243,7 @@ rename-to-docker:
                     echo -e "  ${RED}Failed to rename${RESET} ${YELLOW}$folder_name${RESET}"
                     continue
                 fi
-                new_folder="./build/backend/$new_name"
+                new_folder="./build/$new_name"
                 echo -en "  Renaming ${CYAN}$folder_name${RESET} to ${BLUE}$new_name${RESET}…"
                 if mv "$folder" "$new_folder"; then
                     echo -e " ${GREEN}SUCCESS${RESET}"
@@ -297,7 +297,7 @@ build-docker TAG CROSS='':
     export DOCKER_BUILDKIT=1
     export DOCKER_CLI_EXPERIMENTAL=enabled
     docker_platforms=()
-    for plat in $(find ./build/backend/memos_linux* -type d); do
+    for plat in $(find ./build/memos_linux* -type d); do
         go_name=$(basename $plat)
         docker_platform="${go_name#memos_}"
         docker_platform="${docker_platform//_//}"
