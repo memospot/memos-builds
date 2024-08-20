@@ -49,6 +49,7 @@ builds:
       -w
       -X main.Date={{.CommitDate}}
       -X github.com/usememos/memos/server/version.Version={{ trimprefix .Version "v" }}
+      -X github.com/usememos/memos/server/version.DevVersion={{ trimprefix .Version "v" }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 upx:
