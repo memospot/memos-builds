@@ -1,11 +1,11 @@
 # 	The `--platform` flag is used to specify the target platform in a format supported by the *base image*.
 #
-# 	Platform format is not consistent across images distros and versions (e.g arm/arm32),
+# 	Platform format is not consistent across image distros and versions (e.g. arm/arm32),
 # and when omitted, it will use whatever is supplied to the `docker buildx build` command,
 # and the build may fail if we are not using the same format as the base image.
 #
 # 	By specifying the platform flag, it's possible to compatibilize different images without changing
-# the build command, which would imply changing the published platforms formats for this image.
+# the build command, which would imply changing the published platform formats for this image.
 FROM --platform=${BUILDPLATFORM:-linux/amd64} 	gcr.io/distroless/static:latest AS distroless
 FROM 											alpine:3.20 					AS target-386
 FROM  											alpine:3.20 					AS target-amd64
@@ -86,7 +86,7 @@ ENV MEMOS_METRIC="false"
 EXPOSE 5230
 
 HEALTHCHECK --interval=5m --timeout=10s \
-	CMD wget -qO - http://localhost:${MEMOS_PORT}/healthz || exit 1
+    CMD wget -qO - http://localhost:${MEMOS_PORT}/healthz || exit 1
 
 WORKDIR /opt/memos
 ENTRYPOINT [ "sh", "./entrypoint.sh" ]

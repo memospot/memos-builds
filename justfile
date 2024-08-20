@@ -230,7 +230,7 @@ rename-to-docker:
     go_to_docker["amd64_v([2-4])"]="amd64v\1"
     go_to_docker["arm_([5-7])"]="armv\1"
     echo -e "\n${MAGENTA}: Renaming goreleaser builds to the format expected by the Dockerfile…${RESET}"
-    for folder in $(find ./build/memos* -type d); do
+    for folder in $(find ./build/memos_linux* -type d); do
         folder_name=$(basename $folder)
         for go in "${!go_to_docker[@]}"; do
             if [[ $folder_name =~ $go ]]; then
