@@ -413,10 +413,10 @@ publish TAG:
     git push origin main
 
 # Update README.md captures. Requires `https://github.com/sindresorhus/capture-website-cli` and a running Memos instance.
-update-captures TOKEN='' PORT='5230':
+update-captures PORT='5230' TOKEN='':
     #!{{bash}}
     COOKIE=''
-    if [ -z "{{TOKEN}}" ]; then
+    if ! [ -z "{{TOKEN}}" ]; then
         COOKIE='--cookie="memos.access-token={{TOKEN}}"'
     fi
     capture-website --overwrite --type=webp --output=assets/capture_dark.webp --dark-mode $COOKIE http://localhost:{{PORT}}/ &
