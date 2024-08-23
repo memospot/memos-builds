@@ -256,7 +256,6 @@ rename-to-docker:
     echo -e ": Renaming complete.\n"
 
 # Build Memos tag (v*.*.* or nightly). Use `--cross` to cross-compile for all supported platforms.
-[group('local-only')]
 build TAG CROSS='':
     #!{{bash}}
     set -euo pipefail
@@ -283,7 +282,6 @@ build TAG CROSS='':
     fi
 
 # Build local Docker images. If the current OS is not Linux, `--cross` will be passed implicitly.
-[group('local-only')]
 build-docker TAG CROSS='':
     #!{{bash}}
     set -euo pipefail
@@ -349,7 +347,6 @@ build-docker TAG CROSS='':
     done
 
 # Clean built Docker images
-[group('local-only')]
 [confirm('This will stop and remove all Docker containers and images starting with memos-v*. Are you sure?')]
 clean-docker:
     #!{{bash}}
@@ -372,7 +369,6 @@ clean-docker:
     echo -e "${GREEN}Cleaning complete.${RESET}"
 
 # Clean-up build artifacts, dangling Docker images, volumes and go cache.
-[group('local-only')]
 [confirm('This will clean-up build artifacts, Go cache, dangling Docker images and Docker build cache. Are you sure?')]
 clean:
     #!{{bash}}
@@ -397,7 +393,6 @@ clean:
     go clean -cache -modcache
 
 # Reset main branch to origin/main. Excludes ALL untracked files and changes.
-[group('local-only')]
 [confirm('This will exclude ANY changes and untracked files on the working tree, resetting the local repo to origin/main. Are you sure?')]
 git-reset:
     #!{{bash}}
@@ -409,7 +404,6 @@ git-reset:
     git checkout -
 
 # Update the `memos` subtree, tag and push to GitHub, triggering the `release` workflow.
-[group('local-only')]
 publish TAG:
     #!{{bash}}
     set -euo pipefail
@@ -417,3 +411,13 @@ publish TAG:
     just git-subtree-pull "tags/$TAG"
     just git-retag "{{TAG}}"
     git push origin main
+
+# Update README.md captures. Requires `https://github.com/sindresorhus/capture-website-cli` and a running Memos instance.
+update-captures TOKEN='' PORT='5230':
+    #!{{bash}}
+    COOKIE=''
+    if [ -z "{{TOKEN}}" ]; then
+        COOKIE='--cookie="memos.access-token={{TOKEN}}"'
+    fi
+    capture-website --overwrite --type=webp --output=assets/capture_dark.webp --dark-mode $COOKIE http://localhost:{{PORT}}/ &
+    capture-website --overwrite --type=webp --output=assets/capture_light.webp $COOKIE http://localhost:{{PORT}}/

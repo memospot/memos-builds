@@ -4,42 +4,30 @@ Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful
 
 Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), a self-contained desktop app for Memos, available on macOS, Linux, and Windows.
 
-<div align="center" width="100%" style="display: flex; justify-content: center;">
-  <p align="center" width="100%">
-
 [![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
-  </p>
-</div>
+<div align="center">
 
-<p align="center" width="100%">
-  <a href="https://www.usememos.com/">
+<a href="https://www.usememos.com/">
     <picture>
       <source
         media="(prefers-color-scheme: dark)"
-        srcset="assets/powered_by_memos_dark.webp"
+        srcset="https://raw.githubusercontent.com/memospot/memos-builds/main/assets/capture_dark.webp"
       />
       <source
         media="(prefers-color-scheme: light)"
-        srcset="assets/powered_by_memos.webp"
+        srcset="https://raw.githubusercontent.com/memospot/memos-builds/main/assets/capture_light.webp"
       />
-      <img height="128"
-        alt="powered by memos"
-        src="assets/powered_by_memos.webp"
+      <img
+        alt="demo"
+        src="https://www.usememos.com/demo.png"
       />
     </picture>
   </a>
-</p>
 
-<div align="center" width="100%" style="display: flex; justify-content: center;">
-  <p align="center" width="100%">
+  [![Homepage](https://img.shields.io/badge/Home-blue)](https://www.usememos.com) [![Blog](https://img.shields.io/badge/Blog-gray)](https://www.usememos.com/blog) [![Docs](https://img.shields.io/badge/Docs-blue)](https://www.usememos.com/docs) [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://demo.usememos.com/) [![Memos Discord](https://img.shields.io/badge/Discord-chat-5865f2?logo=discord&logoColor=f5f5f5)](https://discord.gg/tfPJa4UmAv) [![GitHub Stars](https://img.shields.io/github/stars/usememos/memos?logo=github)](https://github.com/usememos/memos)
 
-[![Homepage](https://img.shields.io/badge/Home-blue)](https://www.usememos.com) [![Blog](https://img.shields.io/badge/Blog-gray)](https://www.usememos.com/blog) [![Docs](https://img.shields.io/badge/Docs-blue)](https://www.usememos.com/docs) [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://demo.usememos.com/) [![Memos Discord](https://img.shields.io/badge/Discord-chat-5865f2?logo=discord&logoColor=f5f5f5)](https://discord.gg/tfPJa4UmAv) [![GitHub Stars](https://img.shields.io/github/stars/usememos/memos?logo=github)](https://github.com/usememos/memos)
-
-  </p>
 </div>
-
-![demo](https://www.usememos.com/demo.png)
 
 ## Docker
 
@@ -50,7 +38,6 @@ This project also provides optimized Memos images for the following platforms:
 | linux/amd64/v2 | linux/arm/v6 | linux/ppc64le |
 | linux/amd64/v3 | linux/arm/v7 | linux/riscv64 |
 |                | linux/arm64  |  linux/s390x  |
-
 
 To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants).
 
@@ -90,7 +77,7 @@ docker run --detach --name watchtower \
 
 - Versioned images are checked out to the matching Memos upstream tag.
 
-- Nightly images use whatever is available at Memos's `main` branch at build time.
+- Nightly images use whatever is available at Memos `main` branch at build time.
 
 - Image packages are auto-upgraded at build time.
 
@@ -98,11 +85,11 @@ docker run --detach --name watchtower \
 
 - Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
-|  Platform |         Image         |
-| --------- | --------------------- |
-|   armv5   | busybox:stable-uclibc |
-|  riscv64  |      alpine:3.20      |
-| All other |      alpine:3.20      |
+| Platform  | Image                 |
+|-----------|-----------------------|
+| arm/v5    | busybox:stable-uclibc |
+| riscv64   | alpine:3.20           |
+| All other | alpine:3.20           |
 
 > Up to v0.19.0, `arm32v5` images were based on debian:stable-slim.
 
@@ -176,4 +163,4 @@ MEMOS_MODE=prod MEMOS_DATA=. MEMOS_PORT=5230 ./memos
 
 ## Supporting
 
-If you like this project, don't forget to [⭐star](https://github.com/memospot/memos-builds) it and consider sponsoring it.
+If you appreciate this project, be sure to [⭐star](https://github.com/memospot/memos-builds) it on GitHub.
