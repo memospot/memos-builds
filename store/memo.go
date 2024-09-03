@@ -76,10 +76,13 @@ type FindMemo struct {
 	Random          bool
 
 	// Pagination
-	Limit            *int
-	Offset           *int
+	Limit  *int
+	Offset *int
+
+	// Ordering
 	OrderByUpdatedTs bool
 	OrderByPinned    bool
+	OrderByTimeAsc   bool
 }
 
 type FindMemoPayload struct {

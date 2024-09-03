@@ -36,15 +36,14 @@ var (
 		Short: `An open source, lightweight note-taking service. Easily capture and share your great thoughts.`,
 		Run: func(_ *cobra.Command, _ []string) {
 			instanceProfile := &profile.Profile{
-				Mode:         viper.GetString("mode"),
-				Addr:         viper.GetString("addr"),
-				Port:         viper.GetInt("port"),
-				Data:         viper.GetString("data"),
-				Driver:       viper.GetString("driver"),
-				DSN:          viper.GetString("dsn"),
-				Public:       viper.GetBool("public"),
-				PasswordAuth: viper.GetBool("password-auth"),
-				Version:      version.GetCurrentVersion(viper.GetString("mode")),
+				Mode:        viper.GetString("mode"),
+				Addr:        viper.GetString("addr"),
+				Port:        viper.GetInt("port"),
+				Data:        viper.GetString("data"),
+				Driver:      viper.GetString("driver"),
+				DSN:         viper.GetString("dsn"),
+				InstanceURL: viper.GetString("instance-url"),
+				Version:     version.GetCurrentVersion(viper.GetString("mode")),
 			}
 			if err := instanceProfile.Validate(); err != nil {
 				panic(err)
@@ -57,16 +56,11 @@ var (
 				slog.Error("failed to create db driver", "error", err)
 				return
 			}
-			if err := dbDriver.Migrate(ctx); err != nil {
-				cancel()
-				slog.Error("failed to migrate database", "error", err)
-				return
-			}
 
 			storeInstance := store.New(dbDriver, instanceProfile)
-			if err := storeInstance.MigrateManually(ctx); err != nil {
+			if err := storeInstance.Migrate(ctx); err != nil {
 				cancel()
-				slog.Error("failed to migrate manually", "error", err)
+				slog.Error("failed to migrate", "error", err)
 				return
 			}
 
@@ -105,58 +99,43 @@ var (
 )
 
 func init() {
-	viper.SetDefault("mode", "demo")
+	viper.SetDefault("mode", "dev")
 	viper.SetDefault("driver", "sqlite")
-	viper.SetDefault("addr", "")
 	viper.SetDefault("port", 8081)
-	viper.SetDefault("public", false)
-	viper.SetDefault("password-auth", true)
 
-	rootCmd.PersistentFlags().String("mode", "demo", `mode of server, can be "prod" or "dev" or "demo"`)
+	rootCmd.PersistentFlags().String("mode", "dev", `mode of server, can be "prod" or "dev" or "demo"`)
 	rootCmd.PersistentFlags().String("addr", "", "address of server")
 	rootCmd.PersistentFlags().Int("port", 8081, "port of server")
 	rootCmd.PersistentFlags().String("data", "", "data directory")
 	rootCmd.PersistentFlags().String("driver", "sqlite", "database driver")
 	rootCmd.PersistentFlags().String("dsn", "", "database source name(aka. DSN)")
-	rootCmd.PersistentFlags().Bool("public", false, "")
-	rootCmd.PersistentFlags().Bool("password-auth", true, "")
+	rootCmd.PersistentFlags().String("instance-url", "", "the url of your memos instance")
 
-	err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
-	if err != nil {
+	if err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode")); err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("addr", rootCmd.PersistentFlags().Lookup("addr"))
-	if err != nil {
+	if err := viper.BindPFlag("addr", rootCmd.PersistentFlags().Lookup("addr")); err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
-	if err != nil {
+	if err := viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port")); err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("data", rootCmd.PersistentFlags().Lookup("data"))
-	if err != nil {
+	if err := viper.BindPFlag("data", rootCmd.PersistentFlags().Lookup("data")); err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("driver", rootCmd.PersistentFlags().Lookup("driver"))
-	if err != nil {
+	if err := viper.BindPFlag("driver", rootCmd.PersistentFlags().Lookup("driver")); err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("dsn", rootCmd.PersistentFlags().Lookup("dsn"))
-	if err != nil {
+	if err := viper.BindPFlag("dsn", rootCmd.PersistentFlags().Lookup("dsn")); err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("public", rootCmd.PersistentFlags().Lookup("public"))
-	if err != nil {
-		panic(err)
-	}
-	err = viper.BindPFlag("password-auth", rootCmd.PersistentFlags().Lookup("password-auth"))
-	if err != nil {
+	if err := viper.BindPFlag("instance-url", rootCmd.PersistentFlags().Lookup("instance-url")); err != nil {
 		panic(err)
 	}
 
 	viper.SetEnvPrefix("memos")
 	viper.AutomaticEnv()
-	if err := viper.BindEnv("password-auth", "MEMOS_PASSWORD_AUTH"); err != nil {
+	if err := viper.BindEnv("instance-url", "MEMOS_INSTANCE_URL"); err != nil {
 		panic(err)
 	}
 }
@@ -170,11 +149,9 @@ dsn: %s
 addr: %s
 port: %d
 mode: %s
-public: %t
-password-auth: %t
 driver: %s
 ---
-`, profile.Version, profile.Data, profile.DSN, profile.Addr, profile.Port, profile.Mode, profile.Public, profile.PasswordAuth, profile.Driver)
+`, profile.Version, profile.Data, profile.DSN, profile.Addr, profile.Port, profile.Mode, profile.Driver)
 
 	print(greetingBanner)
 	if len(profile.Addr) == 0 {

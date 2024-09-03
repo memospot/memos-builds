@@ -1,11 +1,11 @@
 import { Button } from "@mui/joy";
 import copy from "copy-to-clipboard";
 import dayjs from "dayjs";
+import { ArrowDownIcon, ExternalLinkIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import Empty from "@/components/Empty";
-import Icon from "@/components/Icon";
 import MemoFilters from "@/components/MemoFilters";
 import MemoView from "@/components/MemoView";
 import MobileHeader from "@/components/MobileHeader";
@@ -113,7 +113,7 @@ const UserProfile = () => {
                 <Button
                   color="neutral"
                   variant="outlined"
-                  endDecorator={<Icon.ExternalLink className="w-4 h-auto opacity-60" />}
+                  endDecorator={<ExternalLinkIcon className="w-4 h-auto opacity-60" />}
                   onClick={handleCopyProfileLink}
                 >
                   {t("common.share")}
@@ -134,27 +134,23 @@ const UserProfile = () => {
               {sortedMemos.map((memo) => (
                 <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact />
               ))}
-              {isRequesting ? (
-                <div className="flex flex-row justify-center items-center w-full my-4 text-gray-400">
-                  <Icon.Loader className="w-4 h-auto animate-spin mr-1" />
-                  <p className="text-sm italic">{t("memo.fetching-data")}</p>
-                </div>
-              ) : !nextPageToken ? (
-                sortedMemos.length === 0 && (
-                  <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
-                    <Empty />
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
-                  </div>
-                )
-              ) : (
+              {nextPageToken && (
                 <div className="w-full flex flex-row justify-center items-center my-4">
                   <Button
                     variant="plain"
-                    endDecorator={<Icon.ArrowDown className="w-5 h-auto" />}
+                    color="neutral"
+                    loading={isRequesting}
+                    endDecorator={<ArrowDownIcon className="w-4 h-auto" />}
                     onClick={() => fetchMemos(nextPageToken)}
                   >
-                    {t("memo.fetch-more")}
+                    {t("memo.load-more")}
                   </Button>
+                </div>
+              )}
+              {!nextPageToken && sortedMemos.length === 0 && (
+                <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
+                  <Empty />
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
                 </div>
               )}
             </>
