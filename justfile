@@ -113,12 +113,15 @@ setup-env NIGHTLY='':
     version_from_file=v$(grep --color=never -Po 'var Version = "\K[^"]+' < ./memos/server/version/version.go)
     version_from_git_tag=$(git describe --tags --abbrev=0)
     version_from_ref="{{replace(env_var_or_default('GITHUB_REF_NAME', 'NOT_SET'), 'release/', '')}}"
+    git_previous_tag=""
     if [[ "{{NIGHTLY}}" == "--nightly" ]]; then
         echo -e "\n: Setting up ${BLUE}Nightly${RESET} build environment…"
-        git_previous_tag=$(git describe --tags --abbrev=0 --match=*-pre)
+        git_previous_tag=$(git describe --tags --abbrev=0 --match=*-pre || echo "")
     else
         echo -e "\n: Setting up ${GREEN}Release${RESET} build environment…"
-        git_previous_tag=$(git describe --tags --abbrev=0 --exclude=*-pre)
+    fi
+    if [[ -n "$git_previous_tag" ]]; then
+        git_previous_tag=$(git describe --tags --abbrev=0 --exclude=*-pre || echo "")
     fi
     version="v$(date +%Y.%m.%d).0"
     for v in $version_from_file $version_from_git_tag $version_from_ref; do
@@ -160,7 +163,7 @@ setup-env NIGHTLY='':
             patch=$((patch - 1))
             previous_version="v${major}.${minor}.${patch}"
             just add-to-env "GORELEASER_PREVIOUS_TAG" $previous_version
-        else
+        elif [[ -n "$git_previous_tag" ]]; then
             just add-to-env "GORELEASER_PREVIOUS_TAG" $git_previous_tag
         fi
     fi
