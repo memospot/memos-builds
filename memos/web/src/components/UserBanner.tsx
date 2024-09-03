@@ -1,11 +1,11 @@
 import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/joy";
 import clsx from "clsx";
+import { LogOutIcon, SmileIcon } from "lucide-react";
 import { authServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useNavigateTo from "@/hooks/useNavigateTo";
 import { Routes } from "@/router";
 import { useTranslate } from "@/utils/i18n";
-import Icon from "./Icon";
 import UserAvatar from "./UserAvatar";
 
 interface Props {
@@ -17,7 +17,7 @@ const UserBanner = (props: Props) => {
   const t = useTranslate();
   const navigateTo = useNavigateTo();
   const user = useCurrentUser();
-  const title = user ? user.nickname || user.username : "memos";
+  const title = user ? user.nickname || user.username : "Memos";
   const avatarUrl = user ? user.avatarUrl : "/full-logo.webp";
 
   const handleSignOut = async () => {
@@ -41,11 +41,11 @@ const UserBanner = (props: Props) => {
         </MenuButton>
         <Menu placement="bottom-start" style={{ zIndex: "9999" }}>
           <MenuItem onClick={handleSignOut}>
-            <Icon.LogOut className="w-4 h-auto opacity-60" />
+            <LogOutIcon className="w-4 h-auto opacity-60" />
             <span className="truncate">{t("common.sign-out")}</span>
           </MenuItem>
           <MenuItem onClick={() => navigateTo(Routes.ABOUT)}>
-            <Icon.Smile className="w-4 h-auto opacity-60" />
+            <SmileIcon className="w-4 h-auto opacity-60" />
             <span className="truncate">{t("common.about")}</span>
           </MenuItem>
         </Menu>

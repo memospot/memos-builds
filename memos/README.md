@@ -29,7 +29,7 @@ docker run -d --name memos -p 5230:5230 -v ~/.memos/:/var/opt/memos neosmemo/mem
 ```
 
 > [!NOTE]
-> This command is only applicable for Unix/Linux systems. For Windows, please refer to the detailed [documentation](https://www.usememos.com/docs/install/self-hosting).
+> This command is only applicable for Unix/Linux systems. For Windows, please refer to the detailed [documentation](https://www.usememos.com/docs/install/container-install#docker-on-windows).
 >
 > The `~/.memos/` directory will be used as the data directory on your local machine, while `/var/opt/memos` is the directory of the volume in Docker and should not be modified.
 
@@ -39,13 +39,11 @@ Learn more about [other installation methods](https://www.usememos.com/docs/inst
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. We greatly appreciate any contributions you make. Thank you for being a part of our community! 🥰
 
-## Internationalization
+## Sponsorship
 
-Memos supports multiple languages. You can help us translate Memos into your language. We use Weblate to manage translations.
+If you find Memos helpful, please consider sponsoring us. Your support will help us to continue developing and maintaining the project.
 
-<a href="https://hosted.weblate.org/engage/memos-i18n/">
-<img src="https://hosted.weblate.org/widget/memos-i18n/english/287x66-grey.png" alt="Translation status" />
-</a>
+❤️ Thanks to the following sponsors and backers: **[yourselfhosted](https://github.com/yourselfhosted)**, **[Burning_Wipf](https://github.com/KUKARAF)**, _[...see more](https://github.com/sponsors/usememos)_.
 
 ## Star history
 

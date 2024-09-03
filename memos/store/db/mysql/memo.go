@@ -92,7 +92,7 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		}
 		if len(v.TagSearch) != 0 {
 			for _, tag := range v.TagSearch {
-				where, args = append(where, "JSON_CONTAINS(JSON_EXTRACT(`memo`.`payload`, '$.property.tags'), ?)"), append(args, fmt.Sprintf(`%%"%s"%%`, tag))
+				where, args = append(where, "JSON_CONTAINS(JSON_EXTRACT(`memo`.`payload`, '$.property.tags'), ?)"), append(args, fmt.Sprintf(`"%s"`, tag))
 			}
 		}
 		if v.HasLink {
@@ -116,12 +116,16 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 	if find.OrderByPinned {
 		orders = append(orders, "`pinned` DESC")
 	}
-	if find.OrderByUpdatedTs {
-		orders = append(orders, "`updated_ts` DESC")
-	} else {
-		orders = append(orders, "`created_ts` DESC")
+	order := "DESC"
+	if find.OrderByTimeAsc {
+		order = "ASC"
 	}
-	orders = append(orders, "`id` DESC")
+	if find.OrderByUpdatedTs {
+		orders = append(orders, "`updated_ts` "+order)
+	} else {
+		orders = append(orders, "`created_ts` "+order)
+	}
+	orders = append(orders, "`id` "+order)
 	if find.Random {
 		orders = append(orders, "RAND()")
 	}
@@ -142,7 +146,12 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 		fields = append(fields, "`memo`.`content` AS `content`")
 	}
 
-	query := "SELECT " + strings.Join(fields, ", ") + " FROM `memo` LEFT JOIN `memo_organizer` ON `memo`.`id` = `memo_organizer`.`memo_id` AND `memo`.`creator_id` = `memo_organizer`.`user_id` LEFT JOIN `memo_relation` ON `memo`.`id` = `memo_relation`.`memo_id` AND `memo_relation`.`type` = \"COMMENT\" WHERE " + strings.Join(where, " AND ") + " HAVING " + strings.Join(having, " AND ") + " ORDER BY " + strings.Join(orders, ", ")
+	query := "SELECT " + strings.Join(fields, ", ") + " FROM `memo`" + " " +
+		"LEFT JOIN `memo_organizer` ON `memo`.`id` = `memo_organizer`.`memo_id` AND `memo`.`creator_id` = `memo_organizer`.`user_id`" + " " +
+		"LEFT JOIN `memo_relation` ON `memo`.`id` = `memo_relation`.`memo_id` AND `memo_relation`.`type` = 'COMMENT'" + " " +
+		"WHERE " + strings.Join(where, " AND ") + " " +
+		"HAVING " + strings.Join(having, " AND ") + " " +
+		"ORDER BY " + strings.Join(orders, ", ")
 	if find.Limit != nil {
 		query = fmt.Sprintf("%s LIMIT %d", query, *find.Limit)
 		if find.Offset != nil {

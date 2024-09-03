@@ -79,7 +79,7 @@ const SignUp = () => {
             {workspaceGeneralSetting.customProfile?.title || "Memos"}
           </p>
         </div>
-        {commonContext.profile.public ? (
+        {!workspaceGeneralSetting.disallowUserRegistration ? (
           <>
             <p className="w-full text-2xl mt-2 dark:text-gray-500">{t("auth.create-your-account")}</p>
             <form className="w-full mt-2" onSubmit={handleFormSubmit}>
@@ -93,6 +93,9 @@ const SignUp = () => {
                     readOnly={actionBtnLoadingState.isLoading}
                     placeholder={t("common.username")}
                     value={username}
+                    autoComplete="username"
+                    autoCapitalize="off"
+                    spellCheck={false}
                     onChange={handleUsernameInputChanged}
                     required
                   />
@@ -106,6 +109,9 @@ const SignUp = () => {
                     readOnly={actionBtnLoadingState.isLoading}
                     placeholder={t("common.password")}
                     value={password}
+                    autoComplete="password"
+                    autoCapitalize="off"
+                    spellCheck={false}
                     onChange={handlePasswordInputChanged}
                     required
                   />

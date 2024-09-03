@@ -1,10 +1,10 @@
 import { Button, Tooltip } from "@mui/joy";
 import dayjs from "dayjs";
+import { ArchiveIcon, ArchiveRestoreIcon, ArrowDownIcon, TrashIcon } from "lucide-react";
 import { ClientError } from "nice-grpc-web";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Empty from "@/components/Empty";
-import Icon from "@/components/Icon";
 import MemoContent from "@/components/MemoContent";
 import MemoFilters from "@/components/MemoFilters";
 import MobileHeader from "@/components/MobileHeader";
@@ -26,7 +26,11 @@ const Archived = () => {
   const [nextPageToken, setNextPageToken] = useState<string>("");
   const sortedMemos = memoList.value
     .filter((memo) => memo.rowStatus === RowStatus.ARCHIVED)
-    .sort((a, b) => dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix());
+    .sort((a, b) =>
+      memoFilterStore.orderByTimeAsc
+        ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
+        : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
+    );
 
   useEffect(() => {
     memoList.reset();
@@ -44,6 +48,9 @@ const Archived = () => {
       } else if (filter.factor === "tagSearch") {
         tagSearch.push(`"${filter.value}"`);
       }
+    }
+    if (memoFilterStore.orderByTimeAsc) {
+      filters.push(`order_by_time_asc == true`);
     }
     if (contentSearch.length > 0) {
       filters.push(`content_search == [${contentSearch.join(", ")}]`);
@@ -90,7 +97,7 @@ const Archived = () => {
         <div className="w-full flex flex-col justify-start items-start">
           <div className="w-full flex flex-row justify-between items-center mb-2">
             <div className="flex flex-row justify-start items-center gap-1">
-              <Icon.Archive className="w-5 h-auto opacity-70 shrink-0" />
+              <ArchiveIcon className="w-5 h-auto opacity-70 shrink-0" />
               <span>{t("common.archived")}</span>
             </div>
             <div className="w-44">
@@ -112,12 +119,12 @@ const Archived = () => {
                 <div className="flex flex-row justify-end items-center gap-x-2">
                   <Tooltip title={t("common.restore")} placement="top">
                     <button onClick={() => handleRestoreMemoClick(memo)}>
-                      <Icon.ArchiveRestore className="w-4 h-auto cursor-pointer text-gray-500 dark:text-gray-400" />
+                      <ArchiveRestoreIcon className="w-4 h-auto cursor-pointer text-gray-500 dark:text-gray-400" />
                     </button>
                   </Tooltip>
                   <Tooltip title={t("common.delete")} placement="top">
                     <button onClick={() => handleDeleteMemoClick(memo)} className="text-gray-500 dark:text-gray-400">
-                      <Icon.Trash className="w-4 h-auto cursor-pointer" />
+                      <TrashIcon className="w-4 h-auto cursor-pointer" />
                     </button>
                   </Tooltip>
                 </div>
@@ -125,23 +132,23 @@ const Archived = () => {
               <MemoContent key={`${memo.name}-${memo.displayTime}`} memoName={memo.name} nodes={memo.nodes} readonly={true} />
             </div>
           ))}
-          {isRequesting ? (
-            <div className="flex flex-row justify-center items-center w-full my-4 text-gray-400">
-              <Icon.Loader className="w-4 h-auto animate-spin mr-1" />
-              <p className="text-sm italic">{t("memo.fetching-data")}</p>
-            </div>
-          ) : !nextPageToken ? (
-            sortedMemos.length === 0 && (
-              <div className="w-full mt-16 mb-8 flex flex-col justify-center items-center italic">
-                <Empty />
-                <p className="mt-4 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
-              </div>
-            )
-          ) : (
+          {nextPageToken && (
             <div className="w-full flex flex-row justify-center items-center my-4">
-              <Button variant="plain" endDecorator={<Icon.ArrowDown className="w-5 h-auto" />} onClick={() => fetchMemos(nextPageToken)}>
-                {t("memo.fetch-more")}
+              <Button
+                variant="plain"
+                color="neutral"
+                loading={isRequesting}
+                endDecorator={<ArrowDownIcon className="w-4 h-auto" />}
+                onClick={() => fetchMemos(nextPageToken)}
+              >
+                {t("memo.load-more")}
               </Button>
+            </div>
+          )}
+          {!nextPageToken && sortedMemos.length === 0 && (
+            <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
+              <Empty />
+              <p className="mt-2 text-gray-600 dark:text-gray-400">{t("message.no-data")}</p>
             </div>
           )}
         </div>
