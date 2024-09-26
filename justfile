@@ -111,12 +111,13 @@ setup-env NIGHTLY='':
     #!{{bash}}
     set -euo pipefail
     version_from_file=v$(grep --color=never -Po 'var Version = "\K[^"]+' < ./memos/server/version/version.go)
+    devversion_from_file=v$(grep --color=never -Po 'var DevVersion = "\K[^"]+' < ./memos/server/version/version.go)
     version_from_git_tag=$(git describe --tags --abbrev=0)
     version_from_ref="{{replace(env_var_or_default('GITHUB_REF_NAME', 'NOT_SET'), 'release/', '')}}"
     git_previous_tag=""
     if [[ "{{NIGHTLY}}" == "--nightly" ]]; then
         echo -e "\n: Setting up ${BLUE}Nightly${RESET} build environment…"
-        git_previous_tag=$(git describe --tags --abbrev=0 --match=*-pre || echo "")
+        version_from_file=$(test -n "$devversion_from_file" && echo $devversion_from_file || echo $version_from_file)
     else
         echo -e "\n: Setting up ${GREEN}Release${RESET} build environment…"
     fi
