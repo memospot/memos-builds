@@ -75,7 +75,7 @@ upx:
 archives:
   - format: tar.gz
     # this template makes the OS and Arch more compatible with `uname` output.
-    version_template: >-
+    name_template: >-
       {{ .ProjectName }}-{{ .Tag }}-{{- .Os }}-
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
@@ -130,7 +130,7 @@ checksum:
 # goreleaser --snapshot --skip=publish --skip=validate --clean
 snapshot:
   # Default is `{{ .Version }}-SNAPSHOT-{{.ShortCommit}}`.
-  name_template: "{{ incpatch .Version }}-pre"
+  version_template: "{{ incpatch .Version }}-pre"
 
 #! Due to Goreleaser OSS limitations, nightly releases are created via GH Actions. *
 
