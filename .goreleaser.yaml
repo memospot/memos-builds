@@ -14,6 +14,7 @@ builds:
     # Notes on build targets:
     # - modernc.org/libc doesn't support any sort of MIPS architecture:
     #   https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures
+    # For more info refer to: https://go.dev/doc/install/source#environment
     goos:
       - darwin
       - freebsd
@@ -27,6 +28,9 @@ builds:
       - ppc64le
       - riscv64
       - s390x
+    go386:
+      - sse2 #  Pentium 4/Opteron/Athlon 64 or later
+      # - softfloat # Pentium MMX or later
     goarm:
       - "5" # use software floating point; for CPUs without a VFP co-processor
       - "6" # use VFPv1 only; usually ARM11 or better cores (VFPv2 or better is also supported)
@@ -36,6 +40,12 @@ builds:
       - v2 # CMPXCHG16B, LAHF, SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3 (circa 2009: Intel Nehalem/circa 2013: AMD Jaguar)
       - v3 # AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, OSXSAVE (circa 2015: Intel Haswell and AMD Excavator)
       # - v4 # AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
+    goarm64:
+      - v8.0
+      # - v9.0
+    goriscv64:
+      - rva20u64
+      # - rva22u64
     ignore:
       - goos: windows
         goarch: arm
@@ -65,7 +75,7 @@ upx:
 archives:
   - format: tar.gz
     # this template makes the OS and Arch more compatible with `uname` output.
-    name_template: >-
+    version_template: >-
       {{ .ProjectName }}-{{ .Tag }}-{{- .Os }}-
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386

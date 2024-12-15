@@ -233,6 +233,11 @@ rename-to-docker:
     go_to_docker["amd64_v1"]="amd64"
     go_to_docker["amd64_v([2-4])"]="amd64v\1"
     go_to_docker["arm_([5-7])"]="armv\1"
+    # GoReleaser >= v2.4.0
+    go_to_docker["arm64_v8.0"]="arm64"
+    go_to_docker["riscv64_rva20u64"]="riscv64"
+    go_to_docker["386_sse2"]="386"
+
     echo -e "\n${MAGENTA}: Renaming goreleaser builds to the format expected by the Dockerfile…${RESET}"
     for folder in $(find ./build/memos_linux* -type d); do
         folder_name=$(basename $folder)
