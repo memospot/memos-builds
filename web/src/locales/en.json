@@ -109,6 +109,7 @@
     "no-archived-memos": "No archived memos.",
     "search-placeholder": "Search memos",
     "show-more": "Show more",
+    "show-less": "Show less",
     "view-detail": "View Detail",
     "visibility": {
       "disabled": "Public memos are disabled",
@@ -118,7 +119,9 @@
     },
     "links": "Links",
     "to-do": "To-do",
-    "code": "Code"
+    "code": "Code",
+    "remove-completed-task-list-items": "Remove done",
+    "remove-completed-task-list-items-confirm": "Are you sure you want to remove all completed to-dos? THIS ACTION IS IRREVERSIBLE"
   },
   "message": {
     "archived-successfully": "Archived successfully",
@@ -135,7 +138,8 @@
     "restored-successfully": "Restored successfully",
     "succeed-copy-link": "Link copied successfully.",
     "update-succeed": "Update succeeded",
-    "user-not-found": "User not found"
+    "user-not-found": "User not found",
+    "remove-completed-task-list-items-successfully": "The removal was successful"
   },
   "reference": {
     "add-references": "Add references",
@@ -235,7 +239,9 @@
       "template": "Template",
       "token-endpoint": "Token endpoint",
       "update-sso": "Update SSO",
-      "user-endpoint": "User endpoint"
+      "user-endpoint": "User endpoint",
+      "no-sso-found": "No SSO found.",
+      "configuring-keycloak-for-authentication": "Configuring Keycloak for Authentication"
     },
     "storage": "Storage",
     "storage-section": {
@@ -289,6 +295,7 @@
       "disable-password-login-final-warning": "Please type \"CONFIRM\" if you know what you are doing.",
       "disable-password-login-warning": "This will disable password login for all users. It is not possible to log in without reverting this setting in the database if your configured identity providers fail. You’ll also have to be extra carefull when removing an identity provider",
       "disable-public-memos": "Disable public memos",
+      "disable-markdown-shortcuts-in-editor": "Disable Markdown shortcuts in editor",
       "display-with-updated-time": "Display with updated time",
       "enable-auto-compact": "Enable auto compact",
       "enable-double-click-to-edit": "Enable double click to edit",
@@ -296,9 +303,41 @@
       "enable-password-login-warning": "This will enable password login for all users. Continue only if you want to users to be able to log in using both SSO and password",
       "max-upload-size": "Maximum upload size (MiB)",
       "max-upload-size-hint": "Recommended value is 32 MiB.",
-      "server-name": "Server Name"
+      "server-name": "Server Name",
+      "removed-completed-task-list-items": "Enable removal of completed task list items"
     },
-    "memo-related": "Memo"
+    "memo-related": "Memo",
+    "access-token-section":{
+      "title": "Access Tokens",
+      "description": "A list of all access tokens for your account.",
+      "created-at": "Created At",
+      "expires-at": "Expires At",
+      "token": "Token"
+    },
+    "webhook-section": {
+      "title": "Webhooks",
+      "url": "Url",
+      "no-webhooks-found": "No webhooks found."
+    },
+    "workspace-section": {
+      "disallow-user-registration": "Disallow user registration",
+      "disallow-password-auth": "Disallow password auth",
+      "disallow-change-username": "Disallow Change Username",
+      "disallow-change-nickname": "Disallow Change Nickname",
+      "week-start-day": "Week start day",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "monday": "Monday"            
+    },
+    "memo-related-settings": {
+      "title": "Memo related settings",
+      "enable-link-preview": "Enable link preview",
+      "enable-memo-comments": "Enable memo comments",
+      "enable-memo-location": "Enable memo location",
+      "content-lenght-limit": "Content length limit(Byte)",
+      "reactions": "Reactions"
+    },
+    "version": "Version"
   },
   "tag": {
     "all-tags": "All Tags",
@@ -307,5 +346,10 @@
     "delete-confirm": "Are you sure to delete this tag? All related memos will be archived.",
     "delete-tag": "Delete Tag",
     "no-tag-found": "No tag found"
+  },
+  "markdown": {
+    "code-block": "Code block",
+    "checkbox": "Checkbox",
+    "content-syntax": "Content syntax"
   }
 }
