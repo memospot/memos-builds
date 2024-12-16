@@ -5,7 +5,7 @@ on:
     tags:
       - "v*.*.*-*"
   schedule:
-    - cron: "0 0 * * *" # Run every day at 00:00 UTC
+    - cron: "25 0 * * *" # Run every day at 00:25 UTC
   workflow_dispatch:
 
 env:
@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with: { fetch-depth: 0 }
+        with: { fetch-depth: 0, persist-credentials: false }
 
       # setup deps
       - name: Setup Just
@@ -90,7 +90,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with: { fetch-depth: 0 }
+        with: { fetch-depth: 0, persist-credentials: false }
 
       # setup deps
       - name: Setup Just
@@ -164,7 +164,7 @@ jobs:
 
             Release assets may be overwritten by the daily automated builds if the upstream Memos version hasn't changed.
 
-            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/v${{ env.MEMOS_VERSION }}...main)**
+            **[Official Memos upstream changelog](https://github.com/usememos/memos/compare/${{ env.MEMOS_VERSION }}...main)**
           tag_name: ${{ env.BUILD_VERSION }}
           draft: false
           prerelease: true

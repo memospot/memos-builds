@@ -7,17 +7,17 @@
 # 	By specifying the platform flag, it's possible to compatibilize different images without changing
 # the build command, which would imply changing the published platform formats for this image.
 FROM --platform=${BUILDPLATFORM:-linux/amd64} 	gcr.io/distroless/static:latest AS distroless
-FROM 											alpine:3.20 					AS target-386
-FROM  											alpine:3.20 					AS target-amd64
-FROM --platform=amd64  							alpine:3.20 					AS target-amd64v2
-FROM --platform=amd64							alpine:3.20 					AS target-amd64v3
-FROM --platform=linux/arm/v5 					busybox:stable-uclibc 			AS target-armv5
-FROM --platform=linux/arm/v6 					alpine:3.20  					AS target-armv6
-FROM --platform=linux/arm/v7 					alpine:3.20  					AS target-armv7
-FROM  											alpine:3.20  					AS target-arm64
-FROM  											alpine:3.20  					AS target-ppc64le
-FROM  											alpine:3.20 					AS target-riscv64
-FROM  											alpine:3.20  					AS target-s390x
+FROM 											alpine:3.21 					AS target-386
+FROM  											alpine:3.21 					AS target-amd64
+FROM --platform=amd64  							alpine:3.21 					AS target-amd64v2
+FROM --platform=amd64							alpine:3.21 					AS target-amd64v3
+FROM --platform=linux/arm/v5 					busybox:1.36.1-uclibc 			AS target-armv5
+FROM --platform=linux/arm/v6 					alpine:3.21  					AS target-armv6
+FROM --platform=linux/arm/v7 					alpine:3.21  					AS target-armv7
+FROM  											alpine:3.21  					AS target-arm64
+FROM  											alpine:3.21  					AS target-ppc64le
+FROM  											alpine:3.21 					AS target-riscv64
+FROM  											alpine:3.21  					AS target-s390x
 
 # Select appropriate base image and setup container OS.
 FROM target-${TARGETARCH}${TARGETVARIANT}
