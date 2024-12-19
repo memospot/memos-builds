@@ -43,6 +43,10 @@ builds:
     goarm64:
       - v8.0
       # - v9.0
+    goppc64:
+      - power8
+      # - power9
+      # - power10
     goriscv64:
       - rva20u64
       # - rva22u64
