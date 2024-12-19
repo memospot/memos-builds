@@ -236,6 +236,7 @@ rename-to-docker:
     # GoReleaser >= v2.4.0
     go_to_docker["386_sse2"]="386"
     go_to_docker["arm64_v8.0"]="arm64"
+    go_to_docker["mips64le_hardfloat"]="mips64le"
     go_to_docker["ppc64le_power8"]="ppc64le"
     go_to_docker["riscv64_rva20u64"]="riscv64"
 
@@ -396,7 +397,7 @@ clean:
             rm -rf "$artifact"
         fi
     done
-    docker builder prune -f 7
+    docker builder prune -f
     docker buildx prune -f
     docker image prune -f
     echo -e "${MAGENTA}Cleaning Go cache…${RESET} This may take a while."
