@@ -12,9 +12,10 @@ builds:
       - GO111MODULE=on
 
     # Notes on build targets:
-    # - modernc.org/libc doesn't support any sort of MIPS architecture:
+    # - modernc.org/libc and modernc.org/sqlite have limited architecture support:
     #   https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures
-    # For more info refer to: https://go.dev/doc/install/source#environment
+    #
+    # - For more info refer to: https://go.dev/doc/install/source#environment
     goos:
       - darwin
       - freebsd
@@ -53,8 +54,6 @@ builds:
     ignore:
       - goos: windows
         goarch: arm
-      - goos: windows # i386 builds can be enabled when Memos upgrades modernc.org/sqlite to >= v1.31.0
-        goarch: "386"
     flags: >-
       -trimpath
       -tags=timetzdata
