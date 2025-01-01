@@ -115,7 +115,7 @@ jobs:
           cache-dependency-path: memos/go.sum
 
       - name: Setup Goreleaser
-        uses: jaxxstorm/action-install-gh-release@25d5e2dd555cd74f1fab9ac1e6ea117acde2c0c4
+        uses: jaxxstorm/action-install-gh-release@cd6b2b78ad38bdd294341cda064ec0692b06215b
         with:
           repo: goreleaser/goreleaser
           cache: enable
