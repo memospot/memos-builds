@@ -111,7 +111,7 @@ jobs:
         with: { tool: just@1.34.0 }
 
       - name: Setup buf
-        uses: bufbuild/buf-setup-action@35c243d7f2a909b1d4e40399b348a7fdab27d78d
+        uses: bufbuild/buf-setup-action@1115d0acd3d2a120b30023fac52abc46807c8fd6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           version: "1.34.0"
