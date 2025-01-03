@@ -26,4 +26,28 @@ printf "%bHost Architecture:    %b%s%b\n" "$yellow" "$green" "$(uname -m)" "$res
 printf "%bMain binary date:     %b%s%b\n" "$cyan" "$green" "$bindate" "$reset"
 printf "%bMain binary checksum: %b%s%b\n" "$cyan" "$green" "$checksum" "$reset"
 
+file_env() {
+  var="$1"
+  fileVar="${var}_FILE"
+
+  val_var="$(printenv "$var")"
+  val_fileVar="$(printenv "$fileVar")"
+
+  if [ -n "$val_var" ] && [ -n "$val_fileVar" ]; then
+    echo "error: both $var and $fileVar are set (but are exclusive)" >&2
+    exit 1
+  fi
+
+  if [ -n "$val_var" ]; then
+    val="$val_var"
+  elif [ -n "$val_fileVar" ]; then
+    val="$(cat "$val_fileVar")"
+  fi
+
+  export "$var"="$val"
+  unset "$fileVar"
+}
+
+file_env "MEMOS_DSN"
+
 exec ${MAIN} "$@"
