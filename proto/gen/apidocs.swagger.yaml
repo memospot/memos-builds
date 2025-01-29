@@ -190,7 +190,7 @@ paths:
             $ref: '#/definitions/googlerpcStatus'
       parameters:
         - name: user
-          description: 'Format: users/{id}'
+          description: 'Format: users/{user}'
           in: query
           required: false
           type: string
@@ -320,24 +320,10 @@ paths:
         - name: filter
           description: |-
             Filter is used to filter memos returned in the list.
-            Format: "creator == 'users/{uid}' && visibilities == ['PUBLIC', 'PROTECTED']"
+            Format: "creator == 'users/{user}' && visibilities == ['PUBLIC', 'PROTECTED']"
           in: query
           required: false
           type: string
-        - name: view
-          description: |-
-            The view of the memo.
-
-             - MEMO_VIEW_FULL: The full view of the memo. Includes all fields.
-             - MEMO_VIEW_METADATA_ONLY: The metadata only view of the memo. Excludes the content/snippet fields.
-          in: query
-          required: false
-          type: string
-          enum:
-            - MEMO_VIEW_UNSPECIFIED
-            - MEMO_VIEW_FULL
-            - MEMO_VIEW_METADATA_ONLY
-          default: MEMO_VIEW_UNSPECIFIED
       tags:
         - MemoService
     post:
@@ -381,7 +367,7 @@ paths:
           type: string
       tags:
         - MemoService
-  /api/v1/reactions/{reactionId}:
+  /api/v1/reactions/{id}:
     delete:
       summary: DeleteMemoReaction deletes a reaction for a memo.
       operationId: MemoService_DeleteMemoReaction
@@ -396,7 +382,10 @@ paths:
           schema:
             $ref: '#/definitions/googlerpcStatus'
       parameters:
-        - name: reactionId
+        - name: id
+          description: |-
+            The id of the reaction.
+            Refer to the `Reaction.id`.
           in: path
           required: true
           type: integer
@@ -494,6 +483,21 @@ paths:
             $ref: '#/definitions/v1User'
       tags:
         - UserService
+  /api/v1/users/-/stats:
+    post:
+      summary: ListAllUserStats returns all user stats.
+      operationId: UserService_ListAllUserStats
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListAllUserStatsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      tags:
+        - UserService
   /api/v1/users:search:
     get:
       summary: SearchUsers searches users by filter.
@@ -531,11 +535,13 @@ paths:
           schema:
             $ref: '#/definitions/googlerpcStatus'
       parameters:
-        - name: creatorId
+        - name: creator
+          description: |-
+            The name of the creator.
+            Format: users/{user}
           in: query
           required: false
-          type: integer
-          format: int32
+          type: string
       tags:
         - WebhookService
     post:
@@ -625,17 +631,17 @@ paths:
           schema:
             type: object
             properties:
-              creatorId:
-                type: integer
-                format: int32
+              creator:
+                type: string
+                title: |-
+                  The name of the creator.
+                  Format: users/{user}
               createTime:
                 type: string
                 format: date-time
               updateTime:
                 type: string
                 format: date-time
-              rowStatus:
-                $ref: '#/definitions/v1RowStatus'
               name:
                 type: string
               url:
@@ -789,10 +795,10 @@ paths:
             properties:
               sender:
                 type: string
-                title: 'Format: users/{id}'
+                title: 'Format: users/{user}'
               receiver:
                 type: string
-                title: 'Format: users/{id}'
+                title: 'Format: users/{user}'
               status:
                 $ref: '#/definitions/v1InboxStatus'
               createTime:
@@ -837,13 +843,13 @@ paths:
               uid:
                 type: string
                 description: The user defined id of the memo.
-              rowStatus:
-                $ref: '#/definitions/v1RowStatus'
+              state:
+                $ref: '#/definitions/v1State'
               creator:
                 type: string
                 title: |-
                   The name of the creator.
-                  Format: users/{id}
+                  Format: users/{user}
               createTime:
                 type: string
                 format: date-time
@@ -921,7 +927,7 @@ paths:
         - name: name_1
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1139,7 +1145,7 @@ paths:
         - name: name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1163,7 +1169,7 @@ paths:
         - name: name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1186,7 +1192,7 @@ paths:
         - name: name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1216,7 +1222,7 @@ paths:
         - name: name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1455,7 +1461,31 @@ paths:
         - name: name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
+          in: path
+          required: true
+          type: string
+          pattern: users/[^/]+
+      tags:
+        - UserService
+  /api/v1/{name}/stats:
+    get:
+      summary: GetUserStats returns the stats of a user.
+      operationId: UserService_GetUserStats
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UserStats'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/googlerpcStatus'
+      parameters:
+        - name: name
+          description: |-
+            The name of the user.
+            Format: users/{user}.
           in: path
           required: true
           type: string
@@ -1597,7 +1627,7 @@ paths:
         - name: setting.name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1638,7 +1668,7 @@ paths:
         - name: user.name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}. {user} is a system-generated auto-increment id.
           in: path
           required: true
           type: string
@@ -1649,10 +1679,6 @@ paths:
           schema:
             type: object
             properties:
-              id:
-                type: integer
-                format: int32
-                description: The system generated uid of the user.
               role:
                 $ref: '#/definitions/UserRole'
               username:
@@ -1667,8 +1693,8 @@ paths:
                 type: string
               password:
                 type: string
-              rowStatus:
-                $ref: '#/definitions/v1RowStatus'
+              state:
+                $ref: '#/definitions/v1State'
               createTime:
                 type: string
                 format: date-time
@@ -1696,7 +1722,7 @@ paths:
         - name: name
           description: |-
             The name of the user.
-            Format: users/{id}
+            Format: users/{user}
           in: path
           required: true
           type: string
@@ -1810,6 +1836,21 @@ definitions:
       expiresAt:
         type: string
         format: date-time
+  UserStatsMemoTypeStats:
+    type: object
+    properties:
+      linkCount:
+        type: integer
+        format: int32
+      codeCount:
+        type: integer
+        format: int32
+      todoCount:
+        type: integer
+        format: int32
+      undoCount:
+        type: integer
+        format: int32
   WorkspaceStorageSettingS3Config:
     type: object
     properties:
@@ -1823,6 +1864,8 @@ definitions:
         type: string
       bucket:
         type: string
+      usePathStyle:
+        type: boolean
     title: 'Reference: https://developers.cloudflare.com/r2/examples/aws/aws-sdk-go/'
   apiHttpBody:
     type: object
@@ -1889,14 +1932,14 @@ definitions:
   apiv1ActivityMemoCommentPayload:
     type: object
     properties:
-      memoId:
-        type: integer
-        format: int32
-        description: The memo id of comment.
-      relatedMemoId:
-        type: integer
-        format: int32
-        description: The memo id of related memo.
+      memo:
+        type: string
+        description: |-
+          The memo name of comment.
+          Refer to `Memo.name`.
+      relatedMemo:
+        type: string
+        description: The name of related memo.
     description: ActivityMemoCommentPayload represents the payload of a memo comment activity.
   apiv1ActivityPayload:
     type: object
@@ -1971,13 +2014,13 @@ definitions:
       uid:
         type: string
         description: The user defined id of the memo.
-      rowStatus:
-        $ref: '#/definitions/v1RowStatus'
+      state:
+        $ref: '#/definitions/v1State'
       creator:
         type: string
         title: |-
           The name of the creator.
-          Format: users/{id}
+          Format: users/{user}
       createTime:
         type: string
         format: date-time
@@ -2062,7 +2105,7 @@ definitions:
         type: string
         title: |-
           The name of the user.
-          Format: users/{id}
+          Format: users/{user}
       locale:
         type: string
         description: The preferred locale of the user.
@@ -2341,10 +2384,11 @@ definitions:
         title: |-
           The name of the activity.
           Format: activities/{id}
-      creatorId:
-        type: integer
-        format: int32
-        description: The uid of the user who created the activity.
+      creator:
+        type: string
+        title: |-
+          The name of the creator.
+          Format: users/{user}
       type:
         type: string
         description: The type of the activity.
@@ -2488,10 +2532,10 @@ definitions:
           Format: inboxes/{id}
       sender:
         type: string
-        title: 'Format: users/{id}'
+        title: 'Format: users/{user}'
       receiver:
         type: string
-        title: 'Format: users/{id}'
+        title: 'Format: users/{user}'
       status:
         $ref: '#/definitions/v1InboxStatus'
       createTime:
@@ -2541,6 +2585,14 @@ definitions:
         type: string
       url:
         type: string
+  v1ListAllUserStatsResponse:
+    type: object
+    properties:
+      userStats:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1UserStats'
   v1ListIdentityProvidersResponse:
     type: object
     properties:
@@ -2680,12 +2732,12 @@ definitions:
         $ref: '#/definitions/v1MemoRelationMemo'
         title: |-
           The name of memo.
-          Format: "memos/{uid}"
+          Format: "memos/{id}"
       relatedMemo:
         $ref: '#/definitions/v1MemoRelationMemo'
         title: |-
           The name of related memo.
-          Format: "memos/{uid}"
+          Format: "memos/{id}"
       type:
         $ref: '#/definitions/v1MemoRelationType'
   v1MemoRelationMemo:
@@ -2709,16 +2761,6 @@ definitions:
       - REFERENCE
       - COMMENT
     default: TYPE_UNSPECIFIED
-  v1MemoView:
-    type: string
-    enum:
-      - MEMO_VIEW_UNSPECIFIED
-      - MEMO_VIEW_FULL
-      - MEMO_VIEW_METADATA_ONLY
-    default: MEMO_VIEW_UNSPECIFIED
-    description: |2-
-       - MEMO_VIEW_FULL: The full view of the memo. Includes all fields.
-       - MEMO_VIEW_METADATA_ONLY: The metadata only view of the memo. Excludes the content/snippet fields.
   v1Node:
     type: object
     properties:
@@ -2871,9 +2913,12 @@ definitions:
         type: string
         title: |-
           The name of the creator.
-          Format: users/{id}
+          Format: users/{user}
       contentId:
         type: string
+        description: |-
+          The content identifier.
+          For memo, it should be the `Memo.name`.
       reactionType:
         type: string
   v1ReferencedContentNode:
@@ -2929,13 +2974,6 @@ definitions:
     properties:
       markdown:
         type: string
-  v1RowStatus:
-    type: string
-    enum:
-      - ROW_STATUS_UNSPECIFIED
-      - ACTIVE
-      - ARCHIVED
-    default: ROW_STATUS_UNSPECIFIED
   v1SearchUsersResponse:
     type: object
     properties:
@@ -2949,6 +2987,13 @@ definitions:
     properties:
       content:
         type: string
+  v1State:
+    type: string
+    enum:
+      - STATE_UNSPECIFIED
+      - NORMAL
+      - ARCHIVED
+    default: STATE_UNSPECIFIED
   v1StrikethroughNode:
     type: object
     properties:
@@ -3037,13 +3082,9 @@ definitions:
     properties:
       name:
         type: string
-        title: |-
+        description: |-
           The name of the user.
-          Format: users/{id}
-      id:
-        type: integer
-        format: int32
-        description: The system generated uid of the user.
+          Format: users/{user}. {user} is a system-generated auto-increment id.
       role:
         $ref: '#/definitions/UserRole'
       username:
@@ -3058,8 +3099,8 @@ definitions:
         type: string
       password:
         type: string
-      rowStatus:
-        $ref: '#/definitions/v1RowStatus'
+      state:
+        $ref: '#/definitions/v1State'
       createTime:
         type: string
         format: date-time
@@ -3079,6 +3120,33 @@ definitions:
       expiresAt:
         type: string
         format: date-time
+  v1UserStats:
+    type: object
+    properties:
+      name:
+        type: string
+        title: |-
+          The name of the user.
+          Format: users/{user}
+      memoDisplayTimestamps:
+        type: array
+        items:
+          type: string
+          format: date-time
+        description: |-
+          The timestamps when the memos were displayed.
+          We should return raw data to the client, and let the client format the data with the user's timezone.
+      memoTypeStats:
+        $ref: '#/definitions/UserStatsMemoTypeStats'
+        description: The stats of memo types.
+      tagCount:
+        type: object
+        additionalProperties:
+          type: integer
+          format: int32
+        title: |-
+          The count of tags.
+          Format: "tag1": 1, "tag2": 2
   v1Visibility:
     type: string
     enum:
@@ -3093,17 +3161,17 @@ definitions:
       id:
         type: integer
         format: int32
-      creatorId:
-        type: integer
-        format: int32
+      creator:
+        type: string
+        title: |-
+          The name of the creator.
+          Format: users/{user}
       createTime:
         type: string
         format: date-time
       updateTime:
         type: string
         format: date-time
-      rowStatus:
-        $ref: '#/definitions/v1RowStatus'
       name:
         type: string
       url:
@@ -3115,7 +3183,7 @@ definitions:
         type: string
         title: |-
           The name of instance owner.
-          Format: "users/{id}"
+          Format: users/{user}
       version:
         type: string
         title: version is the current version of instance

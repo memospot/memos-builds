@@ -36,7 +36,7 @@ func (s *APIV1Service) GetActivity(ctx context.Context, request *v1pb.GetActivit
 func (*APIV1Service) convertActivityFromStore(_ context.Context, activity *store.Activity) (*v1pb.Activity, error) {
 	return &v1pb.Activity{
 		Name:       fmt.Sprintf("%s%d", ActivityNamePrefix, activity.ID),
-		CreatorId:  activity.CreatorID,
+		Creator:    fmt.Sprintf("%s%d", UserNamePrefix, activity.CreatorID),
 		Type:       activity.Type.String(),
 		Level:      activity.Level.String(),
 		CreateTime: timestamppb.New(time.Unix(activity.CreatedTs, 0)),
@@ -48,8 +48,8 @@ func convertActivityPayloadFromStore(payload *storepb.ActivityPayload) *v1pb.Act
 	v2Payload := &v1pb.ActivityPayload{}
 	if payload.MemoComment != nil {
 		v2Payload.MemoComment = &v1pb.ActivityMemoCommentPayload{
-			MemoId:        payload.MemoComment.MemoId,
-			RelatedMemoId: payload.MemoComment.RelatedMemoId,
+			Memo:        fmt.Sprintf("%s%d", MemoNamePrefix, payload.MemoComment.MemoId),
+			RelatedMemo: fmt.Sprintf("%s%d", MemoNamePrefix, payload.MemoComment.RelatedMemoId),
 		}
 	}
 	if payload.VersionUpdate != nil {

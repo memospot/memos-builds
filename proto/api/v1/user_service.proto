@@ -53,6 +53,15 @@ service UserService {
     option (google.api.http) = {delete: "/api/v1/{name=users/*}"};
     option (google.api.method_signature) = "name";
   }
+  // ListAllUserStats returns all user stats.
+  rpc ListAllUserStats(ListAllUserStatsRequest) returns (ListAllUserStatsResponse) {
+    option (google.api.http) = {post: "/api/v1/users/-/stats"};
+  }
+  // GetUserStats returns the stats of a user.
+  rpc GetUserStats(GetUserStatsRequest) returns (UserStats) {
+    option (google.api.http) = {get: "/api/v1/{name=users/*}/stats"};
+    option (google.api.method_signature) = "name";
+  }
   // GetUserSetting gets the setting of a user.
   rpc GetUserSetting(GetUserSettingRequest) returns (UserSetting) {
     option (google.api.http) = {get: "/api/v1/{name=users/*}/setting"};
@@ -88,11 +97,8 @@ service UserService {
 
 message User {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}. {user} is a system-generated auto-increment id.
   string name = 1;
-
-  // The system generated uid of the user.
-  int32 id = 2;
 
   enum Role {
     ROLE_UNSPECIFIED = 0;
@@ -114,7 +120,7 @@ message User {
 
   string password = 9 [(google.api.field_behavior) = INPUT_ONLY];
 
-  RowStatus row_status = 10;
+  State state = 10;
 
   google.protobuf.Timestamp create_time = 11;
 
@@ -139,13 +145,13 @@ message SearchUsersResponse {
 
 message GetUserRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
 }
 
 message GetUserAvatarBinaryRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
 
   // The raw HTTP body is bound to this field.
@@ -164,13 +170,49 @@ message UpdateUserRequest {
 
 message DeleteUserRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
+  string name = 1;
+}
+
+message UserStats {
+  // The name of the user.
+  // Format: users/{user}
+  string name = 1;
+
+  // The timestamps when the memos were displayed.
+  // We should return raw data to the client, and let the client format the data with the user's timezone.
+  repeated google.protobuf.Timestamp memo_display_timestamps = 2;
+
+  // The stats of memo types.
+  MemoTypeStats memo_type_stats = 3;
+
+  // The count of tags.
+  // Format: "tag1": 1, "tag2": 2
+  map<string, int32> tag_count = 4;
+
+  message MemoTypeStats {
+    int32 link_count = 1;
+    int32 code_count = 2;
+    int32 todo_count = 3;
+    int32 undo_count = 4;
+  }
+}
+
+message ListAllUserStatsRequest {}
+
+message ListAllUserStatsResponse {
+  repeated UserStats user_stats = 1;
+}
+
+message GetUserStatsRequest {
+  // The name of the user.
+  // Format: users/{user}.
   string name = 1;
 }
 
 message UserSetting {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
   // The preferred locale of the user.
   string locale = 2;
@@ -182,7 +224,7 @@ message UserSetting {
 
 message GetUserSettingRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
 }
 
@@ -201,7 +243,7 @@ message UserAccessToken {
 
 message ListUserAccessTokensRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
 }
 
@@ -211,7 +253,7 @@ message ListUserAccessTokensResponse {
 
 message CreateUserAccessTokenRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
 
   string description = 2;
@@ -221,7 +263,7 @@ message CreateUserAccessTokenRequest {
 
 message DeleteUserAccessTokenRequest {
   // The name of the user.
-  // Format: users/{id}
+  // Format: users/{user}
   string name = 1;
   // access_token is the access token to delete.
   string access_token = 2;

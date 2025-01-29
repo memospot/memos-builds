@@ -10,7 +10,7 @@ import { memoServiceClient } from "@/grpcweb";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { MemoRelation_Memo, MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
-import { Memo, MemoView } from "@/types/proto/api/v1/memo_service";
+import { Memo } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { EditorRefActions } from "../Editor";
 import { MemoEditorContext } from "../types";
@@ -44,14 +44,13 @@ const AddMemoRelationPopover = (props: Props) => {
 
       setIsFetching(true);
       try {
-        const filters = [`creator == "${user.name}"`, `row_status == "NORMAL"`];
+        const filters = [`creator == "${user.name}"`, `state == "NORMAL"`];
         if (searchText) {
           filters.push(`content_search == [${JSON.stringify(searchText)}]`);
         }
         const { memos } = await memoServiceClient.listMemos({
           pageSize: DEFAULT_LIST_MEMOS_PAGE_SIZE,
           filter: filters.length > 0 ? filters.join(" && ") : undefined,
-          view: MemoView.MEMO_VIEW_FULL,
         });
         setFetchedMemos(memos);
       } catch (error: any) {
@@ -92,7 +91,7 @@ const AddMemoRelationPopover = (props: Props) => {
     // If embedded mode is enabled, embed the memo instead of creating a relation.
     if (embedded) {
       if (!editorRef.current) {
-        toast.error("Failed to embed memo");
+        toast.error(t("message.failed-to-embed-memo"));
         return;
       }
 

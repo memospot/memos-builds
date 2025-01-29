@@ -302,29 +302,43 @@ const MemoEditor = (props: Props) => {
       if (memoName) {
         const prevMemo = await memoStore.getOrFetchMemoByName(memoName);
         if (prevMemo) {
-          const updateMask = ["content", "visibility"];
+          const updateMask = new Set<string>();
           const memoPatch: Partial<Memo> = {
             name: prevMemo.name,
             content,
-            visibility: state.memoVisibility,
           };
-          if (!isEqual(displayTime, prevMemo.displayTime)) {
-            updateMask.push("display_time");
-            memoPatch.displayTime = displayTime;
+          if (!isEqual(content, prevMemo.content)) {
+            updateMask.add("content");
+            memoPatch.content = content;
+          }
+          if (!isEqual(state.memoVisibility, prevMemo.visibility)) {
+            updateMask.add("visibility");
+            memoPatch.visibility = state.memoVisibility;
           }
           if (!isEqual(state.resourceList, prevMemo.resources)) {
-            updateMask.push("resources");
+            updateMask.add("resources");
             memoPatch.resources = state.resourceList;
           }
           if (!isEqual(state.relationList, prevMemo.relations)) {
-            updateMask.push("relations");
+            updateMask.add("relations");
             memoPatch.relations = state.relationList;
           }
           if (!isEqual(state.location, prevMemo.location)) {
-            updateMask.push("location");
+            updateMask.add("location");
             memoPatch.location = state.location;
           }
-          const memo = await memoStore.updateMemo(memoPatch, updateMask);
+          if (["content", "resources", "relations", "location"].some((key) => updateMask.has(key))) {
+            updateMask.add("update_time");
+          }
+          if (!isEqual(displayTime, prevMemo.displayTime)) {
+            updateMask.add("display_time");
+            memoPatch.displayTime = displayTime;
+          }
+          if (updateMask.size === 0) {
+            toast.error("No changes detected");
+            return;
+          }
+          const memo = await memoStore.updateMemo(memoPatch, Array.from(updateMask));
           if (onConfirm) {
             onConfirm(memo.name);
           }
@@ -435,6 +449,10 @@ const MemoEditor = (props: Props) => {
             selected={displayTime}
             onChange={(date) => date && setDisplayTime(date)}
             showTimeSelect
+            showMonthDropdown
+            showYearDropdown
+            yearDropdownItemNumber={5}
+            dateFormatCalendar=" "
             customInput={<span className="cursor-pointer text-sm text-gray-400 dark:text-gray-500">{displayTime.toLocaleString()}</span>}
             calendarClassName="ml-24 sm:ml-44"
           />
