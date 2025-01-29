@@ -116,8 +116,8 @@ service MemoService {
   }
   // DeleteMemoReaction deletes a reaction for a memo.
   rpc DeleteMemoReaction(DeleteMemoReactionRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {delete: "/api/v1/reactions/{reaction_id}"};
-    option (google.api.method_signature) = "reaction_id";
+    option (google.api.http) = {delete: "/api/v1/reactions/{id}"};
+    option (google.api.method_signature) = "id";
   }
 }
 
@@ -137,10 +137,10 @@ message Memo {
   // The user defined id of the memo.
   string uid = 2;
 
-  RowStatus row_status = 3;
+  State state = 3;
 
   // The name of the creator.
-  // Format: users/{id}
+  // Format: users/{user}
   string creator = 4;
 
   google.protobuf.Timestamp create_time = 5;
@@ -203,16 +203,6 @@ message CreateMemoRequest {
   optional Location location = 5;
 }
 
-enum MemoView {
-  MEMO_VIEW_UNSPECIFIED = 0;
-
-  // The full view of the memo. Includes all fields.
-  MEMO_VIEW_FULL = 1;
-
-  // The metadata only view of the memo. Excludes the content/snippet fields.
-  MEMO_VIEW_METADATA_ONLY = 2;
-}
-
 message ListMemosRequest {
   // The maximum number of memos to return.
   int32 page_size = 1;
@@ -222,11 +212,8 @@ message ListMemosRequest {
   string page_token = 2;
 
   // Filter is used to filter memos returned in the list.
-  // Format: "creator == 'users/{uid}' && visibilities == ['PUBLIC', 'PROTECTED']"
+  // Format: "creator == 'users/{user}' && visibilities == ['PUBLIC', 'PROTECTED']"
   string filter = 3;
-
-  // The view of the memo.
-  MemoView view = 4;
 }
 
 message ListMemosResponse {
@@ -349,5 +336,7 @@ message UpsertMemoReactionRequest {
 }
 
 message DeleteMemoReactionRequest {
-  int32 reaction_id = 1;
+  // The id of the reaction.
+  // Refer to the `Reaction.id`.
+  int32 id = 1;
 }
