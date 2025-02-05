@@ -1,5 +1,4 @@
 import { Tooltip } from "@mui/joy";
-import clsx from "clsx";
 import { BookmarkIcon, MessageCircleMoreIcon } from "lucide-react";
 import { memo, useCallback, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -12,8 +11,9 @@ import { MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
 import { Memo, Visibility } from "@/types/proto/api/v1/memo_service";
 import { WorkspaceMemoRelatedSetting } from "@/types/proto/api/v1/workspace_setting_service";
 import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
+import { cn } from "@/utils";
 import { useTranslate } from "@/utils/i18n";
-import { convertVisibilityToString } from "@/utils/memo";
+import { convertVisibilityToString, memoLink } from "@/utils/memo";
 import { isSuperUser } from "@/utils/user";
 import MemoActionMenu from "./MemoActionMenu";
 import MemoContent from "./MemoContent";
@@ -61,7 +61,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
   const relativeTimeFormat = Date.now() - memo.displayTime!.getTime() > 1000 * 60 * 60 * 24 ? "datetime" : "auto";
   const isArchived = memo.state === State.ARCHIVED;
   const readonly = memo.creator !== user?.name && !isSuperUser(user);
-  const isInMemoDetailPage = location.pathname.startsWith(`/m/${memo.uid}`);
+  const isInMemoDetailPage = location.pathname.startsWith(memoLink(memo.name));
   const parentPage = props.parentPage || location.pathname;
 
   // Initial related data: creator.
@@ -71,12 +71,12 @@ const MemoView: React.FC<Props> = (props: Props) => {
   }, []);
 
   const handleGotoMemoDetailPage = useCallback(() => {
-    navigateTo(`/m/${memo.uid}`, {
+    navigateTo(memoLink(memo.name), {
       state: {
         from: parentPage,
       },
     });
-  }, [memo.uid, parentPage]);
+  }, [memo.name, parentPage]);
 
   const handleMemoContentClick = useCallback(async (e: React.MouseEvent) => {
     const targetEl = e.target as HTMLElement;
@@ -125,7 +125,7 @@ const MemoView: React.FC<Props> = (props: Props) => {
 
   return (
     <div
-      className={clsx(
+      className={cn(
         "group relative flex flex-col justify-start items-start w-full px-4 py-3 mb-2 gap-2 bg-white dark:bg-zinc-800 rounded-lg border border-white dark:border-zinc-800 hover:border-gray-200 dark:hover:border-zinc-700",
         props.showPinned && memo.pinned && "border-gray-200 border dark:border-zinc-700",
         className,
@@ -188,11 +188,11 @@ const MemoView: React.FC<Props> = (props: Props) => {
               </div>
               {!isInMemoDetailPage && (workspaceMemoRelatedSetting.enableComment || commentAmount > 0) && (
                 <Link
-                  className={clsx(
+                  className={cn(
                     "flex flex-row justify-start items-center hover:opacity-70",
                     commentAmount === 0 && "invisible group-hover:visible",
                   )}
-                  to={`/m/${memo.uid}#comments`}
+                  to={`${memoLink(memo.name)}#comments`}
                   viewTransition
                   state={{
                     from: parentPage,

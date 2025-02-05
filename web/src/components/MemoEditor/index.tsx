@@ -336,6 +336,9 @@ const MemoEditor = (props: Props) => {
           }
           if (updateMask.size === 0) {
             toast.error("No changes detected");
+            if (onCancel) {
+              onCancel();
+            }
             return;
           }
           const memo = await memoStore.updateMemo(memoPatch, Array.from(updateMask));
@@ -347,11 +350,13 @@ const MemoEditor = (props: Props) => {
         // Create memo or memo comment.
         const request = !parentMemoName
           ? memoStore.createMemo({
-              content,
-              visibility: state.memoVisibility,
-              resources: state.resourceList,
-              relations: state.relationList,
-              location: state.location,
+              memo: Memo.fromPartial({
+                content,
+                visibility: state.memoVisibility,
+                resources: state.resourceList,
+                relations: state.relationList,
+                location: state.location,
+              }),
             })
           : memoServiceClient
               .createMemoComment({
