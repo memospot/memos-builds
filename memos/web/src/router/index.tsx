@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "@/App";
+import HomeLayout from "@/layouts/HomeLayout";
 import RootLayout from "@/layouts/RootLayout";
-import SuspenseWrapper from "@/layouts/SuspenseWrapper";
 import About from "@/pages/About";
 import AdminSignIn from "@/pages/AdminSignIn";
 import Archived from "@/pages/Archived";
@@ -17,6 +17,7 @@ import Setting from "@/pages/Setting";
 import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
 import UserProfile from "@/pages/UserProfile";
+import MemoDetailRedirect from "./MemoDetailRedirect";
 
 export enum Routes {
   ROOT = "/",
@@ -36,7 +37,6 @@ const router = createBrowserRouter([
     children: [
       {
         path: Routes.AUTH,
-        element: <SuspenseWrapper />,
         children: [
           {
             path: "",
@@ -61,8 +61,25 @@ const router = createBrowserRouter([
         element: <RootLayout />,
         children: [
           {
-            path: "",
-            element: <Home />,
+            element: <HomeLayout />,
+            children: [
+              {
+                path: "",
+                element: <Home />,
+              },
+              {
+                path: Routes.EXPLORE,
+                element: <Explore />,
+              },
+              {
+                path: Routes.ARCHIVED,
+                element: <Archived />,
+              },
+              {
+                path: "u/:username",
+                element: <UserProfile />,
+              },
+            ],
           },
           {
             path: Routes.RESOURCES,
@@ -73,28 +90,21 @@ const router = createBrowserRouter([
             element: <Inboxes />,
           },
           {
-            path: Routes.ARCHIVED,
-            element: <Archived />,
-          },
-          {
             path: Routes.SETTING,
             element: <Setting />,
           },
           {
-            path: Routes.EXPLORE,
-            element: <Explore />,
-          },
-          {
-            path: "m/:uid",
+            path: "memos/:uid",
             element: <MemoDetail />,
-          },
-          {
-            path: "u/:username",
-            element: <UserProfile />,
           },
           {
             path: Routes.ABOUT,
             element: <About />,
+          },
+          // Redirect old path to new path.
+          {
+            path: "m/:uid",
+            element: <MemoDetailRedirect />,
           },
           {
             path: "403",
