@@ -4,6 +4,7 @@ import MemoView from "@/components/MemoView";
 import PagedMemoList from "@/components/PagedMemoList";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoFilterStore } from "@/store/v1";
+import { viewStore } from "@/store/v2";
 import { Direction, State } from "@/types/proto/api/v1/common";
 import { Memo } from "@/types/proto/api/v1/memo_service";
 
@@ -41,27 +42,23 @@ const Explore = () => {
       conditions.push(`tag_search == [${tagSearch.join(", ")}]`);
     }
     return conditions.join(" && ");
-  }, [user, memoFilterStore.filters, memoFilterStore.orderByTimeAsc]);
+  }, [user, memoFilterStore.filters, viewStore.state.orderByTimeAsc]);
 
   return (
-    <>
-      <div className="flex flex-col justify-start items-start w-full max-w-full">
-        <PagedMemoList
-          renderer={(memo: Memo) => <MemoView key={`${memo.name}-${memo.updateTime}`} memo={memo} showCreator showVisibility compact />}
-          listSort={(memos: Memo[]) =>
-            memos
-              .filter((memo) => memo.state === State.NORMAL)
-              .sort((a, b) =>
-                memoFilterStore.orderByTimeAsc
-                  ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
-                  : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
-              )
-          }
-          direction={memoFilterStore.orderByTimeAsc ? Direction.ASC : Direction.DESC}
-          oldFilter={memoListFilter}
-        />
-      </div>
-    </>
+    <PagedMemoList
+      renderer={(memo: Memo) => <MemoView key={`${memo.name}-${memo.updateTime}`} memo={memo} showCreator showVisibility compact />}
+      listSort={(memos: Memo[]) =>
+        memos
+          .filter((memo) => memo.state === State.NORMAL)
+          .sort((a, b) =>
+            viewStore.state.orderByTimeAsc
+              ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
+              : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
+          )
+      }
+      direction={viewStore.state.orderByTimeAsc ? Direction.ASC : Direction.DESC}
+      oldFilter={memoListFilter}
+    />
   );
 };
 
