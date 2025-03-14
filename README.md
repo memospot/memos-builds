@@ -2,7 +2,7 @@
 
 Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
 
-Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), a self-contained desktop app for Memos, available on macOS, Linux, and Windows.
+Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
 [![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
@@ -25,21 +25,25 @@ Some of these builds are utilized by [Memospot](https://github.com/memospot/memo
     </picture>
   </a>
 
-  [![Homepage](https://img.shields.io/badge/Home-blue)](https://www.usememos.com) [![Blog](https://img.shields.io/badge/Blog-gray)](https://www.usememos.com/blog) [![Docs](https://img.shields.io/badge/Docs-blue)](https://www.usememos.com/docs) [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://demo.usememos.com/) [![Memos Discord](https://img.shields.io/badge/Discord-chat-5865f2?logo=discord&logoColor=f5f5f5)](https://discord.gg/tfPJa4UmAv) [![GitHub Stars](https://img.shields.io/github/stars/usememos/memos?logo=github)](https://github.com/usememos/memos)
+[![Homepage](https://img.shields.io/badge/Home-blue)](https://www.usememos.com) [![Blog](https://img.shields.io/badge/Blog-gray)](https://www.usememos.com/blog) [![Docs](https://img.shields.io/badge/Docs-blue)](https://www.usememos.com/docs) [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://demo.usememos.com/) [![Memos Discord](https://img.shields.io/badge/Discord-chat-5865f2?logo=discord&logoColor=f5f5f5)](https://discord.gg/tfPJa4UmAv) [![GitHub Stars](https://img.shields.io/github/stars/usememos/memos?logo=github)](https://github.com/usememos/memos)
 
 </div>
 
 ## Docker
 
-This project also provides optimized Memos images for the following platforms:
-|      amd64     |     arm32    |     other     |
+This project provides optimized Memos images for the following platforms:
+
+| amd64          | arm32        | other         |
 | -------------- | ------------ | ------------- |
-|  linux/amd64   | linux/arm/v5 |   linux/386   |
+| linux/amd64    | linux/arm/v5 | linux/386     |
 | linux/amd64/v2 | linux/arm/v6 | linux/ppc64le |
 | linux/amd64/v3 | linux/arm/v7 | linux/riscv64 |
-|                | linux/arm64  |  linux/s390x  |
+|                | linux/arm64  | linux/s390x   |
 
 To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants).
+
+> [!TIP]
+> The optimizations include build flags, smaller images, and health check.
 
 ### Quick start
 
@@ -81,21 +85,18 @@ docker run --detach --name watchtower \
 
 - Image packages are auto-upgraded at build time.
 
-- Nightly images are built daily at 00:00 UTC.
+- Nightly images are built daily at 00:25 UTC.
 
 - Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
 | Platform  | Image                 |
-|-----------|-----------------------|
-| arm/v5    | busybox:stable-uclibc |
-| riscv64   | alpine:3.20           |
-| All other | alpine:3.20           |
-
-> Up to v0.19.0, `arm32v5` images were based on debian:stable-slim.
+| --------- | --------------------- |
+| arm/v5    | busybox:1.36.1-uclibc |
+| All other | alpine:3.21           |
 
 ## Platform variants
 
-There are multiple builds for `arm` and `amd64` platforms, with different hardware optimizations. Choose the one that best suits the host CPU.
+Multiple builds for `arm` and `amd64` platforms exists, with different hardware optimizations. Choose the build that best suits the host CPU.
 
 Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` or `aarch64` CPU, use the ARM64 build.
 
@@ -115,8 +116,6 @@ Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architectu
 
 Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger false positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
 
-It's currently not possible to build Memos for Windows i386 and any sort of MIPS architecture, because [modernc.org/libc](https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures) (used by SQLite driver) is not compatible with these targets.
-
 ## Support
 
 Memos official first-class [support](https://github.com/usememos/memos/issues) is for its [Docker container](https://hub.docker.com/r/neosmemo/memos).
@@ -126,7 +125,7 @@ Please do not open issues on the official Memos repository regarding these build
 
 ## Running as a Service
 
-You should manually set up a system service to start Memos on boot.
+To start Memos at system boot, you must manually set up a system service.
 
 [Memos Service Guide](docs/service.md)
 
@@ -136,9 +135,9 @@ You should manually set up a system service to start Memos on boot.
 
 To run Memos using [Termux](https://play.google.com/store/apps/details?id=com.termux) on Android:
 
-- Download a Linux build suiting device CPU architecture (most modern devices are `arm64`)
+- Download a Linux build suiting device CPU architecture (most modern devices are `arm64`).
 
-- Extract the downloaded file and copy the `memos` binary to internal storage
+- Extract the downloaded file and copy the `memos` binary to internal storage.
 
 Run this on Termux:
 

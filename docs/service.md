@@ -2,11 +2,11 @@
 
 This guide will help you set up Memos as a service on Linux.
 
-⚠ These instructions are untested. Please submit a PR if you find any issues.
+⚠ Untested instructions. Please submit a PR if you find any issues.
 
 ## Note
 
-You must setcap the binary if you want to use a privileged port (below 1024):
+To use a privileged port (below 1024), you must set capabilities on the binary:
 
 ```sh
 sudo setcap 'cap_net_bind_service=+ep' /opt/memos/memos
@@ -107,7 +107,7 @@ cat /var/log/messages | grep memos
 
 Memos support configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
 
-Currently, Memos supports the following environment variables:
+Some supported environment variables:
 
 ```sh
 # dev, prod, demo *required*
@@ -126,9 +126,9 @@ MEMOS_DATA="/opt/memos"
 MEMOS_DRIVER="sqlite"
 
 # database connection string: leave empty for sqlite
-# see: https://www.usememos.com/docs/advanced-settings/mysql
+# see: https://www.usememos.com/docs/install/database
 MEMOS_DSN="dbuser:dbpass@tcp(dbhost)/dbname"
 
-# allow metric collection
-MEMOS_METRIC="true"
 ```
+
+See [Memos runtime options](https://www.usememos.com/docs/install/runtime-options) for more details.

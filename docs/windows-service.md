@@ -5,7 +5,7 @@ It will run under the `SYSTEM` account and start automatically at system boot.
 
 ## ⚠ Notes
 
-All service management methods require admin privileges.
+Service management methods require admin privileges.
 For convenience, use [gsudo](https://gerardog.github.io/gsudo/docs/install), or open a new PowerShell terminal as admin:
 
 ```powershell
@@ -31,13 +31,13 @@ Choose one of the following methods to install Memos as a service.
 
 ### 1. [NSSM](https://nssm.cc/download)
 
-NSSM is a lightweight service wrapper. It uses very little memory and CPU time, and it is stable and reliable.
+NSSM is a lightweight service wrapper. It uses little memory and CPU time, and it is stable and reliable.
 
 The downside is that it doesn't support configuration files, so you have to use the command line to configure the service.
 
 You may download and extract `nssm.exe` in the same directory as `memos.exe`, or add its directory to your system PATH. Prefer the latest 64-bit version of `nssm.exe`.
 
-Also, nssm is available on [Chocolatey](https://chocolatey.org/) and [Scoop](https://scoop.sh/) Windows Package Managers:
+Also, `nssm` is available on [Chocolatey](https://chocolatey.org/) and [Scoop](https://scoop.sh/) Windows Package Managers:
 
 ```powershell
 choco install nssm
@@ -120,9 +120,9 @@ If the service installation was successful, the service would appear in the Wind
 
 ## Memos configuration
 
-Memos support configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
+Memos supports configuration via environment variables and command line flags. You may set system-wide environment variables, or set them in the service wrapper (recommended).
 
-Currently, Memos supports the following environment variables:
+Some supported environment variables:
 
 ```sh
 # dev, prod, demo *required*
@@ -148,7 +148,7 @@ MEMOS_DSN="user:password@tcp(mysql_addr)/memos"
 
 For all supported environment variables, see [cmd/memos.go](https://github.com/usememos/memos/blob/main/bin/memos/main.go#L107). All bound flags in `init()` are also supported as environment variables, prefixed with `MEMOS_`.
 
-To set-up Memos with MySQL, see [Memos Database Guide](https://www.usememos.com/docs/advanced-settings/database).
+To set up Memos with MySQL, see [Memos Database Guide](https://www.usememos.com/docs/install/database).
 
 ## Additional notes
 
@@ -156,4 +156,4 @@ To set-up Memos with MySQL, see [Memos Database Guide](https://www.usememos.com/
 
 - If the service fails to start, you should inspect the Windows Event Viewer `eventvwr.msc`.
 
-After setup, Memos will be accessible at [http://localhost:5230](http://localhost:5230), if you didn't change the default port.
+After the setup, Memos will be accessible at [http://localhost:5230](http://localhost:5230), if you didn't change the default port.

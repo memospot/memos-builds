@@ -52,12 +52,8 @@ RUN <<SH
         Alpine)
             apk upgrade --no-cache
             ;;
-        BusyBox)
-            # Nothing to do but validate as supported.
-            ;;
         *)
-            echo "Unsupported distro: $RELEASE"
-            exit 1
+            echo "No action needed for distro ${RELEASE}."            
             ;;
     esac
 

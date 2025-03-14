@@ -173,7 +173,7 @@ setup-env NIGHTLY='':
 # Commit any changes
 [private]
 [group('CI')]
-git-commit-any MESSAGE='chore:ci: ensure clean git state': git-setup
+git-commit-any MESSAGE='chore(ci): ensure clean git state': git-setup
     #!{{bash}}
     git add -A && git commit -m "{{MESSAGE}}" || true
 
@@ -214,7 +214,7 @@ git-setup:
 git-subtree-pull COMMIT: git-setup
     #!{{bash}}
     set -euo pipefail
-    git subtree pull --prefix=memos "https://github.com/usememos/memos.git" "{{COMMIT}}" --squash --message="chore:ci: pull {{COMMIT}} from usememos/memos"
+    git subtree pull --prefix=memos "https://github.com/usememos/memos.git" "{{COMMIT}}" --squash --message="chore(ci): pull {{COMMIT}} from usememos/memos"
 
 # Pull a specific tag from usememos/memos.
 [private]
