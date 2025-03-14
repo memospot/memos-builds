@@ -1,7 +1,6 @@
 import { isEqual } from "lodash-es";
 import { CheckCircleIcon, Code2Icon, HashIcon, LinkIcon } from "lucide-react";
-import { MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
-import { Memo, MemoProperty } from "@/types/proto/api/v1/memo_service";
+import { Memo, MemoRelation_Type, Memo_Property } from "@/types/proto/api/v1/memo_service";
 import { cn } from "@/utils";
 import { useTranslate } from "@/utils/i18n";
 import MemoRelationForceGraph from "../MemoRelationForceGraph";
@@ -14,7 +13,7 @@ interface Props {
 
 const MemoDetailSidebar = ({ memo, className, parentPage }: Props) => {
   const t = useTranslate();
-  const property = MemoProperty.fromPartial(memo.property || {});
+  const property = Memo_Property.fromPartial(memo.property || {});
   const hasSpecialProperty = property.hasLink || property.hasTaskList || property.hasCode || property.hasIncompleteTasks;
   const shouldShowRelationGraph = memo.relations.filter((r) => r.type === MemoRelation_Type.REFERENCE).length > 0;
 
