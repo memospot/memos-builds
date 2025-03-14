@@ -53,7 +53,7 @@ RUN <<SH
             apk upgrade --no-cache
             ;;
         *)
-            echo "No action needed for distro ${RELEASE}."            
+            echo "No action needed for distro ${RELEASE}."
             ;;
     esac
 
@@ -85,4 +85,4 @@ HEALTHCHECK --interval=5m --timeout=10s \
     CMD wget -qO - http://localhost:${MEMOS_PORT}/healthz || exit 1
 
 WORKDIR /opt/memos
-ENTRYPOINT [ "sh", "./entrypoint.sh" ]
+ENTRYPOINT ["ash", "./entrypoint.sh", "./memos"]

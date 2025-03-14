@@ -2,7 +2,8 @@
 
 Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
 
-Some of these builds are utilized by [Memospot](https://github.com/memospot/memospot), a self-contained desktop app for Memos, available on macOS, Linux and Windows.
+Some of these builds are used by [Memospot](https://github.com/memospot/memospot),
+a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
 [![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
@@ -68,7 +69,7 @@ docker run --detach --rm --name memos-throwaway --publish 5232:5230 \
   --env MEMOS_MODE=demo lincolnthalles/memos:nightly
 ```
 
-#### Keeping containers up-to-date
+#### Keeping containers up to date
 
 Use [Watchtower](https://containrrr.dev/watchtower/).
 
@@ -118,7 +119,8 @@ Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger f
 
 ## Support
 
-Memos official first-class [support](https://github.com/usememos/memos/issues) is for its [Docker container](https://hub.docker.com/r/neosmemo/memos).
+Memos' official first-class [support](https://github.com/usememos/memos/issues) is for its
+[Docker container](https://hub.docker.com/r/neosmemo/memos).
 These binaries and images are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your discretion.
 
 Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the official Docker container.

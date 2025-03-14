@@ -2,7 +2,7 @@
 # shellcheck shell=dash
 # This custom entry point makes debugging image builds easier.
 
-MAIN=/opt/memos/memos
+MAIN="$(realpath "$1")"
 
 set -eu
 ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime || true
@@ -10,8 +10,8 @@ printf %s "$TZ" >/etc/timezone
 
 release=$(grep PRETTY_NAME </etc/os-release | cut -d'"' -f2)
 platform=$(grep TARGETPLATFORM </opt/memos/buildinfo | cut -d'=' -f2)
-bindate=$(stat -c %y ${MAIN} | cut -d'.' -f1)
-checksum=$(sha256sum ${MAIN} | cut -d' ' -f1)
+bindate=$(stat -c %y "${MAIN}" | cut -d'.' -f1)
+checksum=$(sha256sum "${MAIN}" | cut -d' ' -f1)
 
 cyan="\033[36m"
 green="\033[32m"
@@ -27,14 +27,18 @@ printf "%bMain binary date:     %b%s%b\n" "$cyan" "$green" "$bindate" "$reset"
 printf "%bMain binary checksum: %b%s%b\n" "$cyan" "$green" "$checksum" "$reset"
 
 file_env() {
-  var="$1"
-  fileVar="${var}_FILE"
+  local var="$1"
+  local fileVar="${var}_FILE"
+  local val=""
 
-  val_var="$(printenv "$var")"
-  val_fileVar="$(printenv "$fileVar")"
+  # Get values from environment
+  # shellcheck disable=SC2155
+  local val_var="$(printenv "$var")"
+  # shellcheck disable=SC2155
+  local val_fileVar="$(printenv "$fileVar")"
 
   if [ -n "$val_var" ] && [ -n "$val_fileVar" ]; then
-    echo "error: both $var and $fileVar are set (but are exclusive)" >&2
+    printf "error: both %s and %s are set (but are exclusive)\n" "$var" "$fileVar" >&2
     exit 1
   fi
 
@@ -47,7 +51,6 @@ file_env() {
   export "$var"="$val"
   unset "$fileVar"
 }
-
 file_env "MEMOS_DSN"
 
-exec ${MAIN} "$@"
+exec "$@"
