@@ -49,6 +49,7 @@
     "input": "Input",
     "language": "Language",
     "last-updated-at": "Last updated at",
+    "layout": "Layout",
     "learn-more": "Learn more",
     "link": "Link",
     "mark": "Mark",
@@ -129,7 +130,7 @@
   "memo": {
     "archived-at": "Archived at",
     "click-to-hide-nsfw-content": "Click to hide NSFW content",
-    "click-to-show-nsfw-content": "Click to show NSFW contnet",
+    "click-to-show-nsfw-content": "Click to show NSFW content",
     "code": "Code",
     "comment": {
       "self": "Comments",
@@ -160,7 +161,9 @@
       "private": "Private",
       "protected": "Workspace",
       "public": "Public"
-    }
+    },
+    "list": "List",
+    "masonry": "Masonry"
   },
   "message": {
     "archived-successfully": "Archived successfully",
@@ -219,7 +222,8 @@
     "no-unused-resources": "No unused resources",
     "reset-link": "Reset Link",
     "reset-link-prompt": "Are you sure to reset the link? This will break all current link usages. THIS ACTION IS IRREVERSIBLE",
-    "reset-resource-link": "Reset Resource Link"
+    "reset-resource-link": "Reset Resource Link",
+    "unused-resources": "Unused resources"
   },
   "router": {
     "back-to-top": "Back to Top",
