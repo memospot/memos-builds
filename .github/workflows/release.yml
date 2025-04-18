@@ -108,7 +108,7 @@ jobs:
       # setup deps
       - name: Setup Just
         uses: taiki-e/install-action@dccf3df6e0d23d1cceb188bbc2255dd0799bcf48
-        with: { tool: just@1.34.0 }
+        with: { tool: just@1.40.0 }
 
       - name: Setup buf
         uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99
