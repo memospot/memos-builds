@@ -101,7 +101,7 @@ jobs:
         uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          version: "1.34.0"
+          version: "1.52.1"
 
       - name: Setup UPX
         uses: crazy-max/ghaction-upx@de21b8cbed76979407eeb6e41aa5e270afc3225c
