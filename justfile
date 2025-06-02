@@ -110,8 +110,8 @@ add-to-env KEY VALUE:
 setup-env NIGHTLY='':
     #!{{bash}}
     set -euo pipefail
-    version_from_file=v$(grep --color=never -Po 'var Version = "\K[^"]+' < ./memos/server/version/version.go)
-    devversion_from_file=v$(grep --color=never -Po 'var DevVersion = "\K[^"]+' < ./memos/server/version/version.go)
+    version_from_file=v$(grep --color=never -Po 'var Version = "\K[^"]+' < ./memos/internal/version/version.go)
+    devversion_from_file=v$(grep --color=never -Po 'var DevVersion = "\K[^"]+' < ./memos/internal/version/version.go)
     version_from_git_tag=$(git describe --tags --abbrev=0)
     version_from_ref="{{replace(env_var_or_default('GITHUB_REF_NAME', 'NOT_SET'), 'release/', '')}}"
     git_previous_tag=""
