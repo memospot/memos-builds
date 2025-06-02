@@ -3,6 +3,7 @@ import { Button, Input } from "@usememos/mui";
 import dayjs from "dayjs";
 import { includes } from "lodash-es";
 import { PaperclipIcon, SearchIcon, TrashIcon } from "lucide-react";
+import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 import Empty from "@/components/Empty";
 import MobileHeader from "@/components/MobileHeader";
@@ -11,7 +12,7 @@ import { resourceServiceClient } from "@/grpcweb";
 import useLoading from "@/hooks/useLoading";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
 import i18n from "@/i18n";
-import { useMemoStore } from "@/store/v1";
+import { memoStore } from "@/store/v2";
 import { Resource } from "@/types/proto/api/v1/resource_service";
 import { useTranslate } from "@/utils/i18n";
 
@@ -33,14 +34,13 @@ interface State {
   searchQuery: string;
 }
 
-const Resources = () => {
+const Resources = observer(() => {
   const t = useTranslate();
   const { md } = useResponsiveWidth();
   const loadingState = useLoading();
   const [state, setState] = useState<State>({
     searchQuery: "",
   });
-  const memoStore = useMemoStore();
   const [resources, setResources] = useState<Resource[]>([]);
   const filteredResources = resources.filter((resource) => includes(resource.filename, state.searchQuery));
   const groupedResources = groupResourcesByDate(filteredResources.filter((resource) => resource.memo));
@@ -135,7 +135,7 @@ const Resources = () => {
                               <span className="text-gray-600 dark:text-gray-400">{t("resource.unused-resources")}</span>
                               <span className="text-gray-500 dark:text-gray-500 opacity-80">({unusedResources.length})</span>
                               <Tooltip title="Delete all" placement="top">
-                                <Button size="sm" variant="plain" onClick={handleDeleteUnusedResources}>
+                                <Button variant="plain" onClick={handleDeleteUnusedResources}>
                                   <TrashIcon className="w-4 h-auto opacity-60" />
                                 </Button>
                               </Tooltip>
@@ -165,6 +165,6 @@ const Resources = () => {
       </div>
     </section>
   );
-};
+});
 
 export default Resources;

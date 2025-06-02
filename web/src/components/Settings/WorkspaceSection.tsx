@@ -1,12 +1,13 @@
-import { Select, Textarea, Option, Divider, Switch } from "@mui/joy";
-import { Button } from "@usememos/mui";
+import { Select, Option, Divider } from "@mui/joy";
+import { Button, Textarea, Switch } from "@usememos/mui";
 import { isEqual } from "lodash-es";
 import { ExternalLinkIcon } from "lucide-react";
+import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { identityProviderServiceClient } from "@/grpcweb";
-import { workspaceSettingNamePrefix } from "@/store/v1";
+import { workspaceSettingNamePrefix } from "@/store/common";
 import { workspaceStore } from "@/store/v2";
 import { WorkspaceSettingKey } from "@/store/v2/workspace";
 import { IdentityProvider } from "@/types/proto/api/v1/idp_service";
@@ -14,7 +15,7 @@ import { WorkspaceGeneralSetting } from "@/types/proto/api/v1/workspace_setting_
 import { useTranslate } from "@/utils/i18n";
 import showUpdateCustomizedProfileDialog from "../UpdateCustomizedProfileDialog";
 
-const WorkspaceSection = () => {
+const WorkspaceSection = observer(() => {
   const t = useTranslate();
   const originalSetting = WorkspaceGeneralSetting.fromPartial(
     workspaceStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL)?.generalSetting || {},
@@ -23,7 +24,7 @@ const WorkspaceSection = () => {
   const [identityProviderList, setIdentityProviderList] = useState<IdentityProvider[]>([]);
 
   useEffect(() => {
-    setWorkspaceGeneralSetting(originalSetting);
+    setWorkspaceGeneralSetting({ ...workspaceGeneralSetting, customProfile: originalSetting.customProfile });
   }, [workspaceStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL)]);
 
   const handleUpdateCustomizedProfileButtonClick = () => {
@@ -80,13 +81,9 @@ const WorkspaceSection = () => {
         <span>{t("setting.system-section.additional-style")}</span>
       </div>
       <Textarea
-        className="w-full"
-        sx={{
-          fontFamily: "monospace",
-          fontSize: "14px",
-        }}
-        minRows={2}
-        maxRows={4}
+        className="font-mono"
+        rows={3}
+        fullWidth
         placeholder={t("setting.system-section.additional-style-placeholder")}
         value={workspaceGeneralSetting.additionalStyle}
         onChange={(event) => updatePartialSetting({ additionalStyle: event.target.value })}
@@ -95,14 +92,9 @@ const WorkspaceSection = () => {
         <span>{t("setting.system-section.additional-script")}</span>
       </div>
       <Textarea
-        className="w-full"
-        color="neutral"
-        sx={{
-          fontFamily: "monospace",
-          fontSize: "14px",
-        }}
-        minRows={2}
-        maxRows={4}
+        className="font-mono"
+        rows={3}
+        fullWidth
         placeholder={t("setting.system-section.additional-script-placeholder")}
         value={workspaceGeneralSetting.additionalScript}
         onChange={(event) => updatePartialSetting({ additionalScript: event.target.value })}
@@ -171,6 +163,6 @@ const WorkspaceSection = () => {
       </div>
     </div>
   );
-};
+});
 
 export default WorkspaceSection;

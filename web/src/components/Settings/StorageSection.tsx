@@ -1,11 +1,12 @@
-import { Divider, List, ListItem, Radio, RadioGroup, Tooltip, Switch } from "@mui/joy";
-import { Button, Input } from "@usememos/mui";
+import { Divider, List, ListItem, Radio, RadioGroup, Tooltip } from "@mui/joy";
+import { Button, Input, Switch } from "@usememos/mui";
 import { isEqual } from "lodash-es";
 import { HelpCircleIcon } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { observer } from "mobx-react-lite";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { workspaceSettingNamePrefix } from "@/store/v1";
+import { workspaceSettingNamePrefix } from "@/store/common";
 import { workspaceStore } from "@/store/v2";
 import { WorkspaceSettingKey } from "@/store/v2/workspace";
 import {
@@ -15,11 +16,17 @@ import {
 } from "@/types/proto/api/v1/workspace_setting_service";
 import { useTranslate } from "@/utils/i18n";
 
-const StorageSection = () => {
+const StorageSection = observer(() => {
   const t = useTranslate();
   const [workspaceStorageSetting, setWorkspaceStorageSetting] = useState<WorkspaceStorageSetting>(
     WorkspaceStorageSetting.fromPartial(workspaceStore.getWorkspaceSettingByKey(WorkspaceSettingKey.STORAGE)?.storageSetting || {}),
   );
+
+  useEffect(() => {
+    setWorkspaceStorageSetting(
+      WorkspaceStorageSetting.fromPartial(workspaceStore.getWorkspaceSettingByKey(WorkspaceSettingKey.STORAGE)?.storageSetting || {}),
+    );
+  }, [workspaceStore.getWorkspaceSettingByKey(WorkspaceSettingKey.STORAGE)]);
 
   const allowSaveStorageSetting = useMemo(() => {
     if (workspaceStorageSetting.uploadSizeLimitMb <= 0) {
@@ -217,6 +224,6 @@ const StorageSection = () => {
       </div>
     </div>
   );
-};
+});
 
 export default StorageSection;
