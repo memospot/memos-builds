@@ -1,12 +1,12 @@
 import { SearchIcon } from "lucide-react";
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
-import { useMemoFilterStore } from "@/store/v1";
+import { memoFilterStore } from "@/store/v2";
 import { useTranslate } from "@/utils/i18n";
 import MemoDisplaySettingMenu from "./MemoDisplaySettingMenu";
 
-const SearchBar = () => {
+const SearchBar = observer(() => {
   const t = useTranslate();
-  const memoFilterStore = useMemoFilterStore();
   const [queryText, setQueryText] = useState("");
 
   const onTextChange = (event: React.FormEvent<HTMLInputElement>) => {
@@ -42,6 +42,6 @@ const SearchBar = () => {
       <MemoDisplaySettingMenu className="absolute right-2 top-2" />
     </div>
   );
-};
+});
 
 export default SearchBar;
