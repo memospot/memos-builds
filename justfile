@@ -216,6 +216,23 @@ git-subtree-pull COMMIT: git-setup
     set -euo pipefail
     git subtree pull --prefix=memos "https://github.com/usememos/memos.git" "{{COMMIT}}" --squash --message="chore(ci): pull {{COMMIT}} from usememos/memos"
 
+    if [ -d "{{justfile_directory()}}/patches" ]; then
+        echo -e "${MAGENTA}Applying patches from ./patches to ./memos…${RESET}"
+        for patch in {{justfile_directory()}}/patches/*.patch ; do
+            echo -e "  Checking for patch ${CYAN}$patch${RESET}…"
+            if [ -f "$patch" ]; then
+                echo -e "  Applying ${CYAN}$patch${RESET}…"
+                if git -C memos apply "$patch"; then
+                    echo -e "${GREEN}Patch $patch applied successfully.${RESET}"
+                    git add memos && git commit -m "chore(ci): apply patches" || true
+                else
+                    echo -e "${YELLOW}Failed to apply patch $patch. Skipping.${RESET}"
+                    continue
+                fi
+            fi
+        done
+    fi
+
 # Pull a specific tag from usememos/memos.
 [private]
 [group('CI')]
