@@ -1,42 +1,41 @@
-import { isEqual } from "lodash-es";
+import dayjs from "dayjs";
 import toast from "react-hot-toast";
-import { cn } from "@/utils";
+import { cn } from "@/lib/utils";
 
-// Helper function to convert Date to local datetime string.
-const toLocalDateTimeString = (date: Date | undefined): string => {
-  return date?.toLocaleString() || "";
+// must be compatible with JS Date.parse(), we use ISO 8601 (almost)
+const DATE_TIME_FORMAT = "YYYY-MM-DD HH:mm:ss";
+
+// convert Date to datetime string.
+const formatDate = (date: Date): string => {
+  return dayjs(date).format(DATE_TIME_FORMAT);
 };
 
 interface Props {
-  value: Date | undefined;
-  originalValue: Date | undefined;
+  value: Date;
   onChange: (date: Date) => void;
 }
 
-const DateTimeInput: React.FC<Props> = ({ value, originalValue, onChange }) => {
+const DateTimeInput: React.FC<Props> = ({ value, onChange }) => {
   return (
     <input
       type="text"
-      className={cn(
-        "px-1 bg-transparent rounded text-xs transition-all",
-        "border-transparent outline-none focus:border-gray-300 dark:focus:border-zinc-700",
-        !isEqual(value, originalValue) && "border-gray-300 dark:border-zinc-700",
-        "border",
-      )}
-      defaultValue={toLocalDateTimeString(value)}
+      className={cn("px-1 bg-transparent rounded text-xs transition-all", "border-transparent outline-none focus:border-border", "border")}
+      defaultValue={formatDate(value)}
       onBlur={(e) => {
         const inputValue = e.target.value;
         if (inputValue) {
-          const date = new Date(inputValue);
+          // note: inputValue must be compatible with JS Date.parse()
+          const date = dayjs(inputValue).toDate();
+          // Check if the date is valid.
           if (!isNaN(date.getTime())) {
             onChange(date);
           } else {
-            toast.error("Invalid datetime format. Use format: 2023-12-31T23:59:59");
-            e.target.value = toLocalDateTimeString(value);
+            toast.error("Invalid datetime format. Use format: 2023-12-31 23:59:59");
+            e.target.value = formatDate(value);
           }
         }
       }}
-      placeholder="YYYY-MM-DDTHH:mm:ss"
+      placeholder={DATE_TIME_FORMAT}
     />
   );
 };

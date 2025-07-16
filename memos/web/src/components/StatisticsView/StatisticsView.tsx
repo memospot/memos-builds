@@ -6,8 +6,8 @@ import { matchPath, useLocation } from "react-router-dom";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useStatisticsData } from "@/hooks/useStatisticsData";
 import { Routes } from "@/router";
-import { userStore } from "@/store/v2";
-import memoFilterStore, { FilterFactor } from "@/store/v2/memoFilter";
+import { userStore } from "@/store";
+import memoFilterStore, { FilterFactor } from "@/store/memoFilter";
 import { useTranslate } from "@/utils/i18n";
 import ActivityCalendar from "../ActivityCalendar";
 import { MonthNavigator } from "./MonthNavigator";
@@ -34,7 +34,7 @@ const StatisticsView = observer(() => {
   const hasPinnedMemos = currentUser && (userStore.state.currentUserStats?.pinnedMemos || []).length > 0;
 
   return (
-    <div className="group w-full mt-2 space-y-1 text-zinc-600 dark:text-gray-400 animate-fade-in">
+    <div className="group w-full mt-2 space-y-1 text-muted-foreground animate-fade-in">
       <MonthNavigator visibleMonth={visibleMonthString} onMonthChange={setVisibleMonthString} />
 
       <div className="w-full animate-scale-in">

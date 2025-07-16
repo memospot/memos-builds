@@ -1,13 +1,13 @@
-import { Dropdown, Menu, MenuButton } from "@mui/joy";
 import { SmilePlusIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useRef, useState } from "react";
 import useClickAway from "react-use/lib/useClickAway";
 import { memoServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { memoStore, workspaceStore } from "@/store/v2";
+import { cn } from "@/lib/utils";
+import { memoStore, workspaceStore } from "@/store";
 import { Memo } from "@/types/proto/api/v1/memo_service";
-import { cn } from "@/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface Props {
   memo: Memo;
@@ -36,7 +36,7 @@ const ReactionSelector = observer((props: Props) => {
           (reaction) => reaction.reactionType === reactionType && reaction.creator === currentUser.name,
         );
         for (const reaction of reactions) {
-          await memoServiceClient.deleteMemoReaction({ id: reaction.id });
+          await memoServiceClient.deleteMemoReaction({ name: reaction.name });
         }
       } else {
         await memoServiceClient.upsertMemoReaction({
@@ -55,24 +55,27 @@ const ReactionSelector = observer((props: Props) => {
   };
 
   return (
-    <Dropdown open={open} onOpenChange={(_, isOpen) => setOpen(isOpen)}>
-      <MenuButton slots={{ root: "div" }}>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <span
-          className={cn("h-7 w-7 flex justify-center items-center rounded-full border dark:border-zinc-700 hover:opacity-70", className)}
+          className={cn(
+            "h-7 w-7 flex justify-center items-center rounded-full border cursor-pointer transition-colors hover:opacity-80",
+            className,
+          )}
         >
-          <SmilePlusIcon className="w-4 h-4 mx-auto text-gray-500 dark:text-gray-400" />
+          <SmilePlusIcon className="w-4 h-4 mx-auto text-muted-foreground" />
         </span>
-      </MenuButton>
-      <Menu className="relative" component="div" size="sm" placement="bottom-start">
+      </PopoverTrigger>
+      <PopoverContent align="center">
         <div ref={containerRef}>
-          <div className="flex flex-row flex-wrap py-0.5 px-2 h-auto gap-1 max-w-56">
+          <div className="grid grid-cols-4 sm:grid-cols-6 h-auto gap-1 max-w-56">
             {workspaceMemoRelatedSetting.reactions.map((reactionType) => {
               return (
                 <span
                   key={reactionType}
                   className={cn(
-                    "inline-flex w-auto text-base cursor-pointer rounded px-1 text-gray-500 dark:text-gray-400 hover:opacity-80",
-                    hasReacted(reactionType) && "bg-blue-100 dark:bg-zinc-800",
+                    "inline-flex w-auto text-base cursor-pointer rounded px-1 text-muted-foreground hover:opacity-80 transition-colors",
+                    hasReacted(reactionType) && "bg-secondary text-secondary-foreground",
                   )}
                   onClick={() => handleReactionClick(reactionType)}
                 >
@@ -82,8 +85,8 @@ const ReactionSelector = observer((props: Props) => {
             })}
           </div>
         </div>
-      </Menu>
-    </Dropdown>
+      </PopoverContent>
+    </Popover>
   );
 });
 

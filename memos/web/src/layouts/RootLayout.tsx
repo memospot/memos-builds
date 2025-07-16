@@ -5,11 +5,11 @@ import usePrevious from "react-use/lib/usePrevious";
 import Navigation from "@/components/Navigation";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
+import { cn } from "@/lib/utils";
 import Loading from "@/pages/Loading";
 import { Routes } from "@/router";
-import { workspaceStore } from "@/store/v2";
-import memoFilterStore from "@/store/v2/memoFilter";
-import { cn } from "@/utils";
+import { workspaceStore } from "@/store";
+import memoFilterStore from "@/store/memoFilter";
 
 const RootLayout = observer(() => {
   const location = useLocation();
@@ -26,7 +26,9 @@ const RootLayout = observer(() => {
       if (workspaceStore.state.memoRelatedSetting.disallowPublicVisibility) {
         window.location.href = Routes.AUTH;
         return;
-      } else if (([Routes.ROOT, Routes.RESOURCES, Routes.INBOX, Routes.ARCHIVED, Routes.SETTING] as string[]).includes(location.pathname)) {
+      } else if (
+        ([Routes.ROOT, Routes.ATTACHMENTS, Routes.INBOX, Routes.ARCHIVED, Routes.SETTING] as string[]).includes(location.pathname)
+      ) {
         window.location.href = Routes.EXPLORE;
         return;
       }
@@ -48,14 +50,15 @@ const RootLayout = observer(() => {
       {sm && (
         <div
           className={cn(
-            "group flex flex-col justify-start items-start fixed top-0 left-0 select-none border-r dark:border-zinc-800 h-full bg-zinc-100 dark:bg-zinc-800 dark:bg-opacity-40",
+            "group flex flex-col justify-start items-start fixed top-0 left-0 select-none h-full bg-sidebar",
             "w-16 px-2",
+            "border-r border-border",
           )}
         >
-          <Navigation collapsed={true} />
+          <Navigation className="py-4 md:pt-6" collapsed={true} />
         </div>
       )}
-      <main className="w-full h-auto flex-grow shrink flex flex-col justify-start items-center">
+      <main className="w-full h-auto grow shrink flex flex-col justify-start items-center">
         <Suspense fallback={<Loading />}>
           <Outlet />
         </Suspense>

@@ -2,8 +2,8 @@ import { observer } from "mobx-react-lite";
 import { useContext, useEffect } from "react";
 import useLoading from "@/hooks/useLoading";
 import useNavigateTo from "@/hooks/useNavigateTo";
+import { memoStore } from "@/store";
 import { memoNamePrefix } from "@/store/common";
-import { memoStore } from "@/store/v2";
 import { RendererContext } from "../types";
 import Error from "./Error";
 
@@ -44,7 +44,7 @@ const ReferencedMemo = observer(({ resourceId: uid, params: paramsStr }: Props) 
 
   return (
     <span
-      className="text-blue-600 whitespace-nowrap dark:text-blue-400 cursor-pointer underline break-all hover:opacity-80 decoration-1"
+      className="text-primary whitespace-nowrap cursor-pointer underline break-all hover:text-primary/80 decoration-1"
       onClick={handleGotoMemoDetailPage}
     >
       {displayContent}

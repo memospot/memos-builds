@@ -1,4 +1,3 @@
-import { Option, Select } from "@mui/joy";
 import { CogIcon, DatabaseIcon, KeyIcon, LibraryIcon, LucideIcon, Settings2Icon, UserIcon, UsersIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -12,10 +11,11 @@ import SSOSection from "@/components/Settings/SSOSection";
 import SectionMenuItem from "@/components/Settings/SectionMenuItem";
 import StorageSection from "@/components/Settings/StorageSection";
 import WorkspaceSection from "@/components/Settings/WorkspaceSection";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
-import { workspaceStore } from "@/store/v2";
-import { WorkspaceSettingKey } from "@/store/v2/workspace";
+import { workspaceStore } from "@/store";
+import { WorkspaceSettingKey } from "@/store/workspace";
 import { User_Role } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 
@@ -87,9 +87,9 @@ const Setting = observer(() => {
     <section className="@container w-full max-w-5xl min-h-full flex flex-col justify-start items-start sm:pt-3 md:pt-6 pb-8">
       {!md && <MobileHeader />}
       <div className="w-full px-4 sm:px-6">
-        <div className="w-full shadow flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 text-gray-600 dark:text-gray-400">
+        <div className="w-full border border-border flex flex-row justify-start items-start px-4 py-3 rounded-xl bg-background text-muted-foreground">
           <div className="hidden sm:flex flex-col justify-start items-start w-40 h-auto shrink-0 py-2">
-            <span className="text-sm mt-0.5 pl-3 font-mono select-none text-gray-400 dark:text-gray-500">{t("common.basic")}</span>
+            <span className="text-sm mt-0.5 pl-3 font-mono select-none text-muted-foreground">{t("common.basic")}</span>
             <div className="w-full flex flex-col justify-start items-start mt-1">
               {BASIC_SECTIONS.map((item) => (
                 <SectionMenuItem
@@ -103,7 +103,7 @@ const Setting = observer(() => {
             </div>
             {isHost ? (
               <>
-                <span className="text-sm mt-4 pl-3 font-mono select-none text-gray-400 dark:text-gray-500">{t("common.admin")}</span>
+                <span className="text-sm mt-4 pl-3 font-mono select-none text-muted-foreground">{t("common.admin")}</span>
                 <div className="w-full flex flex-col justify-start items-start mt-1">
                   {ADMIN_SECTIONS.map((item) => (
                     <SectionMenuItem
@@ -123,12 +123,17 @@ const Setting = observer(() => {
           </div>
           <div className="w-full grow sm:pl-4 overflow-x-auto">
             <div className="w-auto inline-block my-2 sm:hidden">
-              <Select value={state.selectedSection} onChange={(_, value) => handleSectionSelectorItemClick(value as SettingSection)}>
-                {settingsSectionList.map((settingSection) => (
-                  <Option key={settingSection} value={settingSection}>
-                    {t(`setting.${settingSection}`)}
-                  </Option>
-                ))}
+              <Select value={state.selectedSection} onValueChange={(value) => handleSectionSelectorItemClick(value as SettingSection)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {settingsSectionList.map((settingSection) => (
+                    <SelectItem key={settingSection} value={settingSection}>
+                      {t(`setting.${settingSection}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             {state.selectedSection === "my-account" ? (

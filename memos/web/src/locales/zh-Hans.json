@@ -20,6 +20,7 @@
     "admin": "管理",
     "archive": "归档",
     "archived": "已归档",
+    "attachments": "附件",
     "avatar": "头像",
     "basic": "基础",
     "beta": "测试",
@@ -32,6 +33,7 @@
     "create": "创建",
     "created-at": "创建时间",
     "database": "数据库",
+    "day": "天",
     "days": "天",
     "delete": "删除",
     "description": "说明",
@@ -43,6 +45,7 @@
     "filter": "过滤器",
     "home": "主页",
     "image": "图片",
+    "in": "包含",
     "inbox": "通知",
     "input": "输入",
     "language": "语言",
@@ -51,6 +54,7 @@
     "learn-more": "了解更多",
     "link": "链接",
     "mark": "引用",
+    "memo": "备忘录",
     "memos": "备忘录",
     "name": "名称",
     "new": "新建",
@@ -91,6 +95,7 @@
     "unpin": "取消置顶",
     "update": "更新",
     "upload": "上传",
+    "user": "用户",
     "username": "用户名",
     "version": "版本",
     "visibility": "可见性",
@@ -108,7 +113,8 @@
   "editor": {
     "add-your-comment-here": "请输入您的评论...",
     "any-thoughts": "此刻的想法...",
-    "save": "保存"
+    "save": "保存",
+    "no-changes-detected": "未检测到更改"
   },
   "filters": {
     "has-code": "有代码",
@@ -140,10 +146,11 @@
     "direction-asc": "正序",
     "direction-desc": "倒序",
     "display-time": "展示时间",
+    "filters": "过滤器",
     "links": "链接",
     "load-more": "加载更多",
     "no-archived-memos": "没有已归档备忘录。",
-    "no-memos": "无备忘",
+    "no-memos": "无备忘录",
     "order-by": "排序",
     "remove-completed-task-list-items": "移除已办",
     "remove-completed-task-list-items-confirm": "您确定要移除所有完成的待办吗？（此操作不可逆）",
@@ -238,6 +245,21 @@
       "description": "该账号下全部的访问令牌",
       "title": "访问令牌"
     },
+    "user-sessions-section": {
+      "title": "用户会话",
+      "description": "当前账号下全部的会话，你可以撤销除当前会话以外的所有会话。",
+      "device": "设备",
+      "location": "位置",
+      "last-active": "最后活跃时间",
+      "expires": "过期时间",
+      "current": "当前设备",
+      "never": "从未",
+      "session-revocation": "您确定要撤销会话 {{sessionId}} 吗？删除后您将需要在该设备上再次登录。",
+      "session-revoked": "会话已成功撤销",
+      "revoke-session": "撤销会话",
+      "cannot-revoke-current": "无法撤销当前会话",
+      "no-sessions": "当前没有会话"
+    },
     "account-section": {
       "change-password": "修改密码",
       "email-note": "可选",
@@ -252,8 +274,8 @@
       "username-note": "用于登录"
     },
     "appearance-option": {
-      "dark": "总是深色",
-      "light": "总是浅色",
+      "dark": "深色",
+      "light": "浅色",
       "system": "跟随系统"
     },
     "member": "成员",

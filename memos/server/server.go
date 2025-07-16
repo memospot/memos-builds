@@ -24,7 +24,6 @@ import (
 	apiv1 "github.com/usememos/memos/server/router/api/v1"
 	"github.com/usememos/memos/server/router/frontend"
 	"github.com/usememos/memos/server/router/rss"
-	"github.com/usememos/memos/server/runner/memopayload"
 	"github.com/usememos/memos/server/runner/s3presign"
 	"github.com/usememos/memos/store"
 )
@@ -74,7 +73,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 		return c.String(http.StatusOK, "Service ready.")
 	})
 
-	// Serve frontend resources.
+	// Serve frontend static files.
 	frontend.NewFrontendService(profile, store).Serve(ctx, echoServer)
 
 	rootGroup := echoServer.Group("")
@@ -83,7 +82,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	rss.NewRSSService(s.Profile, s.Store).RegisterRoutes(rootGroup)
 
 	grpcServer := grpc.NewServer(
-		// Override the maximum receiving message size to math.MaxInt32 for uploading large resources.
+		// Override the maximum receiving message size to math.MaxInt32 for uploading large attachments.
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.ChainUnaryInterceptor(
 			apiv1.NewLoggerInterceptor().LoggerInterceptor,
@@ -193,11 +192,6 @@ func (s *Server) StartBackgroundRunners(ctx context.Context) {
 	// Create and start S3 presign runner
 	s3presignRunner := s3presign.NewRunner(s.Store)
 	s3presignRunner.RunOnce(ctx)
-
-	// Create and start memo payload runner just once
-	memopayloadRunner := memopayload.NewRunner(s.Store)
-	// Rebuild all memos' payload after server starts.
-	memopayloadRunner.RunOnce(ctx)
 
 	// Start continuous S3 presign runner
 	go func() {
