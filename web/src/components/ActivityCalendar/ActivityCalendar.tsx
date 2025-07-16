@@ -1,18 +1,18 @@
-import { Tooltip } from "@mui/joy";
 import dayjs from "dayjs";
 import { observer } from "mobx-react-lite";
 import { memo, useMemo } from "react";
-import { workspaceStore } from "@/store/v2";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { workspaceStore } from "@/store";
 import type { ActivityCalendarProps, CalendarDay } from "@/types/statistics";
-import { cn } from "@/utils";
 import { useTranslate } from "@/utils/i18n";
 
 const getCellOpacity = (ratio: number): string => {
   if (ratio === 0) return "";
-  if (ratio > 0.75) return "bg-primary-darker/90 text-gray-100 dark:bg-primary-lighter/80";
-  if (ratio > 0.5) return "bg-primary-darker/70 text-gray-100 dark:bg-primary-lighter/60";
-  if (ratio > 0.25) return "bg-primary/70 text-gray-100 dark:bg-primary-lighter/40";
-  return "bg-primary/50 text-gray-100 dark:bg-primary-lighter/20";
+  if (ratio > 0.75) return "bg-destructive text-destructive-foreground";
+  if (ratio > 0.5) return "bg-destructive/70 text-destructive-foreground";
+  if (ratio > 0.25) return "bg-destructive/50 text-destructive-foreground";
+  return "bg-destructive/30 text-destructive-foreground";
 };
 
 const CalendarCell = memo(
@@ -37,10 +37,10 @@ const CalendarCell = memo(
       <div
         className={cn(
           "w-6 h-6 text-xs lg:text-[13px] flex justify-center items-center cursor-default",
-          "rounded-lg border-2 text-gray-400 transition-all duration-200",
+          "rounded-lg border-2 text-muted-foreground transition-all duration-200",
           dayInfo.isCurrentMonth && getCellOpacity(count / maxCount),
-          dayInfo.isCurrentMonth && isToday && "border-zinc-400",
-          dayInfo.isCurrentMonth && isSelected && "font-medium border-zinc-400",
+          dayInfo.isCurrentMonth && isToday && "border-border",
+          dayInfo.isCurrentMonth && isSelected && "font-medium border-border",
           dayInfo.isCurrentMonth && !isToday && !isSelected && "border-transparent",
           count > 0 && "cursor-pointer hover:scale-110",
         )}
@@ -52,21 +52,28 @@ const CalendarCell = memo(
 
     if (!dayInfo.isCurrentMonth) {
       return (
-        <div className={cn("w-6 h-6 text-xs lg:text-[13px] flex justify-center items-center cursor-default opacity-60 text-gray-400")}>
+        <div
+          className={cn("w-6 h-6 text-xs lg:text-[13px] flex justify-center items-center cursor-default opacity-60 text-muted-foreground")}
+        >
           {dayInfo.day}
         </div>
       );
     }
 
     return (
-      <Tooltip className="shrink-0" title={tooltipText} placement="top" arrow>
-        {cellContent}
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="shrink-0">{cellContent}</div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltipText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   },
 );
-
-CalendarCell.displayName = "CalendarCell";
 
 export const ActivityCalendar = memo(
   observer((props: ActivityCalendarProps) => {

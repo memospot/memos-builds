@@ -313,24 +313,27 @@ func (x *WorkspaceBasicSetting) GetSchemaVersion() string {
 
 type WorkspaceGeneralSetting struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// theme is the name of the selected theme.
+	// This references a CSS file in the web/public/themes/ directory.
+	Theme string `protobuf:"bytes,1,opt,name=theme,proto3" json:"theme,omitempty"`
 	// disallow_user_registration disallows user registration.
-	DisallowUserRegistration bool `protobuf:"varint,1,opt,name=disallow_user_registration,json=disallowUserRegistration,proto3" json:"disallow_user_registration,omitempty"`
+	DisallowUserRegistration bool `protobuf:"varint,2,opt,name=disallow_user_registration,json=disallowUserRegistration,proto3" json:"disallow_user_registration,omitempty"`
 	// disallow_password_auth disallows password authentication.
-	DisallowPasswordAuth bool `protobuf:"varint,2,opt,name=disallow_password_auth,json=disallowPasswordAuth,proto3" json:"disallow_password_auth,omitempty"`
+	DisallowPasswordAuth bool `protobuf:"varint,3,opt,name=disallow_password_auth,json=disallowPasswordAuth,proto3" json:"disallow_password_auth,omitempty"`
 	// additional_script is the additional script.
-	AdditionalScript string `protobuf:"bytes,3,opt,name=additional_script,json=additionalScript,proto3" json:"additional_script,omitempty"`
+	AdditionalScript string `protobuf:"bytes,4,opt,name=additional_script,json=additionalScript,proto3" json:"additional_script,omitempty"`
 	// additional_style is the additional style.
-	AdditionalStyle string `protobuf:"bytes,4,opt,name=additional_style,json=additionalStyle,proto3" json:"additional_style,omitempty"`
+	AdditionalStyle string `protobuf:"bytes,5,opt,name=additional_style,json=additionalStyle,proto3" json:"additional_style,omitempty"`
 	// custom_profile is the custom profile.
-	CustomProfile *WorkspaceCustomProfile `protobuf:"bytes,5,opt,name=custom_profile,json=customProfile,proto3" json:"custom_profile,omitempty"`
+	CustomProfile *WorkspaceCustomProfile `protobuf:"bytes,6,opt,name=custom_profile,json=customProfile,proto3" json:"custom_profile,omitempty"`
 	// week_start_day_offset is the week start day offset from Sunday.
 	// 0: Sunday, 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday, 6: Saturday
 	// Default is Sunday.
-	WeekStartDayOffset int32 `protobuf:"varint,6,opt,name=week_start_day_offset,json=weekStartDayOffset,proto3" json:"week_start_day_offset,omitempty"`
+	WeekStartDayOffset int32 `protobuf:"varint,7,opt,name=week_start_day_offset,json=weekStartDayOffset,proto3" json:"week_start_day_offset,omitempty"`
 	// disallow_change_username disallows changing username.
-	DisallowChangeUsername bool `protobuf:"varint,7,opt,name=disallow_change_username,json=disallowChangeUsername,proto3" json:"disallow_change_username,omitempty"`
+	DisallowChangeUsername bool `protobuf:"varint,8,opt,name=disallow_change_username,json=disallowChangeUsername,proto3" json:"disallow_change_username,omitempty"`
 	// disallow_change_nickname disallows changing nickname.
-	DisallowChangeNickname bool `protobuf:"varint,8,opt,name=disallow_change_nickname,json=disallowChangeNickname,proto3" json:"disallow_change_nickname,omitempty"`
+	DisallowChangeNickname bool `protobuf:"varint,9,opt,name=disallow_change_nickname,json=disallowChangeNickname,proto3" json:"disallow_change_nickname,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -363,6 +366,13 @@ func (x *WorkspaceGeneralSetting) ProtoReflect() protoreflect.Message {
 // Deprecated: Use WorkspaceGeneralSetting.ProtoReflect.Descriptor instead.
 func (*WorkspaceGeneralSetting) Descriptor() ([]byte, []int) {
 	return file_store_workspace_setting_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *WorkspaceGeneralSetting) GetTheme() string {
+	if x != nil {
+		return x.Theme
+	}
+	return ""
 }
 
 func (x *WorkspaceGeneralSetting) GetDisallowUserRegistration() bool {
@@ -664,19 +674,19 @@ type WorkspaceMemoRelatedSetting struct {
 	// content_length_limit is the limit of content length. Unit is byte.
 	ContentLengthLimit int32 `protobuf:"varint,3,opt,name=content_length_limit,json=contentLengthLimit,proto3" json:"content_length_limit,omitempty"`
 	// enable_double_click_edit enables editing on double click.
-	EnableDoubleClickEdit bool `protobuf:"varint,5,opt,name=enable_double_click_edit,json=enableDoubleClickEdit,proto3" json:"enable_double_click_edit,omitempty"`
+	EnableDoubleClickEdit bool `protobuf:"varint,4,opt,name=enable_double_click_edit,json=enableDoubleClickEdit,proto3" json:"enable_double_click_edit,omitempty"`
 	// enable_link_preview enables links preview.
-	EnableLinkPreview bool `protobuf:"varint,6,opt,name=enable_link_preview,json=enableLinkPreview,proto3" json:"enable_link_preview,omitempty"`
+	EnableLinkPreview bool `protobuf:"varint,5,opt,name=enable_link_preview,json=enableLinkPreview,proto3" json:"enable_link_preview,omitempty"`
 	// enable_comment enables comment.
-	EnableComment bool `protobuf:"varint,7,opt,name=enable_comment,json=enableComment,proto3" json:"enable_comment,omitempty"`
+	EnableComment bool `protobuf:"varint,6,opt,name=enable_comment,json=enableComment,proto3" json:"enable_comment,omitempty"`
 	// reactions is the list of reactions.
-	Reactions []string `protobuf:"bytes,10,rep,name=reactions,proto3" json:"reactions,omitempty"`
+	Reactions []string `protobuf:"bytes,7,rep,name=reactions,proto3" json:"reactions,omitempty"`
 	// disable markdown shortcuts
-	DisableMarkdownShortcuts bool `protobuf:"varint,11,opt,name=disable_markdown_shortcuts,json=disableMarkdownShortcuts,proto3" json:"disable_markdown_shortcuts,omitempty"`
+	DisableMarkdownShortcuts bool `protobuf:"varint,8,opt,name=disable_markdown_shortcuts,json=disableMarkdownShortcuts,proto3" json:"disable_markdown_shortcuts,omitempty"`
 	// enable_blur_nsfw_content enables blurring of content marked as not safe for work (NSFW).
-	EnableBlurNsfwContent bool `protobuf:"varint,12,opt,name=enable_blur_nsfw_content,json=enableBlurNsfwContent,proto3" json:"enable_blur_nsfw_content,omitempty"`
+	EnableBlurNsfwContent bool `protobuf:"varint,9,opt,name=enable_blur_nsfw_content,json=enableBlurNsfwContent,proto3" json:"enable_blur_nsfw_content,omitempty"`
 	// nsfw_tags is the list of tags that mark content as NSFW for blurring.
-	NsfwTags      []string `protobuf:"bytes,13,rep,name=nsfw_tags,json=nsfwTags,proto3" json:"nsfw_tags,omitempty"`
+	NsfwTags      []string `protobuf:"bytes,10,rep,name=nsfw_tags,json=nsfwTags,proto3" json:"nsfw_tags,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -796,16 +806,17 @@ const file_store_workspace_setting_proto_rawDesc = "" +
 	"\x15WorkspaceBasicSetting\x12\x1d\n" +
 	"\n" +
 	"secret_key\x18\x01 \x01(\tR\tsecretKey\x12%\n" +
-	"\x0eschema_version\x18\x02 \x01(\tR\rschemaVersion\"\xd8\x03\n" +
-	"\x17WorkspaceGeneralSetting\x12<\n" +
-	"\x1adisallow_user_registration\x18\x01 \x01(\bR\x18disallowUserRegistration\x124\n" +
-	"\x16disallow_password_auth\x18\x02 \x01(\bR\x14disallowPasswordAuth\x12+\n" +
-	"\x11additional_script\x18\x03 \x01(\tR\x10additionalScript\x12)\n" +
-	"\x10additional_style\x18\x04 \x01(\tR\x0fadditionalStyle\x12J\n" +
-	"\x0ecustom_profile\x18\x05 \x01(\v2#.memos.store.WorkspaceCustomProfileR\rcustomProfile\x121\n" +
-	"\x15week_start_day_offset\x18\x06 \x01(\x05R\x12weekStartDayOffset\x128\n" +
-	"\x18disallow_change_username\x18\a \x01(\bR\x16disallowChangeUsername\x128\n" +
-	"\x18disallow_change_nickname\x18\b \x01(\bR\x16disallowChangeNickname\"\xa3\x01\n" +
+	"\x0eschema_version\x18\x02 \x01(\tR\rschemaVersion\"\xee\x03\n" +
+	"\x17WorkspaceGeneralSetting\x12\x14\n" +
+	"\x05theme\x18\x01 \x01(\tR\x05theme\x12<\n" +
+	"\x1adisallow_user_registration\x18\x02 \x01(\bR\x18disallowUserRegistration\x124\n" +
+	"\x16disallow_password_auth\x18\x03 \x01(\bR\x14disallowPasswordAuth\x12+\n" +
+	"\x11additional_script\x18\x04 \x01(\tR\x10additionalScript\x12)\n" +
+	"\x10additional_style\x18\x05 \x01(\tR\x0fadditionalStyle\x12J\n" +
+	"\x0ecustom_profile\x18\x06 \x01(\v2#.memos.store.WorkspaceCustomProfileR\rcustomProfile\x121\n" +
+	"\x15week_start_day_offset\x18\a \x01(\x05R\x12weekStartDayOffset\x128\n" +
+	"\x18disallow_change_username\x18\b \x01(\bR\x16disallowChangeUsername\x128\n" +
+	"\x18disallow_change_nickname\x18\t \x01(\bR\x16disallowChangeNickname\"\xa3\x01\n" +
 	"\x16WorkspaceCustomProfile\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x19\n" +
@@ -830,19 +841,19 @@ const file_store_workspace_setting_proto_rawDesc = "" +
 	"\bendpoint\x18\x03 \x01(\tR\bendpoint\x12\x16\n" +
 	"\x06region\x18\x04 \x01(\tR\x06region\x12\x16\n" +
 	"\x06bucket\x18\x05 \x01(\tR\x06bucket\x12$\n" +
-	"\x0euse_path_style\x18\x06 \x01(\bR\fusePathStyle\"\x94\x04\n" +
+	"\x0euse_path_style\x18\x06 \x01(\bR\fusePathStyle\"\x88\x04\n" +
 	"\x1bWorkspaceMemoRelatedSetting\x12<\n" +
 	"\x1adisallow_public_visibility\x18\x01 \x01(\bR\x18disallowPublicVisibility\x127\n" +
 	"\x18display_with_update_time\x18\x02 \x01(\bR\x15displayWithUpdateTime\x120\n" +
 	"\x14content_length_limit\x18\x03 \x01(\x05R\x12contentLengthLimit\x127\n" +
-	"\x18enable_double_click_edit\x18\x05 \x01(\bR\x15enableDoubleClickEdit\x12.\n" +
-	"\x13enable_link_preview\x18\x06 \x01(\bR\x11enableLinkPreview\x12%\n" +
-	"\x0eenable_comment\x18\a \x01(\bR\renableComment\x12\x1c\n" +
-	"\treactions\x18\n" +
-	" \x03(\tR\treactions\x12<\n" +
-	"\x1adisable_markdown_shortcuts\x18\v \x01(\bR\x18disableMarkdownShortcuts\x127\n" +
-	"\x18enable_blur_nsfw_content\x18\f \x01(\bR\x15enableBlurNsfwContent\x12\x1b\n" +
-	"\tnsfw_tags\x18\r \x03(\tR\bnsfwTagsJ\x04\b\x04\x10\x05J\x04\b\b\x10\t*s\n" +
+	"\x18enable_double_click_edit\x18\x04 \x01(\bR\x15enableDoubleClickEdit\x12.\n" +
+	"\x13enable_link_preview\x18\x05 \x01(\bR\x11enableLinkPreview\x12%\n" +
+	"\x0eenable_comment\x18\x06 \x01(\bR\renableComment\x12\x1c\n" +
+	"\treactions\x18\a \x03(\tR\treactions\x12<\n" +
+	"\x1adisable_markdown_shortcuts\x18\b \x01(\bR\x18disableMarkdownShortcuts\x127\n" +
+	"\x18enable_blur_nsfw_content\x18\t \x01(\bR\x15enableBlurNsfwContent\x12\x1b\n" +
+	"\tnsfw_tags\x18\n" +
+	" \x03(\tR\bnsfwTags*s\n" +
 	"\x13WorkspaceSettingKey\x12%\n" +
 	"!WORKSPACE_SETTING_KEY_UNSPECIFIED\x10\x00\x12\t\n" +
 	"\x05BASIC\x10\x01\x12\v\n" +

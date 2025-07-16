@@ -1,16 +1,16 @@
-import { useColorScheme } from "@mui/joy";
 import { observer } from "mobx-react-lite";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import { getSystemColorScheme } from "./helpers/utils";
 import useNavigateTo from "./hooks/useNavigateTo";
-import { userStore, workspaceStore } from "./store/v2";
+import { userStore, workspaceStore } from "./store";
+import { loadTheme } from "./utils/theme";
 
 const App = observer(() => {
   const { i18n } = useTranslation();
   const navigateTo = useNavigateTo();
-  const { mode, setMode } = useColorScheme();
+  const [mode, setMode] = useState<"light" | "dark">("light");
   const workspaceProfile = workspaceStore.state.profile;
   const userSetting = userStore.state.userSetting;
   const workspaceGeneralSetting = workspaceStore.state.generalSetting;
@@ -103,6 +103,13 @@ const App = observer(() => {
       appearance: userSetting.appearance || workspaceStore.state.appearance,
     });
   }, [userSetting?.locale, userSetting?.appearance]);
+
+  // Load theme when user setting changes (user theme is already backfilled with workspace theme)
+  useEffect(() => {
+    if (userSetting?.theme) {
+      loadTheme(userSetting.theme);
+    }
+  }, [userSetting?.theme]);
 
   return <Outlet />;
 });

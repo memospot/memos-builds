@@ -20,6 +20,7 @@
     "admin": "Admin",
     "archive": "Archive",
     "archived": "Archived",
+    "attachments": "Attachments",
     "avatar": "Avatar",
     "basic": "Basic",
     "beta": "Beta",
@@ -112,7 +113,8 @@
   "editor": {
     "add-your-comment-here": "Add your comment here...",
     "any-thoughts": "Any thoughts...",
-    "save": "Save"
+    "save": "Save",
+    "no-changes-detected": "No changes detected"
   },
   "filters": {
     "has-code": "hasCode",
@@ -160,7 +162,7 @@
     "visibility": {
       "disabled": "Public memos are disabled",
       "private": "Private",
-      "protected": "Workspace",
+      "protected": "Protected",
       "public": "Public"
     },
     "list": "List",
@@ -249,6 +251,21 @@
       "title": "Access Tokens",
       "token": "Token"
     },
+    "user-sessions-section": {
+      "title": "Active Sessions",
+      "description": "A list of all active sessions for your account. Sessions automatically expire 2 weeks after the last activity. You can revoke any session except the current one.",
+      "device": "Device",
+      "location": "Location",
+      "last-active": "Last Active",
+      "expires": "Expires",
+      "current": "Current",
+      "never": "Never",
+      "session-revocation": "Are you sure to revoke session {{sessionId}}? You will need to sign in again on that device.",
+      "session-revoked": "Session revoked successfully",
+      "revoke-session": "Revoke session",
+      "cannot-revoke-current": "Cannot revoke current session",
+      "no-sessions": "No active sessions found"
+    },
     "account-section": {
       "change-password": "Change password",
       "email-note": "Optional",
@@ -293,6 +310,7 @@
     "preference-section": {
       "default-memo-sort-option": "Memo display time",
       "default-memo-visibility": "Default memo visibility",
+      "apperance": "Appearance",
       "theme": "Theme"
     },
     "sso": "SSO",

@@ -20,6 +20,7 @@
     "admin": "管理",
     "archive": "封存",
     "archived": "封存",
+    "attachments": "附屬物",
     "avatar": "頭像",
     "basic": "基礎",
     "beta": "測試版",
@@ -32,7 +33,7 @@
     "create": "建立",
     "database": "資料庫",
     "day": "日",
-    "days": "日子",
+    "days": "日",
     "delete": "刪除",
     "description": "說明",
     "edit": "編輯",
@@ -49,7 +50,7 @@
     "learn-more": "了解",
     "link": "連結",
     "mark": "Mark",
-    "memo": "Memo",
+    "memo": "備忘錄",
     "memos": "備忘錄",
     "name": "名稱",
     "new": "新增",
@@ -83,6 +84,7 @@
     "unpin": "解除釘選",
     "update": "更新",
     "upload": "上傳",
+    "user": "使用者",
     "username": "帳號",
     "version": "版本",
     "visibility": "可見度",
@@ -229,6 +231,20 @@
       "title": "存取令牌",
       "token": "令牌"
     },
+    "user-sessions-section": {
+      "title": "使用者會话",
+      "description": "此處列出您帳號的所有使用者會话。",
+      "device": "裝置",
+      "last-active": "最後活躍時間",
+      "expires": "過期時間",
+      "current": "當前裝置",
+      "never": "永不過期",
+      "session-revocation": "您確定要撤銷 {{device}} 的使用者會话嗎？此操作無法恢復。",
+      "session-revoked": "使用者會话撤銷成功",
+      "revoke-session": "撤銷使用者會话",
+      "cannot-revoke-current": "不能撤銷當前裝置的使用者會话",
+      "no-sessions": "沒有使用者會话"
+    },
     "account-section": {
       "change-password": "變更密碼",
       "email-note": "非必須的",
@@ -243,8 +259,8 @@
       "username-note": "為登入用途"
     },
     "appearance-option": {
-      "dark": "總是深色",
-      "light": "總是淺色",
+      "dark": "深色",
+      "light": "淺色",
       "system": "跟隨系統"
     },
     "member": "使用者",
@@ -359,7 +375,8 @@
       "max-upload-size": "最大上傳檔案大小 (MiB)",
       "max-upload-size-hint": "建議值為 32 MiB。",
       "removed-completed-task-list-items": "啟用移除已完成",
-      "server-name": "伺服器名稱"
+      "server-name": "伺服器名稱",
+      "title": "系統設定"
     },
     "version": "版本",
     "webhook-section": {
@@ -392,6 +409,13 @@
     "create-tags-guide": "您可以通過輸入`#標籤`來創建標籤。",
     "delete-confirm": "您確定要刪除此標籤嗎？所有關聯的memos將會被封存",
     "delete-tag": "刪除標籤",
-    "no-tag-found": "找不到標籤"
+    "no-tag-found": "找不到標籤",
+    "new-tag": "新標籤",
+    "old-name": "舊標籤名稱",
+    "rename-error-empty": "標籤名稱不能為空",
+    "rename-error-repeat": "標籤名稱已存在",
+    "rename-success": "標籤重命名成功",
+    "rename-tag": "重命名標籤",
+    "rename-tip": "您的標籤名稱將會被更新"
   }
 }

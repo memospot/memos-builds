@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 import { HomeSidebar, HomeSidebarDrawer } from "@/components/HomeSidebar";
 import MobileHeader from "@/components/MobileHeader";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
-import { cn } from "@/utils";
+import { cn } from "@/lib/utils";
 
 const HomeLayout = observer(() => {
   const { md, lg } = useResponsiveWidth();
@@ -16,13 +16,7 @@ const HomeLayout = observer(() => {
         </MobileHeader>
       )}
       {md && (
-        <div
-          className={cn(
-            "fixed top-0 left-16 shrink-0 h-[100svh] transition-all",
-            "border-r border-gray-200 dark:border-zinc-800",
-            lg ? "w-72" : "w-56",
-          )}
-        >
+        <div className={cn("fixed top-0 left-16 shrink-0 h-svh transition-all", "border-r border-border", lg ? "w-72" : "w-56")}>
           <HomeSidebar className={cn("px-3 py-6")} />
         </div>
       )}
