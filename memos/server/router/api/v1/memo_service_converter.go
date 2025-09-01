@@ -16,7 +16,7 @@ import (
 	"github.com/usememos/memos/store"
 )
 
-func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Memo) (*v1pb.Memo, error) {
+func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Memo, reactions []*store.Reaction, attachments []*store.Attachment) (*v1pb.Memo, error) {
 	displayTs := memo.CreatedTs
 	workspaceMemoRelatedSetting, err := s.Store.GetWorkspaceMemoRelatedSetting(ctx)
 	if err != nil {
@@ -43,16 +43,17 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		memoMessage.Property = convertMemoPropertyFromStore(memo.Payload.Property)
 		memoMessage.Location = convertLocationFromStore(memo.Payload.Location)
 	}
-	if memo.ParentID != nil {
-		parent, err := s.Store.GetMemo(ctx, &store.FindMemo{
-			ID:             memo.ParentID,
-			ExcludeContent: true,
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get parent memo")
-		}
-		parentName := fmt.Sprintf("%s%s", MemoNamePrefix, parent.UID)
+
+	if memo.ParentUID != nil {
+		parentName := fmt.Sprintf("%s%s", MemoNamePrefix, *memo.ParentUID)
 		memoMessage.Parent = &parentName
+	}
+
+	memoMessage.Reactions = []*v1pb.Reaction{}
+
+	for _, reaction := range reactions {
+		reactionResponse := convertReactionFromStore(reaction)
+		memoMessage.Reactions = append(memoMessage.Reactions, reactionResponse)
 	}
 
 	listMemoRelationsResponse, err := s.ListMemoRelations(ctx, &v1pb.ListMemoRelationsRequest{Name: name})
@@ -61,17 +62,12 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 	}
 	memoMessage.Relations = listMemoRelationsResponse.Relations
 
-	listMemoAttachmentsResponse, err := s.ListMemoAttachments(ctx, &v1pb.ListMemoAttachmentsRequest{Name: name})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list memo attachments")
-	}
-	memoMessage.Attachments = listMemoAttachmentsResponse.Attachments
+	memoMessage.Attachments = []*v1pb.Attachment{}
 
-	listMemoReactionsResponse, err := s.ListMemoReactions(ctx, &v1pb.ListMemoReactionsRequest{Name: name})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list memo reactions")
+	for _, attachment := range attachments {
+		attachmentResponse := convertAttachmentFromStore(attachment)
+		memoMessage.Attachments = append(memoMessage.Attachments, attachmentResponse)
 	}
-	memoMessage.Reactions = listMemoReactionsResponse.Reactions
 
 	nodes, err := parser.Parse(tokenizer.Tokenize(memo.Content))
 	if err != nil {

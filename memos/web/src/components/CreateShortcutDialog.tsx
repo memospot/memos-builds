@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +29,18 @@ function CreateShortcutDialog({ open, onOpenChange, shortcut: initialShortcut, o
   });
   const requestState = useLoading(false);
   const isCreating = !initialShortcut;
+
+  useEffect(() => {
+    if (initialShortcut) {
+      setShortcut({
+        name: initialShortcut.name,
+        title: initialShortcut.title,
+        filter: initialShortcut.filter,
+      });
+    } else {
+      setShortcut({ name: "", title: "", filter: "" });
+    }
+  }, [initialShortcut]);
 
   const onShortcutTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setShortcut({ ...shortcut, title: e.target.value });
@@ -67,7 +79,7 @@ function CreateShortcutDialog({ open, onOpenChange, shortcut: initialShortcut, o
         toast.success("Update shortcut successfully");
       }
       // Refresh shortcuts.
-      await userStore.fetchShortcuts();
+      await userStore.fetchUserSettings();
       requestState.setFinish();
       onSuccess?.();
       onOpenChange(false);
@@ -105,21 +117,11 @@ function CreateShortcutDialog({ open, onOpenChange, shortcut: initialShortcut, o
               <li>
                 <a
                   className="text-primary hover:underline"
-                  href="https://www.usememos.com/docs/getting-started/shortcuts"
+                  href="https://www.usememos.com/docs/guides/shortcuts"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   Docs - Shortcuts
-                </a>
-              </li>
-              <li>
-                <a
-                  className="text-primary hover:underline"
-                  href="https://www.usememos.com/docs/getting-started/shortcuts#how-to-write-a-filter"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  How to Write a Filter?
                 </a>
               </li>
             </ul>

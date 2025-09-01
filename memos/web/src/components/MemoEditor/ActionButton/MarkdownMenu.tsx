@@ -1,5 +1,6 @@
 import { CheckSquareIcon, Code2Icon, SquareSlashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { useTranslate } from "@/utils/i18n";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
 import { EditorRefActions } from "../Editor";
@@ -61,11 +62,20 @@ const MarkdownMenu = (props: Props) => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <SquareSlashIcon className="size-5" />
-        </Button>
-      </DropdownMenuTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <SquareSlashIcon className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{t("tooltip.markdown-menu")}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DropdownMenuContent align="start">
         <DropdownMenuItem onClick={handleCodeBlockClick}>
           <Code2Icon className="w-4 h-auto text-muted-foreground" />
@@ -78,7 +88,7 @@ const MarkdownMenu = (props: Props) => {
         <div className="px-2 -mt-1">
           <a
             className="text-xs text-primary hover:underline"
-            href="https://www.usememos.com/docs/getting-started/content-syntax"
+            href="https://www.usememos.com/docs/guides/content-syntax"
             target="_blank"
             rel="noopener noreferrer"
           >

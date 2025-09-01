@@ -2,6 +2,7 @@ import { HashIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import OverflowTip from "@/components/kit/OverflowTip";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { userStore } from "@/store";
 import { useTranslate } from "@/utils/i18n";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
@@ -34,11 +35,20 @@ const TagSelector = observer((props: Props) => {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <HashIcon className="size-5" />
-        </Button>
-      </PopoverTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <HashIcon className="size-5" />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{t("tooltip.tags")}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent align="start" sideOffset={2}>
         {tags.length > 0 ? (
           <div className="flex flex-row justify-start items-start flex-wrap px-2 max-w-48 h-auto max-h-48 overflow-y-auto gap-x-2">

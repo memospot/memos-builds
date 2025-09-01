@@ -3,7 +3,10 @@ import { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, use
 import { markdownServiceClient } from "@/grpcweb";
 import { cn } from "@/lib/utils";
 import { Node, NodeType, OrderedListItemNode, TaskListItemNode, UnorderedListItemNode } from "@/types/proto/api/v1/markdown_service";
+import { Command } from "../types/command";
+import CommandSuggestions from "./CommandSuggestions";
 import TagSuggestions from "./TagSuggestions";
+import { editorCommands } from "./commands";
 
 export interface EditorRefActions {
   getEditor: () => HTMLTextAreaElement | null;
@@ -26,6 +29,7 @@ interface Props {
   initialContent: string;
   placeholder: string;
   tools?: ReactNode;
+  commands?: Command[];
   onContentChange: (content: string) => void;
   onPaste: (event: React.ClipboardEvent) => void;
 }
@@ -216,7 +220,7 @@ const Editor = forwardRef(function Editor(props: Props, ref: React.ForwardedRef<
     <div className={cn("flex flex-col justify-start items-start relative w-full h-auto max-h-[50vh] bg-inherit", className)}>
       <textarea
         className="w-full h-full my-1 text-base resize-none overflow-x-hidden overflow-y-auto bg-transparent outline-none placeholder:opacity-70 whitespace-pre-wrap break-words"
-        rows={2}
+        rows={1}
         placeholder={placeholder}
         ref={editorRef}
         onPaste={onPaste}
@@ -226,6 +230,7 @@ const Editor = forwardRef(function Editor(props: Props, ref: React.ForwardedRef<
         onCompositionEnd={() => setTimeout(() => setIsInIME(false))}
       ></textarea>
       <TagSuggestions editorRef={editorRef} editorActions={ref} />
+      <CommandSuggestions editorRef={editorRef} editorActions={ref} commands={editorCommands} />
     </div>
   );
 });

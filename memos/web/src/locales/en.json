@@ -21,6 +21,7 @@
     "archive": "Archive",
     "archived": "Archived",
     "attachments": "Attachments",
+    "auto-expand": "Auto expand",
     "avatar": "Avatar",
     "basic": "Basic",
     "beta": "Beta",
@@ -123,7 +124,8 @@
   },
   "inbox": {
     "memo-comment": "{{user}} has a comment on your {{memo}}.",
-    "version-update": "New version {{version}} is available now!"
+    "version-update": "New version {{version}} is available now!",
+    "failed-to-load": "Failed to load inbox item"
   },
   "markdown": {
     "checkbox": "Checkbox",
@@ -279,11 +281,6 @@
       "update-information": "Update Information",
       "username-note": "Used to sign in"
     },
-    "appearance-option": {
-      "dark": "Always dark",
-      "light": "Always light",
-      "system": "Follow system"
-    },
     "member": "Member",
     "member-list": "Member list",
     "member-section": {
@@ -310,7 +307,6 @@
     "preference-section": {
       "default-memo-sort-option": "Memo display time",
       "default-memo-visibility": "Default memo visibility",
-      "apperance": "Appearance",
       "theme": "Theme"
     },
     "sso": "SSO",
@@ -381,7 +377,6 @@
       "additional-style-placeholder": "Additional CSS code",
       "allow-user-signup": "Allow user signup",
       "customize-server": {
-        "appearance": "Server Appearance",
         "description": "Description",
         "icon-url": "Icon URL",
         "locale": "Server Locale",
@@ -442,5 +437,13 @@
     "rename-success": "Renamed tag successfully",
     "rename-tag": "Rename tag",
     "rename-tip": "All your memos with this tag will be updated."
+  },
+  "tooltip": {
+    "link-memo": "Link Memo",
+    "markdown-menu": "Markdown",
+    "select-location": "Location",
+    "select-visibility": "Visibility",
+    "tags": "Tags",
+    "upload-attachment": "Upload Attachment(s)"
   }
 }

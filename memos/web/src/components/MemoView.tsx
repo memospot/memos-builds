@@ -136,8 +136,7 @@ const MemoView: React.FC<Props> = observer((props: Props) => {
   ) : (
     <div
       className={cn(
-        "group relative flex flex-col justify-start items-start w-full px-4 py-3 mb-2 gap-2 text-card-foreground rounded-lg border border-border transition-colors",
-        props.showPinned && memo.pinned ? "bg-accent" : "bg-card",
+        "group relative flex flex-col justify-start items-start bg-card w-full px-4 py-3 mb-2 gap-2 text-card-foreground rounded-lg border border-border transition-colors",
         className,
       )}
     >
@@ -191,7 +190,7 @@ const MemoView: React.FC<Props> = observer((props: Props) => {
             )}
             {currentUser && !isArchived && <ReactionSelector className="border-none w-auto h-auto" memo={memo} />}
           </div>
-          {!isInMemoDetailPage && (workspaceMemoRelatedSetting.enableComment || commentAmount > 0) && (
+          {!isInMemoDetailPage && commentAmount > 0 && (
             <Link
               className={cn(
                 "flex flex-row justify-start items-center rounded-md p-1 hover:opacity-80",

@@ -114,11 +114,6 @@ export interface ListUsersRequest {
    * Supported fields: username, email, role, state, create_time, update_time
    */
   filter: string;
-  /**
-   * Optional. The order to sort results by.
-   * Example: "create_time desc" or "username asc"
-   */
-  orderBy: string;
   /** Optional. If true, show deleted users in the response. */
   showDeleted: boolean;
 }
@@ -191,24 +186,6 @@ export interface DeleteUserRequest {
   force: boolean;
 }
 
-export interface SearchUsersRequest {
-  /** Required. The search query. */
-  query: string;
-  /** Optional. The maximum number of users to return. */
-  pageSize: number;
-  /** Optional. A page token for pagination. */
-  pageToken: string;
-}
-
-export interface SearchUsersResponse {
-  /** The list of users matching the search query. */
-  users: User[];
-  /** A token for the next page of results. */
-  nextPageToken: string;
-  /** The total count of matching users. */
-  totalSize: number;
-}
-
 export interface GetUserAvatarRequest {
   /**
    * Required. The resource name of the user.
@@ -259,17 +236,89 @@ export interface GetUserStatsRequest {
   name: string;
 }
 
+/** This endpoint doesn't take any parameters. */
+export interface ListAllUserStatsRequest {
+}
+
+export interface ListAllUserStatsResponse {
+  /** The list of user statistics. */
+  stats: UserStats[];
+}
+
 /** User settings message */
 export interface UserSetting {
   /**
-   * The resource name of the user whose setting this is.
-   * Format: users/{user}
+   * The name of the user setting.
+   * Format: users/{user}/settings/{setting}, {setting} is the key for the setting.
+   * For example, "users/123/settings/GENERAL" for general settings.
    */
   name: string;
+  generalSetting?: UserSetting_GeneralSetting | undefined;
+  sessionsSetting?: UserSetting_SessionsSetting | undefined;
+  accessTokensSetting?: UserSetting_AccessTokensSetting | undefined;
+  webhooksSetting?: UserSetting_WebhooksSetting | undefined;
+}
+
+/** Enumeration of user setting keys. */
+export enum UserSetting_Key {
+  KEY_UNSPECIFIED = "KEY_UNSPECIFIED",
+  /** GENERAL - GENERAL is the key for general user settings. */
+  GENERAL = "GENERAL",
+  /** SESSIONS - SESSIONS is the key for user authentication sessions. */
+  SESSIONS = "SESSIONS",
+  /** ACCESS_TOKENS - ACCESS_TOKENS is the key for access tokens. */
+  ACCESS_TOKENS = "ACCESS_TOKENS",
+  /** WEBHOOKS - WEBHOOKS is the key for user webhooks. */
+  WEBHOOKS = "WEBHOOKS",
+  UNRECOGNIZED = "UNRECOGNIZED",
+}
+
+export function userSetting_KeyFromJSON(object: any): UserSetting_Key {
+  switch (object) {
+    case 0:
+    case "KEY_UNSPECIFIED":
+      return UserSetting_Key.KEY_UNSPECIFIED;
+    case 1:
+    case "GENERAL":
+      return UserSetting_Key.GENERAL;
+    case 2:
+    case "SESSIONS":
+      return UserSetting_Key.SESSIONS;
+    case 3:
+    case "ACCESS_TOKENS":
+      return UserSetting_Key.ACCESS_TOKENS;
+    case 4:
+    case "WEBHOOKS":
+      return UserSetting_Key.WEBHOOKS;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return UserSetting_Key.UNRECOGNIZED;
+  }
+}
+
+export function userSetting_KeyToNumber(object: UserSetting_Key): number {
+  switch (object) {
+    case UserSetting_Key.KEY_UNSPECIFIED:
+      return 0;
+    case UserSetting_Key.GENERAL:
+      return 1;
+    case UserSetting_Key.SESSIONS:
+      return 2;
+    case UserSetting_Key.ACCESS_TOKENS:
+      return 3;
+    case UserSetting_Key.WEBHOOKS:
+      return 4;
+    case UserSetting_Key.UNRECOGNIZED:
+    default:
+      return -1;
+  }
+}
+
+/** General user settings configuration. */
+export interface UserSetting_GeneralSetting {
   /** The preferred locale of the user. */
   locale: string;
-  /** The preferred appearance of the user. */
-  appearance: string;
   /** The default visibility of the memo. */
   memoVisibility: string;
   /**
@@ -280,10 +329,28 @@ export interface UserSetting {
   theme: string;
 }
 
+/** User authentication sessions configuration. */
+export interface UserSetting_SessionsSetting {
+  /** List of active user sessions. */
+  sessions: UserSession[];
+}
+
+/** User access tokens configuration. */
+export interface UserSetting_AccessTokensSetting {
+  /** List of user access tokens. */
+  accessTokens: UserAccessToken[];
+}
+
+/** User webhooks configuration. */
+export interface UserSetting_WebhooksSetting {
+  /** List of user webhooks. */
+  webhooks: UserWebhook[];
+}
+
 export interface GetUserSettingRequest {
   /**
-   * Required. The resource name of the user.
-   * Format: users/{user}
+   * Required. The resource name of the user setting.
+   * Format: users/{user}/settings/{setting}
    */
   name: string;
 }
@@ -295,6 +362,40 @@ export interface UpdateUserSettingRequest {
     | undefined;
   /** Required. The list of fields to update. */
   updateMask?: string[] | undefined;
+}
+
+/** Request message for ListUserSettings method. */
+export interface ListUserSettingsRequest {
+  /**
+   * Required. The parent resource whose settings will be listed.
+   * Format: users/{user}
+   */
+  parent: string;
+  /**
+   * Optional. The maximum number of settings to return.
+   * The service may return fewer than this value.
+   * If unspecified, at most 50 settings will be returned.
+   * The maximum value is 1000; values above 1000 will be coerced to 1000.
+   */
+  pageSize: number;
+  /**
+   * Optional. A page token, received from a previous `ListUserSettings` call.
+   * Provide this to retrieve the subsequent page.
+   */
+  pageToken: string;
+}
+
+/** Response message for ListUserSettings method. */
+export interface ListUserSettingsResponse {
+  /** The list of user settings. */
+  settings: UserSetting[];
+  /**
+   * A token that can be sent as `page_token` to retrieve the next page.
+   * If this field is omitted, there are no subsequent pages.
+   */
+  nextPageToken: string;
+  /** The total count of settings (may be approximate). */
+  totalSize: number;
 }
 
 /** User access token message */
@@ -410,26 +511,69 @@ export interface ListUserSessionsResponse {
 
 export interface RevokeUserSessionRequest {
   /**
-   * Required. The resource name of the session to revoke.
+   * The name of the session to revoke.
    * Format: users/{user}/sessions/{session}
    */
   name: string;
 }
 
-export interface ListAllUserStatsRequest {
-  /** Optional. The maximum number of user stats to return. */
-  pageSize: number;
-  /** Optional. A page token for pagination. */
-  pageToken: string;
+/** UserWebhook represents a webhook owned by a user. */
+export interface UserWebhook {
+  /**
+   * The name of the webhook.
+   * Format: users/{user}/webhooks/{webhook}
+   */
+  name: string;
+  /** The URL to send the webhook to. */
+  url: string;
+  /** Optional. Human-readable name for the webhook. */
+  displayName: string;
+  /** The creation time of the webhook. */
+  createTime?:
+    | Date
+    | undefined;
+  /** The last update time of the webhook. */
+  updateTime?: Date | undefined;
 }
 
-export interface ListAllUserStatsResponse {
-  /** The list of user statistics. */
-  userStats: UserStats[];
-  /** A token for the next page of results. */
-  nextPageToken: string;
-  /** The total count of user statistics. */
-  totalSize: number;
+export interface ListUserWebhooksRequest {
+  /**
+   * The parent user resource.
+   * Format: users/{user}
+   */
+  parent: string;
+}
+
+export interface ListUserWebhooksResponse {
+  /** The list of webhooks. */
+  webhooks: UserWebhook[];
+}
+
+export interface CreateUserWebhookRequest {
+  /**
+   * The parent user resource.
+   * Format: users/{user}
+   */
+  parent: string;
+  /** The webhook to create. */
+  webhook?: UserWebhook | undefined;
+}
+
+export interface UpdateUserWebhookRequest {
+  /** The webhook to update. */
+  webhook?:
+    | UserWebhook
+    | undefined;
+  /** The list of fields to update. */
+  updateMask?: string[] | undefined;
+}
+
+export interface DeleteUserWebhookRequest {
+  /**
+   * The name of the webhook to delete.
+   * Format: users/{user}/webhooks/{webhook}
+   */
+  name: string;
 }
 
 function createBaseUser(): User {
@@ -611,7 +755,7 @@ export const User: MessageFns<User> = {
 };
 
 function createBaseListUsersRequest(): ListUsersRequest {
-  return { pageSize: 0, pageToken: "", filter: "", orderBy: "", showDeleted: false };
+  return { pageSize: 0, pageToken: "", filter: "", showDeleted: false };
 }
 
 export const ListUsersRequest: MessageFns<ListUsersRequest> = {
@@ -625,11 +769,8 @@ export const ListUsersRequest: MessageFns<ListUsersRequest> = {
     if (message.filter !== "") {
       writer.uint32(26).string(message.filter);
     }
-    if (message.orderBy !== "") {
-      writer.uint32(34).string(message.orderBy);
-    }
     if (message.showDeleted !== false) {
-      writer.uint32(40).bool(message.showDeleted);
+      writer.uint32(32).bool(message.showDeleted);
     }
     return writer;
   },
@@ -666,15 +807,7 @@ export const ListUsersRequest: MessageFns<ListUsersRequest> = {
           continue;
         }
         case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.orderBy = reader.string();
-          continue;
-        }
-        case 5: {
-          if (tag !== 40) {
+          if (tag !== 32) {
             break;
           }
 
@@ -698,7 +831,6 @@ export const ListUsersRequest: MessageFns<ListUsersRequest> = {
     message.pageSize = object.pageSize ?? 0;
     message.pageToken = object.pageToken ?? "";
     message.filter = object.filter ?? "";
-    message.orderBy = object.orderBy ?? "";
     message.showDeleted = object.showDeleted ?? false;
     return message;
   },
@@ -1038,146 +1170,6 @@ export const DeleteUserRequest: MessageFns<DeleteUserRequest> = {
     const message = createBaseDeleteUserRequest();
     message.name = object.name ?? "";
     message.force = object.force ?? false;
-    return message;
-  },
-};
-
-function createBaseSearchUsersRequest(): SearchUsersRequest {
-  return { query: "", pageSize: 0, pageToken: "" };
-}
-
-export const SearchUsersRequest: MessageFns<SearchUsersRequest> = {
-  encode(message: SearchUsersRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.query !== "") {
-      writer.uint32(10).string(message.query);
-    }
-    if (message.pageSize !== 0) {
-      writer.uint32(16).int32(message.pageSize);
-    }
-    if (message.pageToken !== "") {
-      writer.uint32(26).string(message.pageToken);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): SearchUsersRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSearchUsersRequest();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.query = reader.string();
-          continue;
-        }
-        case 2: {
-          if (tag !== 16) {
-            break;
-          }
-
-          message.pageSize = reader.int32();
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.pageToken = reader.string();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-
-  create(base?: DeepPartial<SearchUsersRequest>): SearchUsersRequest {
-    return SearchUsersRequest.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<SearchUsersRequest>): SearchUsersRequest {
-    const message = createBaseSearchUsersRequest();
-    message.query = object.query ?? "";
-    message.pageSize = object.pageSize ?? 0;
-    message.pageToken = object.pageToken ?? "";
-    return message;
-  },
-};
-
-function createBaseSearchUsersResponse(): SearchUsersResponse {
-  return { users: [], nextPageToken: "", totalSize: 0 };
-}
-
-export const SearchUsersResponse: MessageFns<SearchUsersResponse> = {
-  encode(message: SearchUsersResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    for (const v of message.users) {
-      User.encode(v!, writer.uint32(10).fork()).join();
-    }
-    if (message.nextPageToken !== "") {
-      writer.uint32(18).string(message.nextPageToken);
-    }
-    if (message.totalSize !== 0) {
-      writer.uint32(24).int32(message.totalSize);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): SearchUsersResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSearchUsersResponse();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.users.push(User.decode(reader, reader.uint32()));
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.nextPageToken = reader.string();
-          continue;
-        }
-        case 3: {
-          if (tag !== 24) {
-            break;
-          }
-
-          message.totalSize = reader.int32();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-
-  create(base?: DeepPartial<SearchUsersResponse>): SearchUsersResponse {
-    return SearchUsersResponse.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<SearchUsersResponse>): SearchUsersResponse {
-    const message = createBaseSearchUsersResponse();
-    message.users = object.users?.map((e) => User.fromPartial(e)) || [];
-    message.nextPageToken = object.nextPageToken ?? "";
-    message.totalSize = object.totalSize ?? 0;
     return message;
   },
 };
@@ -1537,8 +1529,94 @@ export const GetUserStatsRequest: MessageFns<GetUserStatsRequest> = {
   },
 };
 
+function createBaseListAllUserStatsRequest(): ListAllUserStatsRequest {
+  return {};
+}
+
+export const ListAllUserStatsRequest: MessageFns<ListAllUserStatsRequest> = {
+  encode(_: ListAllUserStatsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAllUserStatsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListAllUserStatsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<ListAllUserStatsRequest>): ListAllUserStatsRequest {
+    return ListAllUserStatsRequest.fromPartial(base ?? {});
+  },
+  fromPartial(_: DeepPartial<ListAllUserStatsRequest>): ListAllUserStatsRequest {
+    const message = createBaseListAllUserStatsRequest();
+    return message;
+  },
+};
+
+function createBaseListAllUserStatsResponse(): ListAllUserStatsResponse {
+  return { stats: [] };
+}
+
+export const ListAllUserStatsResponse: MessageFns<ListAllUserStatsResponse> = {
+  encode(message: ListAllUserStatsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.stats) {
+      UserStats.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAllUserStatsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListAllUserStatsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.stats.push(UserStats.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<ListAllUserStatsResponse>): ListAllUserStatsResponse {
+    return ListAllUserStatsResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ListAllUserStatsResponse>): ListAllUserStatsResponse {
+    const message = createBaseListAllUserStatsResponse();
+    message.stats = object.stats?.map((e) => UserStats.fromPartial(e)) || [];
+    return message;
+  },
+};
+
 function createBaseUserSetting(): UserSetting {
-  return { name: "", locale: "", appearance: "", memoVisibility: "", theme: "" };
+  return {
+    name: "",
+    generalSetting: undefined,
+    sessionsSetting: undefined,
+    accessTokensSetting: undefined,
+    webhooksSetting: undefined,
+  };
 }
 
 export const UserSetting: MessageFns<UserSetting> = {
@@ -1546,17 +1624,17 @@ export const UserSetting: MessageFns<UserSetting> = {
     if (message.name !== "") {
       writer.uint32(10).string(message.name);
     }
-    if (message.locale !== "") {
-      writer.uint32(18).string(message.locale);
+    if (message.generalSetting !== undefined) {
+      UserSetting_GeneralSetting.encode(message.generalSetting, writer.uint32(18).fork()).join();
     }
-    if (message.appearance !== "") {
-      writer.uint32(26).string(message.appearance);
+    if (message.sessionsSetting !== undefined) {
+      UserSetting_SessionsSetting.encode(message.sessionsSetting, writer.uint32(26).fork()).join();
     }
-    if (message.memoVisibility !== "") {
-      writer.uint32(34).string(message.memoVisibility);
+    if (message.accessTokensSetting !== undefined) {
+      UserSetting_AccessTokensSetting.encode(message.accessTokensSetting, writer.uint32(34).fork()).join();
     }
-    if (message.theme !== "") {
-      writer.uint32(42).string(message.theme);
+    if (message.webhooksSetting !== undefined) {
+      UserSetting_WebhooksSetting.encode(message.webhooksSetting, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -1581,7 +1659,7 @@ export const UserSetting: MessageFns<UserSetting> = {
             break;
           }
 
-          message.locale = reader.string();
+          message.generalSetting = UserSetting_GeneralSetting.decode(reader, reader.uint32());
           continue;
         }
         case 3: {
@@ -1589,7 +1667,7 @@ export const UserSetting: MessageFns<UserSetting> = {
             break;
           }
 
-          message.appearance = reader.string();
+          message.sessionsSetting = UserSetting_SessionsSetting.decode(reader, reader.uint32());
           continue;
         }
         case 4: {
@@ -1597,7 +1675,7 @@ export const UserSetting: MessageFns<UserSetting> = {
             break;
           }
 
-          message.memoVisibility = reader.string();
+          message.accessTokensSetting = UserSetting_AccessTokensSetting.decode(reader, reader.uint32());
           continue;
         }
         case 5: {
@@ -1605,7 +1683,7 @@ export const UserSetting: MessageFns<UserSetting> = {
             break;
           }
 
-          message.theme = reader.string();
+          message.webhooksSetting = UserSetting_WebhooksSetting.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -1623,10 +1701,226 @@ export const UserSetting: MessageFns<UserSetting> = {
   fromPartial(object: DeepPartial<UserSetting>): UserSetting {
     const message = createBaseUserSetting();
     message.name = object.name ?? "";
+    message.generalSetting = (object.generalSetting !== undefined && object.generalSetting !== null)
+      ? UserSetting_GeneralSetting.fromPartial(object.generalSetting)
+      : undefined;
+    message.sessionsSetting = (object.sessionsSetting !== undefined && object.sessionsSetting !== null)
+      ? UserSetting_SessionsSetting.fromPartial(object.sessionsSetting)
+      : undefined;
+    message.accessTokensSetting = (object.accessTokensSetting !== undefined && object.accessTokensSetting !== null)
+      ? UserSetting_AccessTokensSetting.fromPartial(object.accessTokensSetting)
+      : undefined;
+    message.webhooksSetting = (object.webhooksSetting !== undefined && object.webhooksSetting !== null)
+      ? UserSetting_WebhooksSetting.fromPartial(object.webhooksSetting)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseUserSetting_GeneralSetting(): UserSetting_GeneralSetting {
+  return { locale: "", memoVisibility: "", theme: "" };
+}
+
+export const UserSetting_GeneralSetting: MessageFns<UserSetting_GeneralSetting> = {
+  encode(message: UserSetting_GeneralSetting, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.locale !== "") {
+      writer.uint32(10).string(message.locale);
+    }
+    if (message.memoVisibility !== "") {
+      writer.uint32(26).string(message.memoVisibility);
+    }
+    if (message.theme !== "") {
+      writer.uint32(34).string(message.theme);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserSetting_GeneralSetting {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserSetting_GeneralSetting();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.locale = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.memoVisibility = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.theme = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<UserSetting_GeneralSetting>): UserSetting_GeneralSetting {
+    return UserSetting_GeneralSetting.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<UserSetting_GeneralSetting>): UserSetting_GeneralSetting {
+    const message = createBaseUserSetting_GeneralSetting();
     message.locale = object.locale ?? "";
-    message.appearance = object.appearance ?? "";
     message.memoVisibility = object.memoVisibility ?? "";
     message.theme = object.theme ?? "";
+    return message;
+  },
+};
+
+function createBaseUserSetting_SessionsSetting(): UserSetting_SessionsSetting {
+  return { sessions: [] };
+}
+
+export const UserSetting_SessionsSetting: MessageFns<UserSetting_SessionsSetting> = {
+  encode(message: UserSetting_SessionsSetting, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.sessions) {
+      UserSession.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserSetting_SessionsSetting {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserSetting_SessionsSetting();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.sessions.push(UserSession.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<UserSetting_SessionsSetting>): UserSetting_SessionsSetting {
+    return UserSetting_SessionsSetting.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<UserSetting_SessionsSetting>): UserSetting_SessionsSetting {
+    const message = createBaseUserSetting_SessionsSetting();
+    message.sessions = object.sessions?.map((e) => UserSession.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseUserSetting_AccessTokensSetting(): UserSetting_AccessTokensSetting {
+  return { accessTokens: [] };
+}
+
+export const UserSetting_AccessTokensSetting: MessageFns<UserSetting_AccessTokensSetting> = {
+  encode(message: UserSetting_AccessTokensSetting, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.accessTokens) {
+      UserAccessToken.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserSetting_AccessTokensSetting {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserSetting_AccessTokensSetting();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.accessTokens.push(UserAccessToken.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<UserSetting_AccessTokensSetting>): UserSetting_AccessTokensSetting {
+    return UserSetting_AccessTokensSetting.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<UserSetting_AccessTokensSetting>): UserSetting_AccessTokensSetting {
+    const message = createBaseUserSetting_AccessTokensSetting();
+    message.accessTokens = object.accessTokens?.map((e) => UserAccessToken.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseUserSetting_WebhooksSetting(): UserSetting_WebhooksSetting {
+  return { webhooks: [] };
+}
+
+export const UserSetting_WebhooksSetting: MessageFns<UserSetting_WebhooksSetting> = {
+  encode(message: UserSetting_WebhooksSetting, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.webhooks) {
+      UserWebhook.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UserSetting_WebhooksSetting {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserSetting_WebhooksSetting();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.webhooks.push(UserWebhook.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<UserSetting_WebhooksSetting>): UserSetting_WebhooksSetting {
+    return UserSetting_WebhooksSetting.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<UserSetting_WebhooksSetting>): UserSetting_WebhooksSetting {
+    const message = createBaseUserSetting_WebhooksSetting();
+    message.webhooks = object.webhooks?.map((e) => UserWebhook.fromPartial(e)) || [];
     return message;
   },
 };
@@ -1733,6 +2027,146 @@ export const UpdateUserSettingRequest: MessageFns<UpdateUserSettingRequest> = {
       ? UserSetting.fromPartial(object.setting)
       : undefined;
     message.updateMask = object.updateMask ?? undefined;
+    return message;
+  },
+};
+
+function createBaseListUserSettingsRequest(): ListUserSettingsRequest {
+  return { parent: "", pageSize: 0, pageToken: "" };
+}
+
+export const ListUserSettingsRequest: MessageFns<ListUserSettingsRequest> = {
+  encode(message: ListUserSettingsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.parent !== "") {
+      writer.uint32(10).string(message.parent);
+    }
+    if (message.pageSize !== 0) {
+      writer.uint32(16).int32(message.pageSize);
+    }
+    if (message.pageToken !== "") {
+      writer.uint32(26).string(message.pageToken);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListUserSettingsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListUserSettingsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.parent = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.pageSize = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.pageToken = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<ListUserSettingsRequest>): ListUserSettingsRequest {
+    return ListUserSettingsRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ListUserSettingsRequest>): ListUserSettingsRequest {
+    const message = createBaseListUserSettingsRequest();
+    message.parent = object.parent ?? "";
+    message.pageSize = object.pageSize ?? 0;
+    message.pageToken = object.pageToken ?? "";
+    return message;
+  },
+};
+
+function createBaseListUserSettingsResponse(): ListUserSettingsResponse {
+  return { settings: [], nextPageToken: "", totalSize: 0 };
+}
+
+export const ListUserSettingsResponse: MessageFns<ListUserSettingsResponse> = {
+  encode(message: ListUserSettingsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.settings) {
+      UserSetting.encode(v!, writer.uint32(10).fork()).join();
+    }
+    if (message.nextPageToken !== "") {
+      writer.uint32(18).string(message.nextPageToken);
+    }
+    if (message.totalSize !== 0) {
+      writer.uint32(24).int32(message.totalSize);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListUserSettingsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListUserSettingsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.settings.push(UserSetting.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.nextPageToken = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.totalSize = reader.int32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<ListUserSettingsResponse>): ListUserSettingsResponse {
+    return ListUserSettingsResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ListUserSettingsResponse>): ListUserSettingsResponse {
+    const message = createBaseListUserSettingsResponse();
+    message.settings = object.settings?.map((e) => UserSetting.fromPartial(e)) || [];
+    message.nextPageToken = object.nextPageToken ?? "";
+    message.totalSize = object.totalSize ?? 0;
     return message;
   },
 };
@@ -2417,86 +2851,34 @@ export const RevokeUserSessionRequest: MessageFns<RevokeUserSessionRequest> = {
   },
 };
 
-function createBaseListAllUserStatsRequest(): ListAllUserStatsRequest {
-  return { pageSize: 0, pageToken: "" };
+function createBaseUserWebhook(): UserWebhook {
+  return { name: "", url: "", displayName: "", createTime: undefined, updateTime: undefined };
 }
 
-export const ListAllUserStatsRequest: MessageFns<ListAllUserStatsRequest> = {
-  encode(message: ListAllUserStatsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.pageSize !== 0) {
-      writer.uint32(8).int32(message.pageSize);
+export const UserWebhook: MessageFns<UserWebhook> = {
+  encode(message: UserWebhook, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
     }
-    if (message.pageToken !== "") {
-      writer.uint32(18).string(message.pageToken);
+    if (message.url !== "") {
+      writer.uint32(18).string(message.url);
+    }
+    if (message.displayName !== "") {
+      writer.uint32(26).string(message.displayName);
+    }
+    if (message.createTime !== undefined) {
+      Timestamp.encode(toTimestamp(message.createTime), writer.uint32(34).fork()).join();
+    }
+    if (message.updateTime !== undefined) {
+      Timestamp.encode(toTimestamp(message.updateTime), writer.uint32(42).fork()).join();
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): ListAllUserStatsRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): UserWebhook {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseListAllUserStatsRequest();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 8) {
-            break;
-          }
-
-          message.pageSize = reader.int32();
-          continue;
-        }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.pageToken = reader.string();
-          continue;
-        }
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skip(tag & 7);
-    }
-    return message;
-  },
-
-  create(base?: DeepPartial<ListAllUserStatsRequest>): ListAllUserStatsRequest {
-    return ListAllUserStatsRequest.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<ListAllUserStatsRequest>): ListAllUserStatsRequest {
-    const message = createBaseListAllUserStatsRequest();
-    message.pageSize = object.pageSize ?? 0;
-    message.pageToken = object.pageToken ?? "";
-    return message;
-  },
-};
-
-function createBaseListAllUserStatsResponse(): ListAllUserStatsResponse {
-  return { userStats: [], nextPageToken: "", totalSize: 0 };
-}
-
-export const ListAllUserStatsResponse: MessageFns<ListAllUserStatsResponse> = {
-  encode(message: ListAllUserStatsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    for (const v of message.userStats) {
-      UserStats.encode(v!, writer.uint32(10).fork()).join();
-    }
-    if (message.nextPageToken !== "") {
-      writer.uint32(18).string(message.nextPageToken);
-    }
-    if (message.totalSize !== 0) {
-      writer.uint32(24).int32(message.totalSize);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): ListAllUserStatsResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseListAllUserStatsResponse();
+    const message = createBaseUserWebhook();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -2505,7 +2887,7 @@ export const ListAllUserStatsResponse: MessageFns<ListAllUserStatsResponse> = {
             break;
           }
 
-          message.userStats.push(UserStats.decode(reader, reader.uint32()));
+          message.name = reader.string();
           continue;
         }
         case 2: {
@@ -2513,15 +2895,31 @@ export const ListAllUserStatsResponse: MessageFns<ListAllUserStatsResponse> = {
             break;
           }
 
-          message.nextPageToken = reader.string();
+          message.url = reader.string();
           continue;
         }
         case 3: {
-          if (tag !== 24) {
+          if (tag !== 26) {
             break;
           }
 
-          message.totalSize = reader.int32();
+          message.displayName = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.createTime = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.updateTime = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
           continue;
         }
       }
@@ -2533,14 +2931,274 @@ export const ListAllUserStatsResponse: MessageFns<ListAllUserStatsResponse> = {
     return message;
   },
 
-  create(base?: DeepPartial<ListAllUserStatsResponse>): ListAllUserStatsResponse {
-    return ListAllUserStatsResponse.fromPartial(base ?? {});
+  create(base?: DeepPartial<UserWebhook>): UserWebhook {
+    return UserWebhook.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ListAllUserStatsResponse>): ListAllUserStatsResponse {
-    const message = createBaseListAllUserStatsResponse();
-    message.userStats = object.userStats?.map((e) => UserStats.fromPartial(e)) || [];
-    message.nextPageToken = object.nextPageToken ?? "";
-    message.totalSize = object.totalSize ?? 0;
+  fromPartial(object: DeepPartial<UserWebhook>): UserWebhook {
+    const message = createBaseUserWebhook();
+    message.name = object.name ?? "";
+    message.url = object.url ?? "";
+    message.displayName = object.displayName ?? "";
+    message.createTime = object.createTime ?? undefined;
+    message.updateTime = object.updateTime ?? undefined;
+    return message;
+  },
+};
+
+function createBaseListUserWebhooksRequest(): ListUserWebhooksRequest {
+  return { parent: "" };
+}
+
+export const ListUserWebhooksRequest: MessageFns<ListUserWebhooksRequest> = {
+  encode(message: ListUserWebhooksRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.parent !== "") {
+      writer.uint32(10).string(message.parent);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListUserWebhooksRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListUserWebhooksRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.parent = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<ListUserWebhooksRequest>): ListUserWebhooksRequest {
+    return ListUserWebhooksRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ListUserWebhooksRequest>): ListUserWebhooksRequest {
+    const message = createBaseListUserWebhooksRequest();
+    message.parent = object.parent ?? "";
+    return message;
+  },
+};
+
+function createBaseListUserWebhooksResponse(): ListUserWebhooksResponse {
+  return { webhooks: [] };
+}
+
+export const ListUserWebhooksResponse: MessageFns<ListUserWebhooksResponse> = {
+  encode(message: ListUserWebhooksResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.webhooks) {
+      UserWebhook.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListUserWebhooksResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListUserWebhooksResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.webhooks.push(UserWebhook.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<ListUserWebhooksResponse>): ListUserWebhooksResponse {
+    return ListUserWebhooksResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ListUserWebhooksResponse>): ListUserWebhooksResponse {
+    const message = createBaseListUserWebhooksResponse();
+    message.webhooks = object.webhooks?.map((e) => UserWebhook.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseCreateUserWebhookRequest(): CreateUserWebhookRequest {
+  return { parent: "", webhook: undefined };
+}
+
+export const CreateUserWebhookRequest: MessageFns<CreateUserWebhookRequest> = {
+  encode(message: CreateUserWebhookRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.parent !== "") {
+      writer.uint32(10).string(message.parent);
+    }
+    if (message.webhook !== undefined) {
+      UserWebhook.encode(message.webhook, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateUserWebhookRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCreateUserWebhookRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.parent = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.webhook = UserWebhook.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<CreateUserWebhookRequest>): CreateUserWebhookRequest {
+    return CreateUserWebhookRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CreateUserWebhookRequest>): CreateUserWebhookRequest {
+    const message = createBaseCreateUserWebhookRequest();
+    message.parent = object.parent ?? "";
+    message.webhook = (object.webhook !== undefined && object.webhook !== null)
+      ? UserWebhook.fromPartial(object.webhook)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseUpdateUserWebhookRequest(): UpdateUserWebhookRequest {
+  return { webhook: undefined, updateMask: undefined };
+}
+
+export const UpdateUserWebhookRequest: MessageFns<UpdateUserWebhookRequest> = {
+  encode(message: UpdateUserWebhookRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.webhook !== undefined) {
+      UserWebhook.encode(message.webhook, writer.uint32(10).fork()).join();
+    }
+    if (message.updateMask !== undefined) {
+      FieldMask.encode(FieldMask.wrap(message.updateMask), writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateUserWebhookRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateUserWebhookRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.webhook = UserWebhook.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.updateMask = FieldMask.unwrap(FieldMask.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<UpdateUserWebhookRequest>): UpdateUserWebhookRequest {
+    return UpdateUserWebhookRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<UpdateUserWebhookRequest>): UpdateUserWebhookRequest {
+    const message = createBaseUpdateUserWebhookRequest();
+    message.webhook = (object.webhook !== undefined && object.webhook !== null)
+      ? UserWebhook.fromPartial(object.webhook)
+      : undefined;
+    message.updateMask = object.updateMask ?? undefined;
+    return message;
+  },
+};
+
+function createBaseDeleteUserWebhookRequest(): DeleteUserWebhookRequest {
+  return { name: "" };
+}
+
+export const DeleteUserWebhookRequest: MessageFns<DeleteUserWebhookRequest> = {
+  encode(message: DeleteUserWebhookRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserWebhookRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteUserWebhookRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  create(base?: DeepPartial<DeleteUserWebhookRequest>): DeleteUserWebhookRequest {
+    return DeleteUserWebhookRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<DeleteUserWebhookRequest>): DeleteUserWebhookRequest {
+    const message = createBaseDeleteUserWebhookRequest();
+    message.name = object.name ?? "";
     return message;
   },
 };
@@ -2739,46 +3397,6 @@ export const UserServiceDefinition = {
         },
       },
     },
-    /** SearchUsers searches for users based on query. */
-    searchUsers: {
-      name: "SearchUsers",
-      requestType: SearchUsersRequest,
-      requestStream: false,
-      responseType: SearchUsersResponse,
-      responseStream: false,
-      options: {
-        _unknownFields: {
-          8410: [new Uint8Array([5, 113, 117, 101, 114, 121])],
-          578365826: [
-            new Uint8Array([
-              22,
-              18,
-              20,
-              47,
-              97,
-              112,
-              105,
-              47,
-              118,
-              49,
-              47,
-              117,
-              115,
-              101,
-              114,
-              115,
-              58,
-              115,
-              101,
-              97,
-              114,
-              99,
-              104,
-            ]),
-          ],
-        },
-      },
-    },
     /** GetUserAvatar gets the avatar of a user. */
     getUserAvatar: {
       name: "GetUserAvatar",
@@ -2953,18 +3571,18 @@ export const UserServiceDefinition = {
               115,
               47,
               42,
-              125,
-              58,
-              103,
-              101,
-              116,
-              83,
+              47,
+              115,
               101,
               116,
               116,
               105,
               110,
               103,
+              115,
+              47,
+              42,
+              125,
             ]),
           ],
         },
@@ -3005,7 +3623,7 @@ export const UserServiceDefinition = {
           ],
           578365826: [
             new Uint8Array([
-              55,
+              52,
               58,
               7,
               115,
@@ -3016,7 +3634,7 @@ export const UserServiceDefinition = {
               110,
               103,
               50,
-              44,
+              41,
               47,
               97,
               112,
@@ -3046,21 +3664,71 @@ export const UserServiceDefinition = {
               115,
               47,
               42,
-              125,
-              58,
-              117,
-              112,
-              100,
-              97,
-              116,
-              101,
-              83,
+              47,
+              115,
               101,
               116,
               116,
               105,
               110,
               103,
+              115,
+              47,
+              42,
+              125,
+            ]),
+          ],
+        },
+      },
+    },
+    /** ListUserSettings returns a list of user settings. */
+    listUserSettings: {
+      name: "ListUserSettings",
+      requestType: ListUserSettingsRequest,
+      requestStream: false,
+      responseType: ListUserSettingsResponse,
+      responseStream: false,
+      options: {
+        _unknownFields: {
+          8410: [new Uint8Array([6, 112, 97, 114, 101, 110, 116])],
+          578365826: [
+            new Uint8Array([
+              35,
+              18,
+              33,
+              47,
+              97,
+              112,
+              105,
+              47,
+              118,
+              49,
+              47,
+              123,
+              112,
+              97,
+              114,
+              101,
+              110,
+              116,
+              61,
+              117,
+              115,
+              101,
+              114,
+              115,
+              47,
+              42,
+              125,
+              47,
+              115,
+              101,
+              116,
+              116,
+              105,
+              110,
+              103,
+              115,
             ]),
           ],
         },
@@ -3371,6 +4039,267 @@ export const UserServiceDefinition = {
               105,
               111,
               110,
+              115,
+              47,
+              42,
+              125,
+            ]),
+          ],
+        },
+      },
+    },
+    /** ListUserWebhooks returns a list of webhooks for a user. */
+    listUserWebhooks: {
+      name: "ListUserWebhooks",
+      requestType: ListUserWebhooksRequest,
+      requestStream: false,
+      responseType: ListUserWebhooksResponse,
+      responseStream: false,
+      options: {
+        _unknownFields: {
+          8410: [new Uint8Array([6, 112, 97, 114, 101, 110, 116])],
+          578365826: [
+            new Uint8Array([
+              35,
+              18,
+              33,
+              47,
+              97,
+              112,
+              105,
+              47,
+              118,
+              49,
+              47,
+              123,
+              112,
+              97,
+              114,
+              101,
+              110,
+              116,
+              61,
+              117,
+              115,
+              101,
+              114,
+              115,
+              47,
+              42,
+              125,
+              47,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              115,
+            ]),
+          ],
+        },
+      },
+    },
+    /** CreateUserWebhook creates a new webhook for a user. */
+    createUserWebhook: {
+      name: "CreateUserWebhook",
+      requestType: CreateUserWebhookRequest,
+      requestStream: false,
+      responseType: UserWebhook,
+      responseStream: false,
+      options: {
+        _unknownFields: {
+          8410: [new Uint8Array([14, 112, 97, 114, 101, 110, 116, 44, 119, 101, 98, 104, 111, 111, 107])],
+          578365826: [
+            new Uint8Array([
+              44,
+              58,
+              7,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              34,
+              33,
+              47,
+              97,
+              112,
+              105,
+              47,
+              118,
+              49,
+              47,
+              123,
+              112,
+              97,
+              114,
+              101,
+              110,
+              116,
+              61,
+              117,
+              115,
+              101,
+              114,
+              115,
+              47,
+              42,
+              125,
+              47,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              115,
+            ]),
+          ],
+        },
+      },
+    },
+    /** UpdateUserWebhook updates an existing webhook for a user. */
+    updateUserWebhook: {
+      name: "UpdateUserWebhook",
+      requestType: UpdateUserWebhookRequest,
+      requestStream: false,
+      responseType: UserWebhook,
+      responseStream: false,
+      options: {
+        _unknownFields: {
+          8410: [
+            new Uint8Array([
+              19,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              44,
+              117,
+              112,
+              100,
+              97,
+              116,
+              101,
+              95,
+              109,
+              97,
+              115,
+              107,
+            ]),
+          ],
+          578365826: [
+            new Uint8Array([
+              52,
+              58,
+              7,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              50,
+              41,
+              47,
+              97,
+              112,
+              105,
+              47,
+              118,
+              49,
+              47,
+              123,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              46,
+              110,
+              97,
+              109,
+              101,
+              61,
+              117,
+              115,
+              101,
+              114,
+              115,
+              47,
+              42,
+              47,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
+              115,
+              47,
+              42,
+              125,
+            ]),
+          ],
+        },
+      },
+    },
+    /** DeleteUserWebhook deletes a webhook for a user. */
+    deleteUserWebhook: {
+      name: "DeleteUserWebhook",
+      requestType: DeleteUserWebhookRequest,
+      requestStream: false,
+      responseType: Empty,
+      responseStream: false,
+      options: {
+        _unknownFields: {
+          8410: [new Uint8Array([4, 110, 97, 109, 101])],
+          578365826: [
+            new Uint8Array([
+              35,
+              42,
+              33,
+              47,
+              97,
+              112,
+              105,
+              47,
+              118,
+              49,
+              47,
+              123,
+              110,
+              97,
+              109,
+              101,
+              61,
+              117,
+              115,
+              101,
+              114,
+              115,
+              47,
+              42,
+              47,
+              119,
+              101,
+              98,
+              104,
+              111,
+              111,
+              107,
               115,
               47,
               42,
