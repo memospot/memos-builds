@@ -8,7 +8,7 @@ import (
 // SQLDialect defines database-specific SQL generation methods.
 type SQLDialect interface {
 	// Basic field access
-	GetTablePrefix() string
+	GetTablePrefix(entityName string) string
 	GetParameterPlaceholder(index int) string
 
 	// JSON operations
@@ -53,8 +53,8 @@ func GetDialect(dbType DatabaseType) SQLDialect {
 // SQLiteDialect implements SQLDialect for SQLite.
 type SQLiteDialect struct{}
 
-func (*SQLiteDialect) GetTablePrefix() string {
-	return "`memo`"
+func (*SQLiteDialect) GetTablePrefix(entityName string) string {
+	return fmt.Sprintf("`%s`", entityName)
 }
 
 func (*SQLiteDialect) GetParameterPlaceholder(_ int) string {
@@ -62,7 +62,7 @@ func (*SQLiteDialect) GetParameterPlaceholder(_ int) string {
 }
 
 func (d *SQLiteDialect) GetJSONExtract(path string) string {
-	return fmt.Sprintf("JSON_EXTRACT(%s.`payload`, '%s')", d.GetTablePrefix(), path)
+	return fmt.Sprintf("JSON_EXTRACT(%s.`payload`, '%s')", d.GetTablePrefix("memo"), path)
 }
 
 func (d *SQLiteDialect) GetJSONArrayLength(path string) string {
@@ -85,7 +85,10 @@ func (*SQLiteDialect) GetBooleanValue(value bool) interface{} {
 }
 
 func (d *SQLiteDialect) GetBooleanComparison(path string, value bool) string {
-	return fmt.Sprintf("%s = %d", d.GetJSONExtract(path), d.GetBooleanValue(value))
+	if value {
+		return fmt.Sprintf("%s = 1", d.GetJSONExtract(path))
+	}
+	return fmt.Sprintf("%s = 0", d.GetJSONExtract(path))
 }
 
 func (d *SQLiteDialect) GetBooleanCheck(path string) string {
@@ -93,7 +96,7 @@ func (d *SQLiteDialect) GetBooleanCheck(path string) string {
 }
 
 func (d *SQLiteDialect) GetTimestampComparison(field string) string {
-	return fmt.Sprintf("%s.`%s`", d.GetTablePrefix(), field)
+	return fmt.Sprintf("%s.`%s`", d.GetTablePrefix("memo"), field)
 }
 
 func (*SQLiteDialect) GetCurrentTimestamp() string {
@@ -103,8 +106,8 @@ func (*SQLiteDialect) GetCurrentTimestamp() string {
 // MySQLDialect implements SQLDialect for MySQL.
 type MySQLDialect struct{}
 
-func (*MySQLDialect) GetTablePrefix() string {
-	return "`memo`"
+func (*MySQLDialect) GetTablePrefix(entityName string) string {
+	return fmt.Sprintf("`%s`", entityName)
 }
 
 func (*MySQLDialect) GetParameterPlaceholder(_ int) string {
@@ -112,7 +115,7 @@ func (*MySQLDialect) GetParameterPlaceholder(_ int) string {
 }
 
 func (d *MySQLDialect) GetJSONExtract(path string) string {
-	return fmt.Sprintf("JSON_EXTRACT(%s.`payload`, '%s')", d.GetTablePrefix(), path)
+	return fmt.Sprintf("JSON_EXTRACT(%s.`payload`, '%s')", d.GetTablePrefix("memo"), path)
 }
 
 func (d *MySQLDialect) GetJSONArrayLength(path string) string {
@@ -132,11 +135,10 @@ func (*MySQLDialect) GetBooleanValue(value bool) interface{} {
 }
 
 func (d *MySQLDialect) GetBooleanComparison(path string, value bool) string {
-	boolStr := "false"
 	if value {
-		boolStr = "true"
+		return fmt.Sprintf("%s = CAST('true' AS JSON)", d.GetJSONExtract(path))
 	}
-	return fmt.Sprintf("%s = CAST('%s' AS JSON)", d.GetJSONExtract(path), boolStr)
+	return fmt.Sprintf("%s != CAST('true' AS JSON)", d.GetJSONExtract(path))
 }
 
 func (d *MySQLDialect) GetBooleanCheck(path string) string {
@@ -144,7 +146,7 @@ func (d *MySQLDialect) GetBooleanCheck(path string) string {
 }
 
 func (d *MySQLDialect) GetTimestampComparison(field string) string {
-	return fmt.Sprintf("UNIX_TIMESTAMP(%s.`%s`)", d.GetTablePrefix(), field)
+	return fmt.Sprintf("UNIX_TIMESTAMP(%s.`%s`)", d.GetTablePrefix("memo"), field)
 }
 
 func (*MySQLDialect) GetCurrentTimestamp() string {
@@ -154,8 +156,8 @@ func (*MySQLDialect) GetCurrentTimestamp() string {
 // PostgreSQLDialect implements SQLDialect for PostgreSQL.
 type PostgreSQLDialect struct{}
 
-func (*PostgreSQLDialect) GetTablePrefix() string {
-	return "memo"
+func (*PostgreSQLDialect) GetTablePrefix(entityName string) string {
+	return entityName
 }
 
 func (*PostgreSQLDialect) GetParameterPlaceholder(index int) string {
@@ -163,9 +165,9 @@ func (*PostgreSQLDialect) GetParameterPlaceholder(index int) string {
 }
 
 func (d *PostgreSQLDialect) GetJSONExtract(path string) string {
-	// Convert $.property.hasTaskList to payload->'property'->>'hasTaskList'
+	// Convert $.property.hasTaskList to memo.payload->'property'->>'hasTaskList'
 	parts := strings.Split(strings.TrimPrefix(path, "$."), ".")
-	result := fmt.Sprintf("%s.payload", d.GetTablePrefix())
+	result := fmt.Sprintf("%s.payload", d.GetTablePrefix("memo"))
 	for i, part := range parts {
 		if i == len(parts)-1 {
 			result += fmt.Sprintf("->>'%s'", part)
@@ -178,17 +180,17 @@ func (d *PostgreSQLDialect) GetJSONExtract(path string) string {
 
 func (d *PostgreSQLDialect) GetJSONArrayLength(path string) string {
 	jsonPath := strings.Replace(path, "$.tags", "payload->'tags'", 1)
-	return fmt.Sprintf("jsonb_array_length(COALESCE(%s.%s, '[]'::jsonb))", d.GetTablePrefix(), jsonPath)
+	return fmt.Sprintf("jsonb_array_length(COALESCE(%s.%s, '[]'::jsonb))", d.GetTablePrefix("memo"), jsonPath)
 }
 
 func (d *PostgreSQLDialect) GetJSONContains(path, _ string) string {
 	jsonPath := strings.Replace(path, "$.tags", "payload->'tags'", 1)
-	return fmt.Sprintf("%s.%s @> jsonb_build_array(?)", d.GetTablePrefix(), jsonPath)
+	return fmt.Sprintf("%s.%s @> jsonb_build_array(?::json)", d.GetTablePrefix("memo"), jsonPath)
 }
 
 func (d *PostgreSQLDialect) GetJSONLike(path, _ string) string {
 	jsonPath := strings.Replace(path, "$.tags", "payload->'tags'", 1)
-	return fmt.Sprintf("%s.%s @> jsonb_build_array(?)", d.GetTablePrefix(), jsonPath)
+	return fmt.Sprintf("%s.%s @> jsonb_build_array(?::json)", d.GetTablePrefix("memo"), jsonPath)
 }
 
 func (*PostgreSQLDialect) GetBooleanValue(value bool) interface{} {
@@ -196,6 +198,7 @@ func (*PostgreSQLDialect) GetBooleanValue(value bool) interface{} {
 }
 
 func (d *PostgreSQLDialect) GetBooleanComparison(path string, _ bool) string {
+	// Note: The parameter placeholder will be replaced by the caller
 	return fmt.Sprintf("(%s)::boolean = ?", d.GetJSONExtract(path))
 }
 
@@ -204,7 +207,7 @@ func (d *PostgreSQLDialect) GetBooleanCheck(path string) string {
 }
 
 func (d *PostgreSQLDialect) GetTimestampComparison(field string) string {
-	return fmt.Sprintf("EXTRACT(EPOCH FROM %s.%s)", d.GetTablePrefix(), field)
+	return fmt.Sprintf("EXTRACT(EPOCH FROM TO_TIMESTAMP(%s.%s))", d.GetTablePrefix("memo"), field)
 }
 
 func (*PostgreSQLDialect) GetCurrentTimestamp() string {

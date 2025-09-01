@@ -3,33 +3,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { userStore } from "@/store";
 import { Visibility } from "@/types/proto/api/v1/memo_service";
-import { UserSetting } from "@/types/proto/api/v1/user_service";
+import { UserSetting_GeneralSetting } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString, convertVisibilityToString } from "@/utils/memo";
-import AppearanceSelect from "../AppearanceSelect";
 import LocaleSelect from "../LocaleSelect";
-import ThemeSelector from "../ThemeSelector";
+import ThemeSelect from "../ThemeSelect";
 import VisibilityIcon from "../VisibilityIcon";
 import WebhookSection from "./WebhookSection";
 
 const PreferencesSection = observer(() => {
   const t = useTranslate();
-  const setting = userStore.state.userSetting as UserSetting;
+  const generalSetting = userStore.state.userGeneralSetting;
 
   const handleLocaleSelectChange = async (locale: Locale) => {
-    await userStore.updateUserSetting({ locale }, ["locale"]);
-  };
-
-  const handleAppearanceSelectChange = async (appearance: Appearance) => {
-    await userStore.updateUserSetting({ appearance }, ["appearance"]);
+    await userStore.updateUserGeneralSetting({ locale }, ["locale"]);
   };
 
   const handleDefaultMemoVisibilityChanged = async (value: string) => {
-    await userStore.updateUserSetting({ memoVisibility: value }, ["memo_visibility"]);
+    await userStore.updateUserGeneralSetting({ memoVisibility: value }, ["memoVisibility"]);
   };
 
   const handleThemeChange = async (theme: string) => {
-    await userStore.updateUserSetting({ theme }, ["theme"]);
+    await userStore.updateUserGeneralSetting({ theme }, ["theme"]);
+  };
+
+  // Provide default values if setting is not loaded yet
+  const setting: UserSetting_GeneralSetting = generalSetting || {
+    locale: "en",
+    memoVisibility: "PRIVATE",
+    theme: "default",
   };
 
   return (
@@ -42,13 +44,8 @@ const PreferencesSection = observer(() => {
       </div>
 
       <div className="w-full flex flex-row justify-between items-center">
-        <span>{t("setting.preference-section.apperance")}</span>
-        <AppearanceSelect value={setting.appearance as Appearance} onChange={handleAppearanceSelectChange} />
-      </div>
-
-      <div className="w-full flex flex-row justify-between items-center">
         <span>{t("setting.preference-section.theme")}</span>
-        <ThemeSelector value={setting.theme} onValueChange={handleThemeChange} />
+        <ThemeSelect value={setting.theme} onValueChange={handleThemeChange} />
       </div>
 
       <p className="font-medium text-muted-foreground">{t("setting.preference")}</p>

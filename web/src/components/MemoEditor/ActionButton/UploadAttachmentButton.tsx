@@ -1,8 +1,11 @@
+import { t } from "i18next";
 import { LoaderIcon, PaperclipIcon } from "lucide-react";
+import mime from "mime";
 import { observer } from "mobx-react-lite";
 import { useContext, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { attachmentStore } from "@/store";
 import { Attachment } from "@/types/proto/api/v1/attachment_service";
 import { MemoEditorContext } from "../types";
@@ -49,7 +52,7 @@ const UploadAttachmentButton = observer((props: Props) => {
           attachment: Attachment.fromPartial({
             filename,
             size,
-            type,
+            type: type || mime.getType(filename) || "text/plain",
             content: buffer,
           }),
           attachmentId: "",
@@ -73,19 +76,28 @@ const UploadAttachmentButton = observer((props: Props) => {
   const isUploading = state.uploadingFlag || props.isUploading;
 
   return (
-    <Button className="relative" variant="ghost" size="icon" disabled={isUploading}>
-      {isUploading ? <LoaderIcon className="size-5 animate-spin" /> : <PaperclipIcon className="size-5" />}
-      <input
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        ref={fileInputRef}
-        disabled={isUploading}
-        onChange={handleFileInputChange}
-        type="file"
-        id="files"
-        multiple={true}
-        accept="*"
-      />
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button className="relative" variant="ghost" size="icon" disabled={isUploading}>
+            {isUploading ? <LoaderIcon className="size-5 animate-spin" /> : <PaperclipIcon className="size-5" />}
+            <input
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              ref={fileInputRef}
+              disabled={isUploading}
+              onChange={handleFileInputChange}
+              type="file"
+              id="files"
+              multiple={true}
+              accept="*"
+            />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>{t("tooltip.upload-attachment")}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

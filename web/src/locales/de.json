@@ -107,7 +107,8 @@
   },
   "inbox": {
     "memo-comment": "{{user}} hat einen Kommentar zu {{memo}} hinterlassen.",
-    "version-update": "Die neue Version {{version}} ist jetzt verfügbar!"
+    "version-update": "Die neue Version {{version}} ist jetzt verfügbar!",
+    "failed-to-load": "Fehler beim Laden des Eintrags"
   },
   "markdown": {
     "checkbox": "Checkbox",
@@ -263,11 +264,6 @@
       "update-information": "Informationen ändern",
       "username-note": "Zum Anmelden verwendet"
     },
-    "appearance-option": {
-      "dark": "Dunkel",
-      "light": "Hell",
-      "system": "System"
-    },
     "member": "Mitglied",
     "member-list": "Mitgliederliste",
     "member-section": {
@@ -364,7 +360,6 @@
       "additional-style-placeholder": "Zusätzlicher CSS-Code",
       "allow-user-signup": "Benutzerregistrierung erlauben",
       "customize-server": {
-        "appearance": "Server-Erscheinungsbild",
         "description": "Beschreibung",
         "icon-url": "Icon-URL",
         "locale": "Server-Sprache",

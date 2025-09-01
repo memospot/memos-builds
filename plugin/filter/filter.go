@@ -21,6 +21,9 @@ var MemoFilterCELAttributes = []cel.EnvOption{
 	cel.Variable("tags", cel.ListType(cel.StringType)),
 	cel.Variable("visibility", cel.StringType),
 	cel.Variable("has_task_list", cel.BoolType),
+	cel.Variable("has_link", cel.BoolType),
+	cel.Variable("has_code", cel.BoolType),
+	cel.Variable("has_incomplete_tasks", cel.BoolType),
 	// Current timestamp function.
 	cel.Function("now",
 		cel.Overload("now",
@@ -31,6 +34,21 @@ var MemoFilterCELAttributes = []cel.EnvOption{
 			}),
 		),
 	),
+}
+
+// ReactionFilterCELAttributes are the CEL attributes for reaction.
+var ReactionFilterCELAttributes = []cel.EnvOption{
+	cel.Variable("content_id", cel.StringType),
+}
+
+// UserFilterCELAttributes are the CEL attributes for user.
+var UserFilterCELAttributes = []cel.EnvOption{
+	cel.Variable("username", cel.StringType),
+}
+
+// AttachmentFilterCELAttributes are the CEL attributes for user.
+var AttachmentFilterCELAttributes = []cel.EnvOption{
+	cel.Variable("memo_id", cel.StringType),
 }
 
 // Parse parses the filter string and returns the parsed expression.

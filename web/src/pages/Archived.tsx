@@ -5,6 +5,7 @@ import MemoView from "@/components/MemoView";
 import PagedMemoList from "@/components/PagedMemoList";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { viewStore } from "@/store";
+import { extractUserIdFromName } from "@/store/common";
 import memoFilterStore from "@/store/memoFilter";
 import { State } from "@/types/proto/api/v1/common";
 import { Memo } from "@/types/proto/api/v1/memo_service";
@@ -12,25 +13,17 @@ import { Memo } from "@/types/proto/api/v1/memo_service";
 const Archived = observer(() => {
   const user = useCurrentUser();
 
-  const memoListFilter = useMemo(() => {
-    const conditions = [];
-    const contentSearch: string[] = [];
-    const tagSearch: string[] = [];
+  const memoFitler = useMemo(() => {
+    const conditions = [`creator_id == ${extractUserIdFromName(user.name)}`];
     for (const filter of memoFilterStore.filters) {
       if (filter.factor === "contentSearch") {
-        contentSearch.push(`"${filter.value}"`);
+        conditions.push(`content.contains("${filter.value}")`);
       } else if (filter.factor === "tagSearch") {
-        tagSearch.push(`"${filter.value}"`);
+        conditions.push(`tag in ["${filter.value}"]`);
       }
     }
-    if (contentSearch.length > 0) {
-      conditions.push(`content_search == [${contentSearch.join(", ")}]`);
-    }
-    if (tagSearch.length > 0) {
-      conditions.push(`tag_search == [${tagSearch.join(", ")}]`);
-    }
-    return conditions.join(" && ");
-  }, [user, memoFilterStore.filters]);
+    return conditions.length > 0 ? conditions.join(" && ") : undefined;
+  }, [memoFilterStore.filters]);
 
   return (
     <PagedMemoList
@@ -44,10 +37,9 @@ const Archived = observer(() => {
               : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
           )
       }
-      owner={user.name}
       state={State.ARCHIVED}
       orderBy={viewStore.state.orderByTimeAsc ? "display_time asc" : "display_time desc"}
-      oldFilter={memoListFilter}
+      filter={memoFitler}
     />
   );
 });

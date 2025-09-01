@@ -1,7 +1,7 @@
 import copy from "copy-to-clipboard";
 import hljs from "highlight.js";
 import { CopyIcon } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import MermaidBlock from "./MermaidBlock";
@@ -35,6 +35,31 @@ const CodeBlock: React.FC<Props> = ({ language, content }: Props) => {
     return <MermaidBlock content={content} />;
   }
 
+  useEffect(() => {
+    const dynamicImportStyle = async () => {
+      // Remove any existing highlight.js style
+      const existingStyle = document.querySelector("style[data-hljs-theme]");
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+
+      try {
+        // Always use the github light theme
+        const cssModule = await import("highlight.js/styles/github.css?inline");
+
+        // Create and inject the style
+        const style = document.createElement("style");
+        style.textContent = cssModule.default;
+        style.setAttribute("data-hljs-theme", "light");
+        document.head.appendChild(style);
+      } catch (error) {
+        console.warn("Failed to load highlight.js theme:", error);
+      }
+    };
+
+    dynamicImportStyle();
+  }, []);
+
   const highlightedCode = useMemo(() => {
     try {
       const lang = hljs.getLanguage(formatedLanguage);
@@ -53,16 +78,16 @@ const CodeBlock: React.FC<Props> = ({ language, content }: Props) => {
     }).innerHTML;
   }, [formatedLanguage, content]);
 
-  const handleCopyButtonClick = useCallback(() => {
+  const copyContent = () => {
     copy(content);
     toast.success("Copied to clipboard!");
-  }, [content]);
+  };
 
   return (
     <div className="w-full my-1 bg-card border border-border rounded-md relative">
       <div className="w-full px-2 py-0.5 flex flex-row justify-between items-center text-muted-foreground">
         <span className="text-xs font-mono">{formatedLanguage}</span>
-        <CopyIcon className="w-3 h-auto cursor-pointer hover:text-foreground" onClick={handleCopyButtonClick} />
+        <CopyIcon className="w-3 h-auto cursor-pointer hover:text-foreground" onClick={copyContent} />
       </div>
 
       <div className="overflow-auto">

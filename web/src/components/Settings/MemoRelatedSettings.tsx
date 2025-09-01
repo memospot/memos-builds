@@ -9,19 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { workspaceStore } from "@/store";
 import { workspaceSettingNamePrefix } from "@/store/common";
-import { WorkspaceSettingKey } from "@/store/workspace";
-import { WorkspaceMemoRelatedSetting } from "@/types/proto/api/v1/workspace_service";
+import { WorkspaceSetting_MemoRelatedSetting, WorkspaceSetting_Key } from "@/types/proto/api/v1/workspace_service";
 import { useTranslate } from "@/utils/i18n";
 
 const MemoRelatedSettings = observer(() => {
   const t = useTranslate();
-  const [originalSetting, setOriginalSetting] = useState<WorkspaceMemoRelatedSetting>(workspaceStore.state.memoRelatedSetting);
-  const [memoRelatedSetting, setMemoRelatedSetting] = useState<WorkspaceMemoRelatedSetting>(originalSetting);
+  const [originalSetting, setOriginalSetting] = useState<WorkspaceSetting_MemoRelatedSetting>(workspaceStore.state.memoRelatedSetting);
+  const [memoRelatedSetting, setMemoRelatedSetting] = useState<WorkspaceSetting_MemoRelatedSetting>(originalSetting);
   const [editingReaction, setEditingReaction] = useState<string>("");
   const [editingNsfwTag, setEditingNsfwTag] = useState<string>("");
 
-  const updatePartialSetting = (partial: Partial<WorkspaceMemoRelatedSetting>) => {
-    const newWorkspaceMemoRelatedSetting = WorkspaceMemoRelatedSetting.fromPartial({
+  const updatePartialSetting = (partial: Partial<WorkspaceSetting_MemoRelatedSetting>) => {
+    const newWorkspaceMemoRelatedSetting = WorkspaceSetting_MemoRelatedSetting.fromPartial({
       ...memoRelatedSetting,
       ...partial,
     });
@@ -54,7 +53,7 @@ const MemoRelatedSettings = observer(() => {
 
     try {
       await workspaceStore.upsertWorkspaceSetting({
-        name: `${workspaceSettingNamePrefix}${WorkspaceSettingKey.MEMO_RELATED}`,
+        name: `${workspaceSettingNamePrefix}${WorkspaceSetting_Key.MEMO_RELATED}`,
         memoRelatedSetting,
       });
       setOriginalSetting(memoRelatedSetting);
@@ -90,13 +89,6 @@ const MemoRelatedSettings = observer(() => {
         />
       </div>
       <div className="w-full flex flex-row justify-between items-center">
-        <span>{t("setting.memo-related-settings.enable-memo-comments")}</span>
-        <Switch
-          checked={memoRelatedSetting.enableComment}
-          onCheckedChange={(checked) => updatePartialSetting({ enableComment: checked })}
-        />
-      </div>
-      <div className="w-full flex flex-row justify-between items-center">
         <span>{t("setting.system-section.enable-double-click-to-edit")}</span>
         <Switch
           checked={memoRelatedSetting.enableDoubleClickEdit}
@@ -126,10 +118,12 @@ const MemoRelatedSettings = observer(() => {
             return (
               <Badge key={reactionType} variant="outline" className="flex items-center gap-1">
                 {reactionType}
-                <X
-                  className="w-3 h-3 cursor-pointer hover:text-destructive"
+                <span
+                  className="cursor-pointer text-muted-foreground hover:text-primary"
                   onClick={() => updatePartialSetting({ reactions: memoRelatedSetting.reactions.filter((r) => r !== reactionType) })}
-                />
+                >
+                  <X className="w-4 h-4" />
+                </span>
               </Badge>
             );
           })}
@@ -140,7 +134,9 @@ const MemoRelatedSettings = observer(() => {
               value={editingReaction}
               onChange={(event) => setEditingReaction(event.target.value.trim())}
             />
-            <CheckIcon className="w-5 h-5 text-muted-foreground cursor-pointer hover:text-primary" onClick={() => upsertReaction()} />
+            <span className="text-muted-foreground cursor-pointer hover:text-primary" onClick={() => upsertReaction()}>
+              <CheckIcon className="w-5 h-5" />
+            </span>
           </div>
         </div>
       </div>
@@ -157,10 +153,12 @@ const MemoRelatedSettings = observer(() => {
             return (
               <Badge key={nsfwTag} variant="outline" className="flex items-center gap-1">
                 {nsfwTag}
-                <X
-                  className="w-3 h-3 cursor-pointer hover:text-destructive"
+                <span
+                  className="cursor-pointer text-muted-foreground hover:text-primary"
                   onClick={() => updatePartialSetting({ nsfwTags: memoRelatedSetting.nsfwTags.filter((r) => r !== nsfwTag) })}
-                />
+                >
+                  <X className="w-4 h-4" />
+                </span>
               </Badge>
             );
           })}
@@ -171,7 +169,9 @@ const MemoRelatedSettings = observer(() => {
               value={editingNsfwTag}
               onChange={(event) => setEditingNsfwTag(event.target.value.trim())}
             />
-            <CheckIcon className="w-5 h-5 text-muted-foreground cursor-pointer hover:text-primary" onClick={() => upsertNsfwTags()} />
+            <span className="text-muted-foreground cursor-pointer hover:text-primary" onClick={() => upsertNsfwTags()}>
+              <CheckIcon className="w-5 h-5" />
+            </span>
           </div>
         </div>
       </div>

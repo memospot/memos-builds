@@ -63,6 +63,9 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 	if err != nil {
 		return nil, err
 	}
+
+	attachments := []*store.Attachment{}
+
 	if len(request.Memo.Attachments) > 0 {
 		_, err := s.SetMemoAttachments(ctx, &v1pb.SetMemoAttachmentsRequest{
 			Name:        fmt.Sprintf("%s%s", MemoNamePrefix, memo.UID),
@@ -71,6 +74,14 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to set memo attachments")
 		}
+
+		a, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
+			MemoID: &memo.ID,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get memo attachments")
+		}
+		attachments = a
 	}
 	if len(request.Memo.Relations) > 0 {
 		_, err := s.SetMemoRelations(ctx, &v1pb.SetMemoRelationsRequest{
@@ -82,7 +93,7 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 		}
 	}
 
-	memoMessage, err := s.convertMemoFromStore(ctx, memo)
+	memoMessage, err := s.convertMemoFromStore(ctx, memo, nil, attachments)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert memo")
 	}
@@ -98,21 +109,6 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 	memoFind := &store.FindMemo{
 		// Exclude comments by default.
 		ExcludeComments: true,
-	}
-	// Handle deprecated old_filter for backward compatibility
-	if request.OldFilter != "" && request.Filter == "" {
-		//nolint:staticcheck // SA1019: Using deprecated field for backward compatibility
-		if err := s.buildMemoFindWithFilter(ctx, memoFind, request.OldFilter); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "failed to build find memos with filter: %v", err)
-		}
-	}
-	if request.Parent != "" && request.Parent != "users/-" {
-		userID, err := ExtractUserIDFromName(request.Parent)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid parent: %v", err)
-		}
-		memoFind.CreatorID = &userID
-		memoFind.OrderByPinned = true
 	}
 	if request.State == v1pb.State_ARCHIVED {
 		state := store.Archived
@@ -136,7 +132,7 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 		if err := s.validateFilter(ctx, request.Filter); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
 		}
-		memoFind.Filter = &request.Filter
+		memoFind.Filters = append(memoFind.Filters, request.Filter)
 	}
 
 	currentUser, err := s.GetCurrentUser(ctx)
@@ -147,13 +143,8 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 		memoFind.VisibilityList = []store.Visibility{store.Public}
 	} else {
 		if memoFind.CreatorID == nil {
-			internalFilter := fmt.Sprintf(`creator_id == %d || visibility in ["PUBLIC", "PROTECTED"]`, currentUser.ID)
-			if memoFind.Filter != nil {
-				filter := fmt.Sprintf("(%s) && (%s)", *memoFind.Filter, internalFilter)
-				memoFind.Filter = &filter
-			} else {
-				memoFind.Filter = &internalFilter
-			}
+			filter := fmt.Sprintf(`creator_id == %d || visibility in ["PUBLIC", "PROTECTED"]`, currentUser.ID)
+			memoFind.Filters = append(memoFind.Filters, filter)
 		} else if *memoFind.CreatorID != currentUser.ID {
 			memoFind.VisibilityList = []store.Visibility{store.Public, store.Protected}
 		}
@@ -198,11 +189,58 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 			return nil, status.Errorf(codes.Internal, "failed to get next page token, error: %v", err)
 		}
 	}
+
+	if len(memos) == 0 {
+		response := &v1pb.ListMemosResponse{
+			Memos:         memoMessages,
+			NextPageToken: nextPageToken,
+		}
+		return response, nil
+	}
+
+	reactionMap := make(map[string][]*store.Reaction)
+	memoNames := make([]string, 0, len(memos))
+
+	attachmentMap := make(map[int32][]*store.Attachment)
+	memoIDs := make([]string, 0, len(memos))
+
+	for _, m := range memos {
+		memoNames = append(memoNames, fmt.Sprintf("'%s%s'", MemoNamePrefix, m.UID))
+		memoIDs = append(memoIDs, fmt.Sprintf("'%d'", m.ID))
+	}
+
+	// REACTIONS
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
+		Filters: []string{fmt.Sprintf("content_id in [%s]", strings.Join(memoNames, ", "))},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list reactions")
+	}
+	for _, reaction := range reactions {
+		reactionMap[reaction.ContentID] = append(reactionMap[reaction.ContentID], reaction)
+	}
+
+	// ATTACHMENTS
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
+		Filters: []string{fmt.Sprintf("memo_id in [%s]", strings.Join(memoIDs, ", "))},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list attachments")
+	}
+	for _, attachment := range attachments {
+		attachmentMap[*attachment.MemoID] = append(attachmentMap[*attachment.MemoID], attachment)
+	}
+
 	for _, memo := range memos {
-		memoMessage, err := s.convertMemoFromStore(ctx, memo)
+		memoName := fmt.Sprintf("%s%s", MemoNamePrefix, memo.UID)
+		reactions := reactionMap[memoName]
+		attachments := attachmentMap[memo.ID]
+
+		memoMessage, err := s.convertMemoFromStore(ctx, memo, reactions, attachments)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to convert memo")
 		}
+
 		memoMessages = append(memoMessages, memoMessage)
 	}
 
@@ -240,7 +278,21 @@ func (s *APIV1Service) GetMemo(ctx context.Context, request *v1pb.GetMemoRequest
 		}
 	}
 
-	memoMessage, err := s.convertMemoFromStore(ctx, memo)
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
+		ContentID: &request.Name,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list reactions")
+	}
+
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
+		MemoID: &memo.ID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list attachments")
+	}
+
+	memoMessage, err := s.convertMemoFromStore(ctx, memo, reactions, attachments)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert memo")
 	}
@@ -359,7 +411,20 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get memo")
 	}
-	memoMessage, err := s.convertMemoFromStore(ctx, memo)
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
+		ContentID: &request.Memo.Name,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list reactions")
+	}
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
+		MemoID: &memo.ID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list attachments")
+	}
+
+	memoMessage, err := s.convertMemoFromStore(ctx, memo, reactions, attachments)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert memo")
 	}
@@ -395,7 +460,21 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
 
-	if memoMessage, err := s.convertMemoFromStore(ctx, memo); err == nil {
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
+		ContentID: &request.Name,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list reactions")
+	}
+
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
+		MemoID: &memo.ID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list attachments")
+	}
+
+	if memoMessage, err := s.convertMemoFromStore(ctx, memo, reactions, attachments); err == nil {
 		// Try to dispatch webhook when memo is deleted.
 		if err := s.DispatchMemoDeletedWebhook(ctx, memoMessage); err != nil {
 			slog.Warn("Failed to dispatch memo deleted webhook", slog.Any("err", err))
@@ -412,10 +491,6 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 	}
 
 	// Delete related attachments.
-	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{MemoID: &memo.ID})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list attachments")
-	}
 	for _, attachment := range attachments {
 		if err := s.Store.DeleteAttachment(ctx, &store.DeleteAttachment{ID: attachment.ID}); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to delete attachment")
@@ -541,25 +616,72 @@ func (s *APIV1Service) ListMemoComments(ctx context.Context, request *v1pb.ListM
 		return nil, status.Errorf(codes.Internal, "failed to list memo relations")
 	}
 
-	var memos []*v1pb.Memo
-	for _, memoRelation := range memoRelations {
-		memo, err := s.Store.GetMemo(ctx, &store.FindMemo{
-			ID: &memoRelation.MemoID,
-		})
+	if len(memoRelations) == 0 {
+		response := &v1pb.ListMemoCommentsResponse{
+			Memos: []*v1pb.Memo{},
+		}
+		return response, nil
+	}
+
+	memoRelationIDs := make([]string, 0, len(memoRelations))
+	for _, m := range memoRelations {
+		memoRelationIDs = append(memoRelationIDs, fmt.Sprintf("%d", m.MemoID))
+	}
+	memos, err := s.Store.ListMemos(ctx, &store.FindMemo{
+		Filters: []string{fmt.Sprintf("id in [%s]", strings.Join(memoRelationIDs, ", "))},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list memos")
+	}
+
+	memoIDToNameMap := make(map[int32]string)
+	memoNamesForQuery := make([]string, 0, len(memos))
+	memoIDsForQuery := make([]string, 0, len(memos))
+
+	for _, memo := range memos {
+		memoName := fmt.Sprintf("%s%s", MemoNamePrefix, memo.UID)
+		memoIDToNameMap[memo.ID] = memoName
+		memoNamesForQuery = append(memoNamesForQuery, fmt.Sprintf("'%s'", memoName))
+		memoIDsForQuery = append(memoIDsForQuery, fmt.Sprintf("'%d'", memo.ID))
+	}
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
+		Filters: []string{fmt.Sprintf("content_id in [%s]", strings.Join(memoNamesForQuery, ", "))},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list reactions")
+	}
+
+	memoReactionsMap := make(map[string][]*store.Reaction)
+	for _, reaction := range reactions {
+		memoReactionsMap[reaction.ContentID] = append(memoReactionsMap[reaction.ContentID], reaction)
+	}
+
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
+		Filters: []string{fmt.Sprintf("memo_id in [%s]", strings.Join(memoIDsForQuery, ", "))},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list attachments")
+	}
+	attachmentMap := make(map[int32][]*store.Attachment)
+	for _, attachment := range attachments {
+		attachmentMap[*attachment.MemoID] = append(attachmentMap[*attachment.MemoID], attachment)
+	}
+
+	var memosResponse []*v1pb.Memo
+	for _, m := range memos {
+		memoName := memoIDToNameMap[m.ID]
+		reactions := memoReactionsMap[memoName]
+		attachments := attachmentMap[m.ID]
+
+		memoMessage, err := s.convertMemoFromStore(ctx, m, reactions, attachments)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get memo")
+			return nil, errors.Wrap(err, "failed to convert memo")
 		}
-		if memo != nil {
-			memoMessage, err := s.convertMemoFromStore(ctx, memo)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to convert memo")
-			}
-			memos = append(memos, memoMessage)
-		}
+		memosResponse = append(memosResponse, memoMessage)
 	}
 
 	response := &v1pb.ListMemoCommentsResponse{
-		Memos: memos,
+		Memos: memosResponse,
 	}
 	return response, nil
 }
@@ -572,7 +694,7 @@ func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMe
 
 	memoFind := &store.FindMemo{
 		CreatorID:       &user.ID,
-		PayloadFind:     &store.FindMemoPayload{TagSearch: []string{request.OldTag}},
+		Filters:         []string{fmt.Sprintf("tag in [\"%s\"]", request.OldTag)},
 		ExcludeComments: true,
 	}
 	if (request.Parent) != "memos/-" {
@@ -622,7 +744,7 @@ func (s *APIV1Service) DeleteMemoTag(ctx context.Context, request *v1pb.DeleteMe
 
 	memoFind := &store.FindMemo{
 		CreatorID:       &user.ID,
-		PayloadFind:     &store.FindMemoPayload{TagSearch: []string{request.Tag}},
+		Filters:         []string{fmt.Sprintf("tag in [\"%s\"]", request.Tag)},
 		ExcludeContent:  true,
 		ExcludeComments: true,
 	}

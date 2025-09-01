@@ -7,11 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { workspaceStore } from "@/store";
 import { workspaceSettingNamePrefix } from "@/store/common";
-import { WorkspaceSettingKey } from "@/store/workspace";
-import { WorkspaceCustomProfile } from "@/types/proto/api/v1/workspace_service";
+import { WorkspaceSetting_GeneralSetting_CustomProfile, WorkspaceSetting_Key } from "@/types/proto/api/v1/workspace_service";
 import { useTranslate } from "@/utils/i18n";
-import AppearanceSelect from "./AppearanceSelect";
 import LocaleSelect from "./LocaleSelect";
+import ThemeSelect from "./ThemeSelect";
 
 interface Props {
   open: boolean;
@@ -22,13 +21,13 @@ interface Props {
 function UpdateCustomizedProfileDialog({ open, onOpenChange, onSuccess }: Props) {
   const t = useTranslate();
   const workspaceGeneralSetting = workspaceStore.state.generalSetting;
-  const [customProfile, setCustomProfile] = useState<WorkspaceCustomProfile>(
-    WorkspaceCustomProfile.fromPartial(workspaceGeneralSetting.customProfile || {}),
+  const [customProfile, setCustomProfile] = useState<WorkspaceSetting_GeneralSetting_CustomProfile>(
+    WorkspaceSetting_GeneralSetting_CustomProfile.fromPartial(workspaceGeneralSetting.customProfile || {}),
   );
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const setPartialState = (partialState: Partial<WorkspaceCustomProfile>) => {
+  const setPartialState = (partialState: Partial<WorkspaceSetting_GeneralSetting_CustomProfile>) => {
     setCustomProfile((state) => ({
       ...state,
       ...partialState,
@@ -59,19 +58,12 @@ function UpdateCustomizedProfileDialog({ open, onOpenChange, onSuccess }: Props)
     });
   };
 
-  const handleAppearanceSelectChange = (appearance: Appearance) => {
-    setPartialState({
-      appearance: appearance,
-    });
-  };
-
   const handleRestoreButtonClick = () => {
     setPartialState({
       title: "Memos",
       logoUrl: "/logo.webp",
       description: "",
       locale: "en",
-      appearance: "system",
     });
   };
 
@@ -88,7 +80,7 @@ function UpdateCustomizedProfileDialog({ open, onOpenChange, onSuccess }: Props)
     setIsLoading(true);
     try {
       await workspaceStore.upsertWorkspaceSetting({
-        name: `${workspaceSettingNamePrefix}${WorkspaceSettingKey.GENERAL}`,
+        name: `${workspaceSettingNamePrefix}${WorkspaceSetting_Key.GENERAL}`,
         generalSetting: {
           ...workspaceGeneralSetting,
           customProfile: customProfile,
@@ -141,8 +133,8 @@ function UpdateCustomizedProfileDialog({ open, onOpenChange, onSuccess }: Props)
           </div>
 
           <div className="grid gap-2">
-            <Label>{t("setting.system-section.customize-server.appearance")}</Label>
-            <AppearanceSelect value={customProfile.appearance as Appearance} onChange={handleAppearanceSelectChange} />
+            <Label>Theme</Label>
+            <ThemeSelect />
           </div>
         </div>
 

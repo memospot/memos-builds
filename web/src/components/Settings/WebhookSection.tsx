@@ -2,21 +2,21 @@ import { ExternalLinkIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { webhookServiceClient } from "@/grpcweb";
+import { userServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { Webhook } from "@/types/proto/api/v1/webhook_service";
+import { UserWebhook } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import CreateWebhookDialog from "../CreateWebhookDialog";
 
 const WebhookSection = () => {
   const t = useTranslate();
   const currentUser = useCurrentUser();
-  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [webhooks, setWebhooks] = useState<UserWebhook[]>([]);
   const [isCreateWebhookDialogOpen, setIsCreateWebhookDialogOpen] = useState(false);
 
   const listWebhooks = async () => {
     if (!currentUser) return [];
-    const { webhooks } = await webhookServiceClient.listWebhooks({
+    const { webhooks } = await userServiceClient.listUserWebhooks({
       parent: currentUser.name,
     });
     return webhooks;
@@ -34,10 +34,10 @@ const WebhookSection = () => {
     setIsCreateWebhookDialogOpen(false);
   };
 
-  const handleDeleteWebhook = async (webhook: Webhook) => {
+  const handleDeleteWebhook = async (webhook: UserWebhook) => {
     const confirmed = window.confirm(`Are you sure to delete webhook \`${webhook.displayName}\`? You cannot undo this action.`);
     if (confirmed) {
-      await webhookServiceClient.deleteWebhook({ name: webhook.name });
+      await userServiceClient.deleteUserWebhook({ name: webhook.name });
       setWebhooks(webhooks.filter((item) => item.name !== webhook.name));
     }
   };
@@ -106,7 +106,7 @@ const WebhookSection = () => {
       <div className="w-full mt-2">
         <Link
           className="text-muted-foreground text-sm inline-flex flex-row justify-start items-center hover:underline hover:text-primary"
-          to="https://usememos.com/docs/advanced-settings/webhook"
+          to="https://www.usememos.com/docs/integrations/webhooks"
           target="_blank"
         >
           {t("common.learn-more")}

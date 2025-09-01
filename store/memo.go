@@ -29,8 +29,9 @@ func (v Visibility) String() string {
 		return "PROTECTED"
 	case Private:
 		return "PRIVATE"
+	default:
+		return "PRIVATE"
 	}
-	return "PRIVATE"
 }
 
 type Memo struct {
@@ -52,7 +53,7 @@ type Memo struct {
 	Payload    *storepb.MemoPayload
 
 	// Composed fields
-	ParentID *int32
+	ParentUID *string
 }
 
 type FindMemo struct {
@@ -60,21 +61,14 @@ type FindMemo struct {
 	UID *string
 
 	// Standard fields
-	RowStatus       *RowStatus
-	CreatorID       *int32
-	CreatedTsAfter  *int64
-	CreatedTsBefore *int64
-	UpdatedTsAfter  *int64
-	UpdatedTsBefore *int64
+	RowStatus *RowStatus
+	CreatorID *int32
 
 	// Domain specific fields
-	ContentSearch   []string
 	VisibilityList  []Visibility
-	Pinned          *bool
-	PayloadFind     *FindMemoPayload
 	ExcludeContent  bool
 	ExcludeComments bool
-	Filter          *string
+	Filters         []string
 
 	// Pagination
 	Limit  *int
@@ -82,7 +76,6 @@ type FindMemo struct {
 
 	// Ordering
 	OrderByUpdatedTs bool
-	OrderByPinned    bool
 	OrderByTimeAsc   bool
 }
 

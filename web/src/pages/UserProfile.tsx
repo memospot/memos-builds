@@ -11,6 +11,7 @@ import UserAvatar from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import useLoading from "@/hooks/useLoading";
 import { viewStore, userStore } from "@/store";
+import { extractUserIdFromName } from "@/store/common";
 import memoFilterStore from "@/store/memoFilter";
 import { State } from "@/types/proto/api/v1/common";
 import { Memo } from "@/types/proto/api/v1/memo_service";
@@ -41,28 +42,20 @@ const UserProfile = observer(() => {
       });
   }, [params.username]);
 
-  const memoListFilter = useMemo(() => {
+  const memoFilter = useMemo(() => {
     if (!user) {
-      return "";
+      return undefined;
     }
 
-    const conditions = [];
-    const contentSearch: string[] = [];
-    const tagSearch: string[] = [];
+    const conditions = [`creator_id == ${extractUserIdFromName(user.name)}`];
     for (const filter of memoFilterStore.filters) {
       if (filter.factor === "contentSearch") {
-        contentSearch.push(`"${filter.value}"`);
+        conditions.push(`content.contains("${filter.value}")`);
       } else if (filter.factor === "tagSearch") {
-        tagSearch.push(`"${filter.value}"`);
+        conditions.push(`tag in ["${filter.value}"]`);
       }
     }
-    if (contentSearch.length > 0) {
-      conditions.push(`content_search == [${contentSearch.join(", ")}]`);
-    }
-    if (tagSearch.length > 0) {
-      conditions.push(`tag_search == [${tagSearch.join(", ")}]`);
-    }
-    return conditions.join(" && ");
+    return conditions.length > 0 ? conditions.join(" && ") : undefined;
   }, [user, memoFilterStore.filters]);
 
   const handleCopyProfileLink = () => {
@@ -107,11 +100,9 @@ const UserProfile = observer(() => {
                         ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
                         : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
                     )
-                    .sort((a, b) => Number(b.pinned) - Number(a.pinned))
                 }
-                owner={user.name}
                 orderBy={viewStore.state.orderByTimeAsc ? "display_time asc" : "display_time desc"}
-                oldFilter={memoListFilter}
+                filter={memoFilter}
               />
             </>
           ) : (
