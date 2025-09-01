@@ -59,14 +59,14 @@ default:
     echo -e "${YELLOW}This quick test does not verify tool versions. If you experience any errors, consider updating the related tool.${RESET}\n"
     just --list
 
-# Tidy go.mod, ensuring compatibility with Go 1.24.
+# Tidy go.mod, ensuring compatibility with Go 1.25.
 [private]
 [group('CI')]
 build-backend-tidy:
     #!{{bash}}
     set -euo pipefail
     cd memos
-    go mod tidy -go=1.24
+    go mod tidy -go=1.25
 
 # Generate protobuf-related code.
 [private]
