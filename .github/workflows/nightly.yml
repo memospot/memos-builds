@@ -48,7 +48,7 @@ jobs:
 
       # setup deps
       - name: Setup Just
-        uses: taiki-e/install-action@3216b6964cbfe053bb8b9a2ef245bd9300e2061d
+        uses: taiki-e/install-action@f13d8e15c52b25c79b608d399cc802adc73d83da
         with: { tool: just@1.34.0 }
 
       - name: Setup pnpm
@@ -94,7 +94,7 @@ jobs:
 
       # setup deps
       - name: Setup Just
-        uses: taiki-e/install-action@3216b6964cbfe053bb8b9a2ef245bd9300e2061d
+        uses: taiki-e/install-action@f13d8e15c52b25c79b608d399cc802adc73d83da
         with: { tool: just@1.40.0 }
 
       - name: Setup buf
