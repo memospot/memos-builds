@@ -80,7 +80,7 @@ upx:
     lzma: true
 
 archives:
-  - format: tar.gz
+  - formats: ["tar.gz"]
     # this template makes the OS and Arch more compatible with `uname` output.
     name_template: >-
       {{ .ProjectName }}-{{ .Tag }}-{{- .Os }}-
@@ -95,7 +95,7 @@ archives:
       mode: 0644
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
 changelog:
   disable: true
