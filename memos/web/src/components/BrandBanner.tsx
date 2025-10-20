@@ -8,7 +8,7 @@ interface Props {
   collapsed?: boolean;
 }
 
-const MemosLogo = observer((props: Props) => {
+const BrandBanner = observer((props: Props) => {
   const { collapsed } = props;
   const workspaceGeneralSetting = workspaceStore.state.generalSetting;
   const title = workspaceGeneralSetting.customProfile?.title || "Memos";
@@ -24,4 +24,4 @@ const MemosLogo = observer((props: Props) => {
   );
 });
 
-export default MemosLogo;
+export default BrandBanner;

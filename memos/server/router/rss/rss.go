@@ -152,11 +152,11 @@ func (s *RSSService) generateRSSFromMemoList(ctx context.Context, memoList []*st
 }
 
 func getRSSItemDescription(content string) (string, error) {
-	doc, err := gomark.Parse(content)
+	nodes, err := gomark.Parse(content)
 	if err != nil {
 		return "", err
 	}
-	result := renderer.NewHTMLRenderer().RenderDocument(doc)
+	result := renderer.NewHTMLRenderer().Render(nodes)
 	return result, nil
 }
 

@@ -4,28 +4,30 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/usememos/gomark"
 	"github.com/usememos/gomark/ast"
+	"github.com/usememos/gomark/parser"
+	"github.com/usememos/gomark/parser/tokenizer"
 	"github.com/usememos/gomark/renderer"
+	"github.com/usememos/gomark/restore"
 
 	"github.com/usememos/memos/plugin/httpgetter"
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 )
 
 func (*APIV1Service) ParseMarkdown(_ context.Context, request *v1pb.ParseMarkdownRequest) (*v1pb.ParseMarkdownResponse, error) {
-	doc, err := gomark.Parse(request.Markdown)
+	rawNodes, err := parser.Parse(tokenizer.Tokenize(request.Markdown))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse memo content")
 	}
 
-	nodes := convertFromASTDocument(doc)
+	nodes := convertFromASTNodes(rawNodes)
 	return &v1pb.ParseMarkdownResponse{
 		Nodes: nodes,
 	}, nil
 }
 
 func (*APIV1Service) RestoreMarkdownNodes(_ context.Context, request *v1pb.RestoreMarkdownNodesRequest) (*v1pb.RestoreMarkdownNodesResponse, error) {
-	markdown := gomark.Restore(convertToASTDocument(request.Nodes))
+	markdown := restore.Restore(convertToASTNodes(request.Nodes))
 	return &v1pb.RestoreMarkdownNodesResponse{
 		Markdown: markdown,
 	}, nil
@@ -33,7 +35,7 @@ func (*APIV1Service) RestoreMarkdownNodes(_ context.Context, request *v1pb.Resto
 
 func (*APIV1Service) StringifyMarkdownNodes(_ context.Context, request *v1pb.StringifyMarkdownNodesRequest) (*v1pb.StringifyMarkdownNodesResponse, error) {
 	stringRenderer := renderer.NewStringRenderer()
-	plainText := stringRenderer.RenderDocument(convertToASTDocument(request.Nodes))
+	plainText := stringRenderer.Render(convertToASTNodes(request.Nodes))
 	return &v1pb.StringifyMarkdownNodesResponse{
 		PlainText: plainText,
 	}, nil
@@ -98,9 +100,7 @@ func convertFromASTNode(rawNode ast.Node) *v1pb.Node {
 	case *ast.Italic:
 		node.Node = &v1pb.Node_ItalicNode{ItalicNode: &v1pb.ItalicNode{Symbol: n.Symbol, Children: convertFromASTNodes(n.Children)}}
 	case *ast.BoldItalic:
-		childDoc := &ast.Document{Children: n.Children}
-		plain := renderer.NewStringRenderer().RenderDocument(childDoc)
-		node.Node = &v1pb.Node_BoldItalicNode{BoldItalicNode: &v1pb.BoldItalicNode{Symbol: n.Symbol, Content: plain}}
+		node.Node = &v1pb.Node_BoldItalicNode{BoldItalicNode: &v1pb.BoldItalicNode{Symbol: n.Symbol, Content: n.Content}}
 	case *ast.Code:
 		node.Node = &v1pb.Node_CodeNode{CodeNode: &v1pb.CodeNode{Content: n.Content}}
 	case *ast.Image:
@@ -128,12 +128,7 @@ func convertFromASTNode(rawNode ast.Node) *v1pb.Node {
 	case *ast.Spoiler:
 		node.Node = &v1pb.Node_SpoilerNode{SpoilerNode: &v1pb.SpoilerNode{Content: n.Content}}
 	case *ast.HTMLElement:
-		node.Node = &v1pb.Node_HtmlElementNode{HtmlElementNode: &v1pb.HTMLElementNode{
-			TagName:       n.TagName,
-			Attributes:    n.Attributes,
-			Children:      convertFromASTNodes(n.Children),
-			IsSelfClosing: n.IsSelfClosing,
-		}}
+		node.Node = &v1pb.Node_HtmlElementNode{HtmlElementNode: &v1pb.HTMLElementNode{TagName: n.TagName, Attributes: n.Attributes}}
 	default:
 		node.Node = &v1pb.Node_TextNode{TextNode: &v1pb.TextNode{}}
 	}
@@ -147,13 +142,6 @@ func convertFromASTNodes(rawNodes []ast.Node) []*v1pb.Node {
 		nodes = append(nodes, node)
 	}
 	return nodes
-}
-
-func convertFromASTDocument(doc *ast.Document) []*v1pb.Node {
-	if doc == nil {
-		return nil
-	}
-	return convertFromASTNodes(doc.Children)
 }
 
 func convertTableFromASTNode(node *ast.Table) *v1pb.TableNode {
@@ -173,7 +161,7 @@ func convertListKindFromASTNode(node ast.ListKind) v1pb.ListNode_Kind {
 		return v1pb.ListNode_ORDERED
 	case ast.UnorderedList:
 		return v1pb.ListNode_UNORDERED
-	case ast.DescriptionList:
+	case ast.DescrpitionList:
 		return v1pb.ListNode_DESCRIPTION
 	default:
 		return v1pb.ListNode_KIND_UNSPECIFIED
@@ -222,11 +210,7 @@ func convertToASTNode(node *v1pb.Node) ast.Node {
 	case *v1pb.Node_ItalicNode:
 		return &ast.Italic{Symbol: n.ItalicNode.Symbol, Children: convertToASTNodes(n.ItalicNode.Children)}
 	case *v1pb.Node_BoldItalicNode:
-		children := []ast.Node{}
-		if n.BoldItalicNode.Content != "" {
-			children = append(children, &ast.Text{Content: n.BoldItalicNode.Content})
-		}
-		return &ast.BoldItalic{Symbol: n.BoldItalicNode.Symbol, Children: children}
+		return &ast.BoldItalic{Symbol: n.BoldItalicNode.Symbol, Content: n.BoldItalicNode.Content}
 	case *v1pb.Node_CodeNode:
 		return &ast.Code{Content: n.CodeNode.Content}
 	case *v1pb.Node_ImageNode:
@@ -254,16 +238,7 @@ func convertToASTNode(node *v1pb.Node) ast.Node {
 	case *v1pb.Node_SpoilerNode:
 		return &ast.Spoiler{Content: n.SpoilerNode.Content}
 	case *v1pb.Node_HtmlElementNode:
-		var children []ast.Node
-		if len(n.HtmlElementNode.Children) > 0 {
-			children = convertToASTNodes(n.HtmlElementNode.Children)
-		}
-		return &ast.HTMLElement{
-			TagName:       n.HtmlElementNode.TagName,
-			Attributes:    n.HtmlElementNode.Attributes,
-			Children:      children,
-			IsSelfClosing: n.HtmlElementNode.IsSelfClosing,
-		}
+		return &ast.HTMLElement{TagName: n.HtmlElementNode.TagName, Attributes: n.HtmlElementNode.Attributes}
 	default:
 		return &ast.Text{}
 	}
@@ -276,10 +251,6 @@ func convertToASTNodes(nodes []*v1pb.Node) []ast.Node {
 		rawNodes = append(rawNodes, rawNode)
 	}
 	return rawNodes
-}
-
-func convertToASTDocument(nodes []*v1pb.Node) *ast.Document {
-	return &ast.Document{Children: convertToASTNodes(nodes)}
 }
 
 func convertTableToASTNode(node *v1pb.TableNode) *ast.Table {
@@ -299,8 +270,10 @@ func convertListKindToASTNode(kind v1pb.ListNode_Kind) ast.ListKind {
 		return ast.OrderedList
 	case v1pb.ListNode_UNORDERED:
 		return ast.UnorderedList
+	case v1pb.ListNode_DESCRIPTION:
+		return ast.DescrpitionList
 	default:
 		// Default to description list.
-		return ast.DescriptionList
+		return ast.DescrpitionList
 	}
 }

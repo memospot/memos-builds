@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import { observer } from "mobx-react-lite";
-import { MemoRenderContext } from "@/components/MasonryView";
 import MemoView from "@/components/MemoView";
 import MobileHeader from "@/components/MobileHeader";
 import PagedMemoList from "@/components/PagedMemoList";
@@ -17,9 +16,7 @@ const Explore = observer(() => {
       {!md && <MobileHeader />}
       <div className="w-full px-4 sm:px-6">
         <PagedMemoList
-          renderer={(memo: Memo, context?: MemoRenderContext) => (
-            <MemoView key={`${memo.name}-${memo.updateTime}`} memo={memo} showCreator showVisibility compact={context?.compact} />
-          )}
+          renderer={(memo: Memo) => <MemoView key={`${memo.name}-${memo.updateTime}`} memo={memo} showCreator showVisibility compact />}
           listSort={(memos: Memo[]) =>
             memos
               .filter((memo) => memo.state === State.NORMAL)

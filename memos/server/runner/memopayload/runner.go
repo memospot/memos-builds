@@ -6,8 +6,9 @@ import (
 	"slices"
 
 	"github.com/pkg/errors"
-	"github.com/usememos/gomark"
 	"github.com/usememos/gomark/ast"
+	"github.com/usememos/gomark/parser"
+	"github.com/usememos/gomark/parser/tokenizer"
 
 	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/store"
@@ -72,7 +73,7 @@ func (r *Runner) RunOnce(ctx context.Context) {
 }
 
 func RebuildMemoPayload(memo *store.Memo) error {
-	doc, err := gomark.Parse(memo.Content)
+	nodes, err := parser.Parse(tokenizer.Tokenize(memo.Content))
 	if err != nil {
 		return errors.Wrap(err, "failed to parse content")
 	}
@@ -82,7 +83,7 @@ func RebuildMemoPayload(memo *store.Memo) error {
 	}
 	tags := []string{}
 	property := &storepb.MemoPayload_Property{}
-	TraverseASTDocument(doc, func(node ast.Node) {
+	TraverseASTNodes(nodes, func(node ast.Node) {
 		switch n := node.(type) {
 		case *ast.Tag:
 			tag := n.Content
@@ -108,33 +109,26 @@ func RebuildMemoPayload(memo *store.Memo) error {
 	return nil
 }
 
-func TraverseASTDocument(doc *ast.Document, fn func(ast.Node)) {
-	if doc == nil {
-		return
-	}
-	traverseASTNodes(doc.Children, fn)
-}
-
-func traverseASTNodes(nodes []ast.Node, fn func(ast.Node)) {
+func TraverseASTNodes(nodes []ast.Node, fn func(ast.Node)) {
 	for _, node := range nodes {
 		fn(node)
 		switch n := node.(type) {
 		case *ast.Paragraph:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.Heading:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.Blockquote:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.List:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.OrderedListItem:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.UnorderedListItem:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.TaskListItem:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		case *ast.Bold:
-			traverseASTNodes(n.Children, fn)
+			TraverseASTNodes(n.Children, fn)
 		}
 	}
 }

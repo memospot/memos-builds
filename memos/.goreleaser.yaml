@@ -6,7 +6,7 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./cmd/memos
+  - main: ./bin/memos
     binary: memos
     goos:
       - linux
