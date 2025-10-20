@@ -27,8 +27,6 @@ func (v Visibility) String() string {
 		return "PUBLIC"
 	case Protected:
 		return "PROTECTED"
-	case Private:
-		return "PRIVATE"
 	default:
 		return "PRIVATE"
 	}
@@ -60,6 +58,9 @@ type FindMemo struct {
 	ID  *int32
 	UID *string
 
+	IDList  []int32
+	UIDList []string
+
 	// Standard fields
 	RowStatus *RowStatus
 	CreatorID *int32
@@ -75,6 +76,7 @@ type FindMemo struct {
 	Offset *int
 
 	// Ordering
+	OrderByPinned    bool
 	OrderByUpdatedTs bool
 	OrderByTimeAsc   bool
 }

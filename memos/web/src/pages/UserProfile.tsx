@@ -5,6 +5,7 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
+import { MemoRenderContext } from "@/components/MasonryView";
 import MemoView from "@/components/MemoView";
 import PagedMemoList from "@/components/PagedMemoList";
 import UserAvatar from "@/components/UserAvatar";
@@ -89,19 +90,24 @@ const UserProfile = observer(() => {
                 </div>
               </div>
               <PagedMemoList
-                renderer={(memo: Memo) => (
-                  <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact />
+                renderer={(memo: Memo, context?: MemoRenderContext) => (
+                  <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact={context?.compact} />
                 )}
                 listSort={(memos: Memo[]) =>
                   memos
                     .filter((memo) => memo.state === State.NORMAL)
-                    .sort((a, b) =>
-                      viewStore.state.orderByTimeAsc
+                    .sort((a, b) => {
+                      // First, sort by pinned status (pinned memos first)
+                      if (a.pinned !== b.pinned) {
+                        return b.pinned ? 1 : -1;
+                      }
+                      // Then sort by display time
+                      return viewStore.state.orderByTimeAsc
                         ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
-                        : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
-                    )
+                        : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix();
+                    })
                 }
-                orderBy={viewStore.state.orderByTimeAsc ? "display_time asc" : "display_time desc"}
+                orderBy={viewStore.state.orderByTimeAsc ? "pinned desc, display_time asc" : "pinned desc, display_time desc"}
                 filter={memoFilter}
               />
             </>
