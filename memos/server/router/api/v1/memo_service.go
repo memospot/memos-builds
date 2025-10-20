@@ -10,11 +10,9 @@ import (
 
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/pkg/errors"
+	"github.com/usememos/gomark"
 	"github.com/usememos/gomark/ast"
-	"github.com/usememos/gomark/parser"
-	"github.com/usememos/gomark/parser/tokenizer"
 	"github.com/usememos/gomark/renderer"
-	"github.com/usememos/gomark/restore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -30,6 +28,9 @@ func (s *APIV1Service) CreateMemo(ctx context.Context, request *v1pb.CreateMemoR
 	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user")
+	}
+	if user == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 
 	create := &store.Memo{
@@ -199,20 +200,18 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 	}
 
 	reactionMap := make(map[string][]*store.Reaction)
-	memoNames := make([]string, 0, len(memos))
+	contentIDs := make([]string, 0, len(memos))
 
 	attachmentMap := make(map[int32][]*store.Attachment)
-	memoIDs := make([]string, 0, len(memos))
+	memoIDs := make([]int32, 0, len(memos))
 
 	for _, m := range memos {
-		memoNames = append(memoNames, fmt.Sprintf("'%s%s'", MemoNamePrefix, m.UID))
-		memoIDs = append(memoIDs, fmt.Sprintf("'%d'", m.ID))
+		contentIDs = append(contentIDs, fmt.Sprintf("%s%s", MemoNamePrefix, m.UID))
+		memoIDs = append(memoIDs, m.ID)
 	}
 
 	// REACTIONS
-	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
-		Filters: []string{fmt.Sprintf("content_id in [%s]", strings.Join(memoNames, ", "))},
-	})
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{ContentIDList: contentIDs})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list reactions")
 	}
@@ -221,9 +220,7 @@ func (s *APIV1Service) ListMemos(ctx context.Context, request *v1pb.ListMemosReq
 	}
 
 	// ATTACHMENTS
-	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
-		Filters: []string{fmt.Sprintf("memo_id in [%s]", strings.Join(memoIDs, ", "))},
-	})
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{MemoIDList: memoIDs})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list attachments")
 	}
@@ -319,6 +316,9 @@ func (s *APIV1Service) UpdateMemo(ctx context.Context, request *v1pb.UpdateMemoR
 	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
+	}
+	if user == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	// Only the creator or admin can update the memo.
 	if memo.CreatorID != user.ID && !isSuperUser(user) {
@@ -454,6 +454,9 @@ func (s *APIV1Service) DeleteMemo(ctx context.Context, request *v1pb.DeleteMemoR
 	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
+	}
+	if user == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	// Only the creator or admin can update the memo.
 	if memo.CreatorID != user.ID && !isSuperUser(user) {
@@ -623,30 +626,26 @@ func (s *APIV1Service) ListMemoComments(ctx context.Context, request *v1pb.ListM
 		return response, nil
 	}
 
-	memoRelationIDs := make([]string, 0, len(memoRelations))
+	memoRelationIDs := make([]int32, 0, len(memoRelations))
 	for _, m := range memoRelations {
-		memoRelationIDs = append(memoRelationIDs, fmt.Sprintf("%d", m.MemoID))
+		memoRelationIDs = append(memoRelationIDs, m.MemoID)
 	}
-	memos, err := s.Store.ListMemos(ctx, &store.FindMemo{
-		Filters: []string{fmt.Sprintf("id in [%s]", strings.Join(memoRelationIDs, ", "))},
-	})
+	memos, err := s.Store.ListMemos(ctx, &store.FindMemo{IDList: memoRelationIDs})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list memos")
 	}
 
 	memoIDToNameMap := make(map[int32]string)
-	memoNamesForQuery := make([]string, 0, len(memos))
-	memoIDsForQuery := make([]string, 0, len(memos))
+	contentIDs := make([]string, 0, len(memos))
+	memoIDsForAttachments := make([]int32, 0, len(memos))
 
 	for _, memo := range memos {
 		memoName := fmt.Sprintf("%s%s", MemoNamePrefix, memo.UID)
 		memoIDToNameMap[memo.ID] = memoName
-		memoNamesForQuery = append(memoNamesForQuery, fmt.Sprintf("'%s'", memoName))
-		memoIDsForQuery = append(memoIDsForQuery, fmt.Sprintf("'%d'", memo.ID))
+		contentIDs = append(contentIDs, memoName)
+		memoIDsForAttachments = append(memoIDsForAttachments, memo.ID)
 	}
-	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{
-		Filters: []string{fmt.Sprintf("content_id in [%s]", strings.Join(memoNamesForQuery, ", "))},
-	})
+	reactions, err := s.Store.ListReactions(ctx, &store.FindReaction{ContentIDList: contentIDs})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list reactions")
 	}
@@ -656,9 +655,7 @@ func (s *APIV1Service) ListMemoComments(ctx context.Context, request *v1pb.ListM
 		memoReactionsMap[reaction.ContentID] = append(memoReactionsMap[reaction.ContentID], reaction)
 	}
 
-	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{
-		Filters: []string{fmt.Sprintf("memo_id in [%s]", strings.Join(memoIDsForQuery, ", "))},
-	})
+	attachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{MemoIDList: memoIDsForAttachments})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list attachments")
 	}
@@ -691,6 +688,9 @@ func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMe
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
 	}
+	if user == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
+	}
 
 	memoFind := &store.FindMemo{
 		CreatorID:       &user.ID,
@@ -711,16 +711,16 @@ func (s *APIV1Service) RenameMemoTag(ctx context.Context, request *v1pb.RenameMe
 	}
 
 	for _, memo := range memos {
-		nodes, err := parser.Parse(tokenizer.Tokenize(memo.Content))
+		doc, err := gomark.Parse(memo.Content)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to parse memo: %v", err)
 		}
-		memopayload.TraverseASTNodes(nodes, func(node ast.Node) {
+		memopayload.TraverseASTDocument(doc, func(node ast.Node) {
 			if tag, ok := node.(*ast.Tag); ok && tag.Content == request.OldTag {
 				tag.Content = request.NewTag
 			}
 		})
-		memo.Content = restore.Restore(nodes)
+		memo.Content = gomark.Restore(doc)
 		if err := memopayload.RebuildMemoPayload(memo); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to rebuild memo payload: %v", err)
 		}
@@ -740,6 +740,9 @@ func (s *APIV1Service) DeleteMemoTag(ctx context.Context, request *v1pb.DeleteMe
 	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user")
+	}
+	if user == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 
 	memoFind := &store.FindMemo{
@@ -840,12 +843,12 @@ func convertMemoToWebhookPayload(memo *v1pb.Memo) (*webhook.WebhookRequestPayloa
 }
 
 func getMemoContentSnippet(content string) (string, error) {
-	nodes, err := parser.Parse(tokenizer.Tokenize(content))
+	doc, err := gomark.Parse(content)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse content")
 	}
 
-	plainText := renderer.NewStringRenderer().Render(nodes)
+	plainText := renderer.NewStringRenderer().RenderDocument(doc)
 	if len(plainText) > 64 {
 		return substring(plainText, 64) + "...", nil
 	}
@@ -872,35 +875,55 @@ func substring(s string, length int) string {
 }
 
 // parseMemoOrderBy parses the order_by field and sets the appropriate ordering in memoFind.
+// Follows AIP-132: supports comma-separated list of fields with optional "desc" suffix.
+// Example: "pinned desc, display_time desc" or "create_time asc".
 func (*APIV1Service) parseMemoOrderBy(orderBy string, memoFind *store.FindMemo) error {
-	// Parse order_by field like "display_time desc" or "create_time asc"
-	parts := strings.Fields(strings.TrimSpace(orderBy))
-	if len(parts) == 0 {
+	if strings.TrimSpace(orderBy) == "" {
 		return errors.New("empty order_by")
 	}
 
-	field := parts[0]
-	direction := "desc" // default
-	if len(parts) > 1 {
-		direction = strings.ToLower(parts[1])
-		if direction != "asc" && direction != "desc" {
-			return errors.Errorf("invalid order direction: %s, must be 'asc' or 'desc'", parts[1])
+	// Split by comma to support multiple sort fields per AIP-132.
+	fields := strings.Split(orderBy, ",")
+
+	// Track if we've seen pinned field.
+	hasPinned := false
+
+	for _, field := range fields {
+		parts := strings.Fields(strings.TrimSpace(field))
+		if len(parts) == 0 {
+			continue
+		}
+
+		fieldName := parts[0]
+		fieldDirection := "desc" // default per AIP-132 (we use desc as default for time fields)
+		if len(parts) > 1 {
+			fieldDirection = strings.ToLower(parts[1])
+			if fieldDirection != "asc" && fieldDirection != "desc" {
+				return errors.Errorf("invalid order direction: %s, must be 'asc' or 'desc'", parts[1])
+			}
+		}
+
+		switch fieldName {
+		case "pinned":
+			hasPinned = true
+			memoFind.OrderByPinned = true
+			// Note: pinned is always DESC (true first) regardless of direction specified.
+		case "display_time", "create_time", "name":
+			// Only set if this is the first time field we encounter.
+			if !memoFind.OrderByUpdatedTs {
+				memoFind.OrderByTimeAsc = fieldDirection == "asc"
+			}
+		case "update_time":
+			memoFind.OrderByUpdatedTs = true
+			memoFind.OrderByTimeAsc = fieldDirection == "asc"
+		default:
+			return errors.Errorf("unsupported order field: %s, supported fields are: pinned, display_time, create_time, update_time, name", fieldName)
 		}
 	}
 
-	switch field {
-	case "display_time":
-		memoFind.OrderByTimeAsc = direction == "asc"
-	case "create_time":
-		memoFind.OrderByTimeAsc = direction == "asc"
-	case "update_time":
-		memoFind.OrderByUpdatedTs = true
-		memoFind.OrderByTimeAsc = direction == "asc"
-	case "name":
-		// For ordering by memo name/id - not commonly used but supported
-		memoFind.OrderByTimeAsc = direction == "asc"
-	default:
-		return errors.Errorf("unsupported order field: %s, supported fields are: display_time, create_time, update_time, name", field)
+	// If only pinned was specified, still need to set a default time ordering.
+	if hasPinned && !memoFind.OrderByUpdatedTs && len(fields) == 1 {
+		memoFind.OrderByTimeAsc = false // default to desc
 	}
 
 	return nil

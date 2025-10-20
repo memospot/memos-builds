@@ -25,7 +25,6 @@ import (
 
 	"github.com/usememos/memos/internal/base"
 	"github.com/usememos/memos/internal/util"
-	"github.com/usememos/memos/plugin/filter"
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/store"
@@ -36,6 +35,9 @@ func (s *APIV1Service) ListUsers(ctx context.Context, request *v1pb.ListUsersReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
 	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
+	}
 	if currentUser.Role != store.RoleHost && currentUser.Role != store.RoleAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
@@ -43,10 +45,9 @@ func (s *APIV1Service) ListUsers(ctx context.Context, request *v1pb.ListUsersReq
 	userFind := &store.FindUser{}
 
 	if request.Filter != "" {
-		if err := s.validateUserFilter(ctx, request.Filter); err != nil {
+		if err := validateUserFilter(ctx, request.Filter); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
 		}
-		userFind.Filters = append(userFind.Filters, request.Filter)
 	}
 
 	users, err := s.Store.ListUsers(ctx, userFind)
@@ -322,6 +323,9 @@ func (s *APIV1Service) GetUserSetting(ctx context.Context, request *v1pb.GetUser
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
+	}
 
 	// Only allow user to get their own settings
 	if currentUser.ID != userID {
@@ -355,6 +359,9 @@ func (s *APIV1Service) UpdateUserSetting(ctx context.Context, request *v1pb.Upda
 	currentUser, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 
 	// Only allow user to update their own settings
@@ -442,6 +449,9 @@ func (s *APIV1Service) ListUserSettings(ctx context.Context, request *v1pb.ListU
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
+	}
 
 	// Only allow user to list their own settings
 	if currentUser.ID != userID {
@@ -500,7 +510,7 @@ func (s *APIV1Service) ListUserAccessTokens(ctx context.Context, request *v1pb.L
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
 	if currentUser == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -562,7 +572,7 @@ func (s *APIV1Service) CreateUserAccessToken(ctx context.Context, request *v1pb.
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
 	if currentUser == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -630,7 +640,7 @@ func (s *APIV1Service) DeleteUserAccessToken(ctx context.Context, request *v1pb.
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
 	if currentUser == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -673,7 +683,7 @@ func (s *APIV1Service) ListUserSessions(ctx context.Context, request *v1pb.ListU
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
 	if currentUser == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -736,7 +746,7 @@ func (s *APIV1Service) RevokeUserSession(ctx context.Context, request *v1pb.Revo
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
 	if currentUser == nil {
-		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -796,6 +806,9 @@ func (s *APIV1Service) ListUserWebhooks(ctx context.Context, request *v1pb.ListU
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
+	}
 	if currentUser.ID != userID && currentUser.Role != store.RoleHost && currentUser.Role != store.RoleAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
@@ -824,6 +837,9 @@ func (s *APIV1Service) CreateUserWebhook(ctx context.Context, request *v1pb.Crea
 	currentUser, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID && currentUser.Role != store.RoleHost && currentUser.Role != store.RoleAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -861,6 +877,9 @@ func (s *APIV1Service) UpdateUserWebhook(ctx context.Context, request *v1pb.Upda
 	currentUser, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID && currentUser.Role != store.RoleHost && currentUser.Role != store.RoleAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -930,6 +949,9 @@ func (s *APIV1Service) DeleteUserWebhook(ctx context.Context, request *v1pb.Dele
 	currentUser, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+	if currentUser == nil {
+		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 	if currentUser.ID != userID && currentUser.Role != store.RoleHost && currentUser.Role != store.RoleAdmin {
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
@@ -1043,8 +1065,6 @@ func convertUserRoleToStore(role v1pb.User_Role) store.Role {
 		return store.RoleHost
 	case v1pb.User_ADMIN:
 		return store.RoleAdmin
-	case v1pb.User_USER:
-		return store.RoleUser
 	default:
 		return store.RoleUser
 	}
@@ -1125,10 +1145,6 @@ func convertUserSettingFromStore(storeSetting *storepb.UserSetting, userID int32
 		}
 
 		switch key {
-		case storepb.UserSetting_GENERAL:
-			setting.Value = &v1pb.UserSetting_GeneralSetting_{
-				GeneralSetting: getDefaultUserGeneralSetting(),
-			}
 		case storepb.UserSetting_SESSIONS:
 			setting.Value = &v1pb.UserSetting_SessionsSetting_{
 				SessionsSetting: &v1pb.UserSetting_SessionsSetting{
@@ -1343,35 +1359,9 @@ func extractWebhookIDFromName(name string) string {
 }
 
 // validateUserFilter validates the user filter string.
-func (s *APIV1Service) validateUserFilter(_ context.Context, filterStr string) error {
-	if filterStr == "" {
-		return errors.New("filter cannot be empty")
-	}
-	// Validate the filter.
-	parsedExpr, err := filter.Parse(filterStr, filter.UserFilterCELAttributes...)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse filter")
-	}
-	convertCtx := filter.NewConvertContext()
-
-	// Determine the dialect based on the actual database driver
-	var dialect filter.SQLDialect
-	switch s.Profile.Driver {
-	case "sqlite":
-		dialect = &filter.SQLiteDialect{}
-	case "mysql":
-		dialect = &filter.MySQLDialect{}
-	case "postgres":
-		dialect = &filter.PostgreSQLDialect{}
-	default:
-		// Default to SQLite for unknown drivers
-		dialect = &filter.SQLiteDialect{}
-	}
-
-	converter := filter.NewUserSQLConverter(dialect)
-	err = converter.ConvertExprToSQL(convertCtx, parsedExpr.GetExpr())
-	if err != nil {
-		return errors.Wrap(err, "failed to convert filter to SQL")
+func validateUserFilter(_ context.Context, filterStr string) error {
+	if strings.TrimSpace(filterStr) != "" {
+		return errors.New("user filters are not supported")
 	}
 	return nil
 }

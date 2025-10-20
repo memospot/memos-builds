@@ -8,8 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/usememos/gomark/parser"
-	"github.com/usememos/gomark/parser/tokenizer"
+	"github.com/usememos/gomark"
 
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 	storepb "github.com/usememos/memos/proto/gen/store"
@@ -69,11 +68,13 @@ func (s *APIV1Service) convertMemoFromStore(ctx context.Context, memo *store.Mem
 		memoMessage.Attachments = append(memoMessage.Attachments, attachmentResponse)
 	}
 
-	nodes, err := parser.Parse(tokenizer.Tokenize(memo.Content))
+	doc, err := gomark.Parse(memo.Content)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse content")
 	}
-	memoMessage.Nodes = convertFromASTNodes(nodes)
+	if doc != nil {
+		memoMessage.Nodes = convertFromASTNodes(doc.Children)
+	}
 
 	snippet, err := getMemoContentSnippet(memo.Content)
 	if err != nil {
@@ -133,8 +134,6 @@ func convertVisibilityFromStore(visibility store.Visibility) v1pb.Visibility {
 
 func convertVisibilityToStore(visibility v1pb.Visibility) store.Visibility {
 	switch visibility {
-	case v1pb.Visibility_PRIVATE:
-		return store.Private
 	case v1pb.Visibility_PROTECTED:
 		return store.Protected
 	case v1pb.Visibility_PUBLIC:
