@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import { observer } from "mobx-react-lite";
 import { useMemo } from "react";
-import { MemoRenderContext } from "@/components/MasonryView";
 import MemoView from "@/components/MemoView";
 import PagedMemoList from "@/components/PagedMemoList";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -57,24 +56,17 @@ const Home = observer(() => {
   return (
     <div className="w-full min-h-full bg-background text-foreground">
       <PagedMemoList
-        renderer={(memo: Memo, context?: MemoRenderContext) => (
-          <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact={context?.compact} />
-        )}
+        renderer={(memo: Memo) => <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact />}
         listSort={(memos: Memo[]) =>
           memos
             .filter((memo) => memo.state === State.NORMAL)
-            .sort((a, b) => {
-              // First, sort by pinned status (pinned memos first)
-              if (a.pinned !== b.pinned) {
-                return b.pinned ? 1 : -1;
-              }
-              // Then sort by display time
-              return viewStore.state.orderByTimeAsc
+            .sort((a, b) =>
+              viewStore.state.orderByTimeAsc
                 ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
-                : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix();
-            })
+                : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix(),
+            )
         }
-        orderBy={viewStore.state.orderByTimeAsc ? "pinned desc, display_time asc" : "pinned desc, display_time desc"}
+        orderBy={viewStore.state.orderByTimeAsc ? "display_time asc" : "display_time desc"}
         filter={memoFilter}
       />
     </div>

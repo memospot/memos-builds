@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -148,13 +147,14 @@ func TestConvertExprToSQL(t *testing.T) {
 		},
 	}
 
-	engine, err := filter.DefaultEngine()
-	require.NoError(t, err)
-
 	for _, tt := range tests {
-		stmt, err := engine.CompileToStatement(context.Background(), tt.filter, filter.RenderOptions{Dialect: filter.DialectPostgres})
+		parsedExpr, err := filter.Parse(tt.filter, filter.MemoFilterCELAttributes...)
 		require.NoError(t, err)
-		require.Equal(t, tt.want, stmt.SQL)
-		require.Equal(t, tt.args, stmt.Args)
+		convertCtx := filter.NewConvertContext()
+		converter := filter.NewCommonSQLConverterWithOffset(&filter.PostgreSQLDialect{}, convertCtx.ArgsOffset+len(convertCtx.Args))
+		err = converter.ConvertExprToSQL(convertCtx, parsedExpr.GetExpr())
+		require.NoError(t, err)
+		require.Equal(t, tt.want, convertCtx.Buffer.String())
+		require.Equal(t, tt.args, convertCtx.Args)
 	}
 }

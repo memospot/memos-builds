@@ -1,8 +1,6 @@
 import { ExternalLinkIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import ConfirmDialog from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { userServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -15,7 +13,6 @@ const WebhookSection = () => {
   const currentUser = useCurrentUser();
   const [webhooks, setWebhooks] = useState<UserWebhook[]>([]);
   const [isCreateWebhookDialogOpen, setIsCreateWebhookDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<UserWebhook | undefined>(undefined);
 
   const listWebhooks = async () => {
     if (!currentUser) return [];
@@ -33,22 +30,16 @@ const WebhookSection = () => {
 
   const handleCreateWebhookDialogConfirm = async () => {
     const webhooks = await listWebhooks();
-    const name = webhooks[webhooks.length - 1]?.displayName || "";
     setWebhooks(webhooks);
     setIsCreateWebhookDialogOpen(false);
-    toast.success(t("setting.webhook-section.create-dialog.create-webhook-success", { name }));
   };
 
   const handleDeleteWebhook = async (webhook: UserWebhook) => {
-    setDeleteTarget(webhook);
-  };
-
-  const confirmDeleteWebhook = async () => {
-    if (!deleteTarget) return;
-    await userServiceClient.deleteUserWebhook({ name: deleteTarget.name });
-    setWebhooks(webhooks.filter((item) => item.name !== deleteTarget.name));
-    setDeleteTarget(undefined);
-    toast.success(t("setting.webhook-section.delete-dialog.delete-webhook-success", { name: deleteTarget.displayName }));
+    const confirmed = window.confirm(`Are you sure to delete webhook \`${webhook.displayName}\`? You cannot undo this action.`);
+    if (confirmed) {
+      await userServiceClient.deleteUserWebhook({ name: webhook.name });
+      setWebhooks(webhooks.filter((item) => item.name !== webhook.name));
+    }
   };
 
   return (
@@ -88,7 +79,12 @@ const WebhookSection = () => {
                       {webhook.url}
                     </td>
                     <td className="relative whitespace-nowrap px-3 py-2 text-right text-sm">
-                      <Button variant="ghost" onClick={() => handleDeleteWebhook(webhook)}>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          handleDeleteWebhook(webhook);
+                        }}
+                      >
                         <TrashIcon className="text-destructive w-4 h-auto" />
                       </Button>
                     </td>
@@ -121,16 +117,6 @@ const WebhookSection = () => {
         open={isCreateWebhookDialogOpen}
         onOpenChange={setIsCreateWebhookDialogOpen}
         onSuccess={handleCreateWebhookDialogConfirm}
-      />
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(undefined)}
-        title={t("setting.webhook-section.delete-dialog.delete-webhook-title", { name: deleteTarget?.displayName || "" })}
-        description={t("setting.webhook-section.delete-dialog.delete-webhook-description")}
-        confirmLabel={t("common.delete")}
-        cancelLabel={t("common.cancel")}
-        onConfirm={confirmDeleteWebhook}
-        confirmVariant="destructive"
       />
     </div>
   );

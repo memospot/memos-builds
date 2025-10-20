@@ -1,7 +1,6 @@
 import { MoreVerticalIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import ConfirmDialog from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +15,6 @@ const SSOSection = () => {
   const [identityProviderList, setIdentityProviderList] = useState<IdentityProvider[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingIdentityProvider, setEditingIdentityProvider] = useState<IdentityProvider | undefined>();
-  const [deleteTarget, setDeleteTarget] = useState<IdentityProvider | undefined>(undefined);
 
   useEffect(() => {
     fetchIdentityProviderList();
@@ -28,19 +26,16 @@ const SSOSection = () => {
   };
 
   const handleDeleteIdentityProvider = async (identityProvider: IdentityProvider) => {
-    setDeleteTarget(identityProvider);
-  };
-
-  const confirmDeleteIdentityProvider = async () => {
-    if (!deleteTarget) return;
-    try {
-      await identityProviderServiceClient.deleteIdentityProvider({ name: deleteTarget.name });
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.details);
+    const confirmed = window.confirm(t("setting.sso-section.confirm-delete", { name: identityProvider.title }));
+    if (confirmed) {
+      try {
+        await identityProviderServiceClient.deleteIdentityProvider({ name: identityProvider.name });
+      } catch (error: any) {
+        console.error(error);
+        toast.error(error.details);
+      }
+      await fetchIdentityProviderList();
     }
-    await fetchIdentityProviderList();
-    setDeleteTarget(undefined);
   };
 
   const handleCreateIdentityProvider = () => {
@@ -57,14 +52,6 @@ const SSOSection = () => {
     await fetchIdentityProviderList();
     setIsCreateDialogOpen(false);
     setEditingIdentityProvider(undefined);
-  };
-
-  const handleDialogOpenChange = (open: boolean) => {
-    setIsCreateDialogOpen(open);
-    // Clear editing state when dialog is closed
-    if (!open) {
-      setEditingIdentityProvider(undefined);
-    }
   };
 
   return (
@@ -113,19 +100,9 @@ const SSOSection = () => {
 
       <CreateIdentityProviderDialog
         open={isCreateDialogOpen}
-        onOpenChange={handleDialogOpenChange}
+        onOpenChange={setIsCreateDialogOpen}
         identityProvider={editingIdentityProvider}
         onSuccess={handleDialogSuccess}
-      />
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(undefined)}
-        title={deleteTarget ? t("setting.sso-section.confirm-delete", { name: deleteTarget.title }) : ""}
-        confirmLabel={t("common.delete")}
-        cancelLabel={t("common.cancel")}
-        onConfirm={confirmDeleteIdentityProvider}
-        confirmVariant="destructive"
       />
     </div>
   );

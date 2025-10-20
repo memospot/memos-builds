@@ -1,4 +1,4 @@
-package util //nolint:revive // util namespace is intentional for shared helpers
+package util
 
 import (
 	"crypto/rand"

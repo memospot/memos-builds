@@ -3,7 +3,6 @@ import { observer } from "mobx-react-lite";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import useLocalStorage from "react-use/lib/useLocalStorage";
-import ConfirmDialog from "@/components/ConfirmDialog";
 import { Switch } from "@/components/ui/switch";
 import { memoServiceClient } from "@/grpcweb";
 import { useDialog } from "@/hooks/useDialog";
@@ -26,7 +25,6 @@ const TagsSection = observer((props: Props) => {
   const [treeAutoExpand, setTreeAutoExpand] = useLocalStorage<boolean>("tag-tree-auto-expand", false);
   const renameTagDialog = useDialog();
   const [selectedTag, setSelectedTag] = useState<string>("");
-  const [deleteTagName, setDeleteTagName] = useState<string | undefined>(undefined);
   const tags = Object.entries(userStore.state.tagCount)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .sort((a, b) => b[1] - a[1]);
@@ -54,17 +52,14 @@ const TagsSection = observer((props: Props) => {
   };
 
   const handleDeleteTag = async (tag: string) => {
-    setDeleteTagName(tag);
-  };
-
-  const confirmDeleteTag = async () => {
-    if (!deleteTagName) return;
-    await memoServiceClient.deleteMemoTag({
-      parent: "memos/-",
-      tag: deleteTagName,
-    });
-    toast.success(t("tag.delete-success"));
-    setDeleteTagName(undefined);
+    const confirmed = window.confirm(t("tag.delete-confirm"));
+    if (confirmed) {
+      await memoServiceClient.deleteMemoTag({
+        parent: "memos/-",
+        tag: tag,
+      });
+      toast.success(t("message.deleted-successfully"));
+    }
   };
 
   return (
@@ -143,15 +138,6 @@ const TagsSection = observer((props: Props) => {
         onOpenChange={renameTagDialog.setOpen}
         tag={selectedTag}
         onSuccess={handleRenameSuccess}
-      />
-      <ConfirmDialog
-        open={!!deleteTagName}
-        onOpenChange={(open) => !open && setDeleteTagName(undefined)}
-        title={t("tag.delete-confirm")}
-        confirmLabel={t("common.delete")}
-        cancelLabel={t("common.cancel")}
-        onConfirm={confirmDeleteTag}
-        confirmVariant="destructive"
       />
     </div>
   );
