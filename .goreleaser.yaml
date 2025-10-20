@@ -5,7 +5,7 @@ project_name: memos
 dist: build
 builds:
   - dir: ./memos
-    main: ./bin/memos
+    main: ./cmd/memos
     binary: memos
     env:
       - CGO_ENABLED=0

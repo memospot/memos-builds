@@ -146,7 +146,7 @@ MEMOS_DSN="postgresql://user:password@postgres_addr:5432/memos?sslmode=disable"
 MEMOS_DSN="user:password@tcp(mysql_addr)/memos"
 ```
 
-For all supported environment variables, see [cmd/memos.go](https://github.com/usememos/memos/blob/main/bin/memos/main.go#L107). All bound flags in `init()` are also supported as environment variables, prefixed with `MEMOS_`.
+For all supported environment variables, see [cmd/memos.go](https://github.com/usememos/memos/blob/main/cmd/memos/main.go#L107). All bound flags in `init()` are also supported as environment variables, prefixed with `MEMOS_`.
 
 To set up Memos with MySQL, see [Memos Database Guide](https://www.usememos.com/docs/install/database).
 
