@@ -47,12 +47,13 @@ const Link: React.FC<Props> = ({ content, url }: Props) => {
       <Tooltip open={showTooltip}>
         <TooltipTrigger asChild>
           <a
-            className="underline text-primary hover:text-primary/80"
+            className="underline text-primary hover:opacity-80 transition-all"
             target="_blank"
             href={url}
             rel="noopener noreferrer"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={() => setShowTooltip(false)}
+            onClick={(e) => e.stopPropagation()}
           >
             {content ? content.map((child, index) => <Renderer key={`${child.type}-${index}`} index={String(index)} node={child} />) : url}
           </a>
