@@ -1,5 +1,4 @@
 import copy from "copy-to-clipboard";
-import dayjs from "dayjs";
 import { ExternalLinkIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
@@ -10,10 +9,9 @@ import MemoView from "@/components/MemoView";
 import PagedMemoList from "@/components/PagedMemoList";
 import UserAvatar from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useLoading from "@/hooks/useLoading";
-import { viewStore, userStore } from "@/store";
-import { extractUserIdFromName } from "@/store/common";
-import memoFilterStore from "@/store/memoFilter";
+import { userStore } from "@/store";
 import { State } from "@/types/proto/api/v1/common";
 import { Memo } from "@/types/proto/api/v1/memo_service";
 import { User } from "@/types/proto/api/v1/user_service";
@@ -43,24 +41,18 @@ const UserProfile = observer(() => {
       });
   }, [params.username]);
 
-  // Build filter from active filters - no useMemo needed since component is MobX observer
-  const buildMemoFilter = () => {
-    if (!user) {
-      return undefined;
-    }
+  // Build filter using unified hook (no shortcuts, but includes pinned)
+  const memoFilter = useMemoFilters({
+    creatorName: user?.name,
+    includeShortcuts: false,
+    includePinned: true,
+  });
 
-    const conditions = [`creator_id == ${extractUserIdFromName(user.name)}`];
-    for (const filter of memoFilterStore.filters) {
-      if (filter.factor === "contentSearch") {
-        conditions.push(`content.contains("${filter.value}")`);
-      } else if (filter.factor === "tagSearch") {
-        conditions.push(`tag in ["${filter.value}"]`);
-      }
-    }
-    return conditions.length > 0 ? conditions.join(" && ") : undefined;
-  };
-
-  const memoFilter = buildMemoFilter();
+  // Get sorting logic using unified hook
+  const { listSort, orderBy } = useMemoSorting({
+    pinnedFirst: true,
+    state: State.NORMAL,
+  });
 
   const handleCopyProfileLink = () => {
     if (!user) {
@@ -72,52 +64,47 @@ const UserProfile = observer(() => {
   };
 
   return (
-    <section className="w-full max-w-3xl mx-auto min-h-full flex flex-col justify-start items-center pb-8">
-      <div className="w-full flex flex-col justify-start items-center max-w-2xl">
-        {!loadingState.isLoading &&
-          (user ? (
-            <>
-              <div className="my-4 w-full flex justify-end items-center gap-2">
-                <Button variant="outline" onClick={handleCopyProfileLink}>
+    <section className="w-full min-h-full flex flex-col justify-start items-center">
+      {!loadingState.isLoading &&
+        (user ? (
+          <>
+            {/* User profile header - centered with max width */}
+            <div className="w-full max-w-4xl mx-auto mb-8">
+              <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-6 border-b border-border">
+                <div className="flex items-center gap-4">
+                  <UserAvatar className="w-20! h-20! drop-shadow rounded-full" avatarUrl={user?.avatarUrl} />
+                  <div className="flex flex-col justify-center items-start">
+                    <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">{user.displayName || user.username}</h1>
+                    {user.username && user.displayName && <p className="text-sm text-muted-foreground">@{user.username}</p>}
+                  </div>
+                </div>
+                <Button variant="outline" onClick={handleCopyProfileLink} className="shrink-0">
                   {t("common.share")}
                   <ExternalLinkIcon className="ml-1 w-4 h-auto opacity-60" />
                 </Button>
               </div>
-              <div className="w-full flex flex-col justify-start items-start pt-4 pb-8 px-3">
-                <UserAvatar className="w-16! h-16! drop-shadow rounded-3xl" avatarUrl={user?.avatarUrl} />
-                <div className="mt-2 w-auto max-w-[calc(100%-6rem)] flex flex-col justify-center items-start">
-                  <p className="w-full text-3xl text-foreground leading-tight font-medium opacity-80 truncate">
-                    {user.displayName || user.username}
-                  </p>
-                  <p className="w-full text-muted-foreground leading-snug whitespace-pre-wrap truncate line-clamp-6">{user.description}</p>
+              {user.description && (
+                <div className="py-4">
+                  <p className="text-base text-foreground/80 whitespace-pre-wrap">{user.description}</p>
                 </div>
-              </div>
-              <PagedMemoList
-                renderer={(memo: Memo, context?: MemoRenderContext) => (
-                  <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact={context?.compact} />
-                )}
-                listSort={(memos: Memo[]) =>
-                  memos
-                    .filter((memo) => memo.state === State.NORMAL)
-                    .sort((a, b) => {
-                      // First, sort by pinned status (pinned memos first)
-                      if (a.pinned !== b.pinned) {
-                        return b.pinned ? 1 : -1;
-                      }
-                      // Then sort by display time
-                      return viewStore.state.orderByTimeAsc
-                        ? dayjs(a.displayTime).unix() - dayjs(b.displayTime).unix()
-                        : dayjs(b.displayTime).unix() - dayjs(a.displayTime).unix();
-                    })
-                }
-                orderBy={viewStore.state.orderByTimeAsc ? "pinned desc, display_time asc" : "pinned desc, display_time desc"}
-                filter={memoFilter}
-              />
-            </>
-          ) : (
-            <p>Not found</p>
-          ))}
-      </div>
+              )}
+            </div>
+
+            {/* Memo list - full width for proper masonry layout */}
+            <PagedMemoList
+              renderer={(memo: Memo, context?: MemoRenderContext) => (
+                <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact={context?.compact} />
+              )}
+              listSort={listSort}
+              orderBy={orderBy}
+              filter={memoFilter}
+            />
+          </>
+        ) : (
+          <div className="w-full max-w-3xl mx-auto">
+            <p className="text-center text-muted-foreground mt-8">Not found</p>
+          </div>
+        ))}
     </section>
   );
 });

@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { userStore } from "@/store";
+import { instanceStore, userStore } from "@/store";
 import { Visibility } from "@/types/proto/api/v1/memo_service";
 import { UserSetting_GeneralSetting } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
@@ -9,6 +8,9 @@ import { convertVisibilityFromString, convertVisibilityToString } from "@/utils/
 import LocaleSelect from "../LocaleSelect";
 import ThemeSelect from "../ThemeSelect";
 import VisibilityIcon from "../VisibilityIcon";
+import SettingGroup from "./SettingGroup";
+import SettingRow from "./SettingRow";
+import SettingSection from "./SettingSection";
 import WebhookSection from "./WebhookSection";
 
 const PreferencesSection = observer(() => {
@@ -16,6 +18,9 @@ const PreferencesSection = observer(() => {
   const generalSetting = userStore.state.userGeneralSetting;
 
   const handleLocaleSelectChange = async (locale: Locale) => {
+    // Update instance store immediately for instant UI feedback
+    instanceStore.state.setPartial({ locale });
+    // Persist to user settings
     await userStore.updateUserGeneralSetting({ locale }, ["locale"]);
   };
 
@@ -24,6 +29,9 @@ const PreferencesSection = observer(() => {
   };
 
   const handleThemeChange = async (theme: string) => {
+    // Update instance store immediately for instant UI feedback
+    instanceStore.state.setPartial({ theme });
+    // Persist to user settings
     await userStore.updateUserGeneralSetting({ theme }, ["theme"]);
   };
 
@@ -31,50 +39,47 @@ const PreferencesSection = observer(() => {
   const setting: UserSetting_GeneralSetting = generalSetting || {
     locale: "en",
     memoVisibility: "PRIVATE",
-    theme: "default",
+    theme: "system",
   };
 
   return (
-    <div className="w-full flex flex-col gap-2 pt-2 pb-4">
-      <p className="font-medium text-muted-foreground">{t("common.basic")}</p>
+    <SettingSection>
+      <SettingGroup title={t("common.basic")}>
+        <SettingRow label={t("common.language")}>
+          <LocaleSelect value={setting.locale} onChange={handleLocaleSelectChange} />
+        </SettingRow>
 
-      <div className="w-full flex flex-row justify-between items-center">
-        <span>{t("common.language")}</span>
-        <LocaleSelect value={setting.locale} onChange={handleLocaleSelectChange} />
-      </div>
+        <SettingRow label={t("setting.preference-section.theme")}>
+          <ThemeSelect value={setting.theme} onValueChange={handleThemeChange} />
+        </SettingRow>
+      </SettingGroup>
 
-      <div className="w-full flex flex-row justify-between items-center">
-        <span>{t("setting.preference-section.theme")}</span>
-        <ThemeSelect value={setting.theme} onValueChange={handleThemeChange} />
-      </div>
+      <SettingGroup title={t("setting.preference")} showSeparator>
+        <SettingRow label={t("setting.preference-section.default-memo-visibility")}>
+          <Select value={setting.memoVisibility} onValueChange={handleDefaultMemoVisibilityChanged}>
+            <SelectTrigger className="min-w-fit">
+              <div className="flex items-center gap-2">
+                <VisibilityIcon visibility={convertVisibilityFromString(setting.memoVisibility)} />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {[Visibility.PRIVATE, Visibility.PROTECTED, Visibility.PUBLIC]
+                .map((v) => convertVisibilityToString(v))
+                .map((item) => (
+                  <SelectItem key={item} value={item} className="whitespace-nowrap">
+                    {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </SettingRow>
+      </SettingGroup>
 
-      <p className="font-medium text-muted-foreground">{t("setting.preference")}</p>
-
-      <div className="w-full flex flex-row justify-between items-center">
-        <span className="truncate">{t("setting.preference-section.default-memo-visibility")}</span>
-        <Select value={setting.memoVisibility} onValueChange={handleDefaultMemoVisibilityChanged}>
-          <SelectTrigger className="min-w-fit">
-            <div className="flex items-center gap-2">
-              <VisibilityIcon visibility={convertVisibilityFromString(setting.memoVisibility)} />
-              <SelectValue />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {[Visibility.PRIVATE, Visibility.PROTECTED, Visibility.PUBLIC]
-              .map((v) => convertVisibilityToString(v))
-              .map((item) => (
-                <SelectItem key={item} value={item} className="whitespace-nowrap">
-                  {t(`memo.visibility.${item.toLowerCase() as Lowercase<typeof item>}`)}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <Separator className="my-3" />
-
-      <WebhookSection />
-    </div>
+      <SettingGroup showSeparator>
+        <WebhookSection />
+      </SettingGroup>
+    </SettingSection>
   );
 });
 

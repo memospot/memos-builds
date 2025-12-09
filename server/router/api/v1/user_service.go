@@ -140,35 +140,46 @@ func (s *APIV1Service) GetUserAvatar(ctx context.Context, request *v1pb.GetUserA
 }
 
 func (s *APIV1Service) CreateUser(ctx context.Context, request *v1pb.CreateUserRequest) (*v1pb.User, error) {
-	// Check if there are any existing host users (for first-time setup detection)
-	hostUserType := store.RoleHost
-	existedHostUsers, err := s.Store.ListUsers(ctx, &store.FindUser{
-		Role: &hostUserType,
-	})
+	// Get current user (might be nil for unauthenticated requests)
+	currentUser, _ := s.GetCurrentUser(ctx)
+
+	// Check if there are any existing users (for first-time setup detection)
+	limitOne := 1
+	allUsers, err := s.Store.ListUsers(ctx, &store.FindUser{Limit: &limitOne})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list host users: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to list users: %v", err)
+	}
+	isFirstUser := len(allUsers) == 0
+
+	// Check registration settings FIRST (unless it's the very first user)
+	if !isFirstUser {
+		// Only allow user registration if it is enabled in the settings, or if the user is a superuser
+		if currentUser == nil || !isSuperUser(currentUser) {
+			instanceGeneralSetting, err := s.Store.GetInstanceGeneralSetting(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to get instance general setting, error: %v", err)
+			}
+			if instanceGeneralSetting.DisallowUserRegistration {
+				return nil, status.Errorf(codes.PermissionDenied, "user registration is not allowed")
+			}
+		}
 	}
 
-	// Determine the role to assign and check permissions
+	// Determine the role to assign
 	var roleToAssign store.Role
-	if len(existedHostUsers) == 0 {
+	if isFirstUser {
 		// First-time setup: create the first user as HOST (no authentication required)
 		roleToAssign = store.RoleHost
-	} else {
-		// Regular user creation: allow unauthenticated creation of normal users
-		// But if authenticated, check if user has HOST permission for any role
-		currentUser, err := s.GetCurrentUser(ctx)
-		if err == nil && currentUser != nil && currentUser.Role == store.RoleHost {
-			// Authenticated HOST user can create users with any role specified in request
-			if request.User.Role != v1pb.User_ROLE_UNSPECIFIED {
-				roleToAssign = convertUserRoleToStore(request.User.Role)
-			} else {
-				roleToAssign = store.RoleUser
-			}
+	} else if currentUser != nil && currentUser.Role == store.RoleHost {
+		// Authenticated HOST user can create users with any role specified in request
+		if request.User.Role != v1pb.User_ROLE_UNSPECIFIED {
+			roleToAssign = convertUserRoleToStore(request.User.Role)
 		} else {
-			// Unauthenticated or non-HOST users can only create normal users
 			roleToAssign = store.RoleUser
 		}
+	} else {
+		// Unauthenticated or non-HOST users can only create normal users
+		roleToAssign = store.RoleUser
 	}
 
 	if !base.UIDMatcher.MatchString(strings.ToLower(request.User.Username)) {
@@ -241,14 +252,14 @@ func (s *APIV1Service) UpdateUser(ctx context.Context, request *v1pb.UpdateUserR
 		ID:        user.ID,
 		UpdatedTs: &currentTs,
 	}
-	workspaceGeneralSetting, err := s.Store.GetWorkspaceGeneralSetting(ctx)
+	instanceGeneralSetting, err := s.Store.GetInstanceGeneralSetting(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get workspace general setting: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to get instance general setting: %v", err)
 	}
 	for _, field := range request.UpdateMask.Paths {
 		switch field {
 		case "username":
-			if workspaceGeneralSetting.DisallowChangeUsername {
+			if instanceGeneralSetting.DisallowChangeUsername {
 				return nil, status.Errorf(codes.PermissionDenied, "permission denied: disallow change username")
 			}
 			if !base.UIDMatcher.MatchString(strings.ToLower(request.User.Username)) {
@@ -256,7 +267,7 @@ func (s *APIV1Service) UpdateUser(ctx context.Context, request *v1pb.UpdateUserR
 			}
 			update.Username = &request.User.Username
 		case "display_name":
-			if workspaceGeneralSetting.DisallowChangeNickname {
+			if instanceGeneralSetting.DisallowChangeNickname {
 				return nil, status.Errorf(codes.PermissionDenied, "permission denied: disallow change nickname")
 			}
 			update.Nickname = &request.User.DisplayName
@@ -521,6 +532,21 @@ func (s *APIV1Service) ListUserSettings(ctx context.Context, request *v1pb.ListU
 	return response, nil
 }
 
+// ListUserAccessTokens retrieves all Personal Access Tokens (PATs) for a user.
+//
+// Personal Access Tokens are used for:
+// - Mobile app authentication
+// - CLI tool authentication
+// - API client authentication
+// - Any programmatic access requiring Bearer token auth
+//
+// Security:
+// - Only the token owner can list their tokens
+// - Returns full token strings (so users can manage/revoke them)
+// - Invalid or expired tokens are filtered out
+//
+// Authentication: Required (session cookie or access token)
+// Authorization: User can only list their own tokens.
 func (s *APIV1Service) ListUserAccessTokens(ctx context.Context, request *v1pb.ListUserAccessTokensRequest) (*v1pb.ListUserAccessTokensResponse, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
@@ -584,6 +610,26 @@ func (s *APIV1Service) ListUserAccessTokens(ctx context.Context, request *v1pb.L
 	return response, nil
 }
 
+// CreateUserAccessToken creates a new Personal Access Token (PAT) for a user.
+//
+// Use cases:
+// - User manually creates token in settings for mobile app
+// - User creates token for CLI tool
+// - User creates token for third-party integration
+//
+// Token properties:
+// - JWT format signed with server secret
+// - Contains user ID and username in claims
+// - Optional expiration time (can be never-expiring)
+// - User-provided description for identification
+//
+// Security considerations:
+// - Full token is only shown ONCE (in this response)
+// - User should copy and store it securely
+// - Token can be revoked by deleting it from settings
+//
+// Authentication: Required (session cookie or access token)
+// Authorization: User can only create tokens for themselves.
 func (s *APIV1Service) CreateUserAccessToken(ctx context.Context, request *v1pb.CreateUserAccessTokenRequest) (*v1pb.UserAccessToken, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
@@ -643,6 +689,19 @@ func (s *APIV1Service) CreateUserAccessToken(ctx context.Context, request *v1pb.
 	return userAccessToken, nil
 }
 
+// DeleteUserAccessToken revokes a Personal Access Token.
+//
+// This endpoint:
+// 1. Removes the token from the user's access tokens list
+// 2. Immediately invalidates the token (subsequent API calls with it will fail)
+//
+// Use cases:
+// - User revokes a compromised token
+// - User removes token for unused app/device
+// - User cleans up old tokens
+//
+// Authentication: Required (session cookie or access token)
+// Authorization: User can only delete their own tokens.
 func (s *APIV1Service) DeleteUserAccessToken(ctx context.Context, request *v1pb.DeleteUserAccessTokenRequest) (*emptypb.Empty, error) {
 	// Extract user ID from the access token resource name
 	// Format: users/{user}/accessTokens/{access_token}
@@ -694,6 +753,21 @@ func (s *APIV1Service) DeleteUserAccessToken(ctx context.Context, request *v1pb.
 	return &emptypb.Empty{}, nil
 }
 
+// ListUserSessions retrieves all active sessions for a user.
+//
+// Sessions represent active browser logins. Each session includes:
+// - session_id: Unique identifier
+// - create_time: When the session was created
+// - last_accessed_time: Last API call time (for sliding expiration)
+// - client_info: Device details (browser, OS, IP address, device type)
+//
+// Use cases:
+// - User reviews where they're logged in
+// - User identifies suspicious login attempts
+// - User prepares to revoke specific sessions
+//
+// Authentication: Required (session cookie or access token)
+// Authorization: User can only list their own sessions.
 func (s *APIV1Service) ListUserSessions(ctx context.Context, request *v1pb.ListUserSessionsRequest) (*v1pb.ListUserSessionsResponse, error) {
 	userID, err := ExtractUserIDFromName(request.Parent)
 	if err != nil {
@@ -749,6 +823,23 @@ func (s *APIV1Service) ListUserSessions(ctx context.Context, request *v1pb.ListU
 	return response, nil
 }
 
+// RevokeUserSession terminates a specific session for a user.
+//
+// This endpoint:
+// 1. Removes the session from the user's sessions list
+// 2. Immediately invalidates the session
+// 3. Forces the device to re-login on next request
+//
+// Use cases:
+// - User logs out from a specific device (e.g., "Log out my phone")
+// - User removes suspicious/unknown session
+// - User logs out from all devices except current one
+//
+// Note: This is different from DeleteSession (logout current session).
+// This endpoint allows revoking ANY session, not just the current one.
+//
+// Authentication: Required (session cookie or access token)
+// Authorization: User can only revoke their own sessions.
 func (s *APIV1Service) RevokeUserSession(ctx context.Context, request *v1pb.RevokeUserSessionRequest) (*emptypb.Empty, error) {
 	// Extract user ID and session ID from the session resource name
 	// Format: users/{user}/sessions/{session}
@@ -1471,4 +1562,204 @@ func extractUsernameFromComparison(left, right ast.Expr) (string, bool) {
 	}
 
 	return str, true
+}
+
+// ListUserNotifications lists all notifications for a user.
+// Notifications are backed by the inbox storage layer and represent activities
+// that require user attention (e.g., memo comments).
+func (s *APIV1Service) ListUserNotifications(ctx context.Context, request *v1pb.ListUserNotificationsRequest) (*v1pb.ListUserNotificationsResponse, error) {
+	userID, err := ExtractUserIDFromName(request.Parent)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user name: %v", err)
+	}
+
+	// Verify the requesting user has permission to view these notifications
+	currentUser, err := s.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+	if currentUser.ID != userID {
+		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+	}
+
+	// Fetch inbox items from storage
+	inboxes, err := s.Store.ListInboxes(ctx, &store.FindInbox{
+		ReceiverID: &userID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to list inboxes: %v", err)
+	}
+
+	// Convert storage layer inboxes to API notifications
+	notifications := []*v1pb.UserNotification{}
+	for _, inbox := range inboxes {
+		notification, err := s.convertInboxToUserNotification(ctx, inbox)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to convert inbox: %v", err)
+		}
+		notifications = append(notifications, notification)
+	}
+
+	return &v1pb.ListUserNotificationsResponse{
+		Notifications: notifications,
+	}, nil
+}
+
+// UpdateUserNotification updates a notification's status (e.g., marking as read/archived).
+// Only the notification owner can update their notifications.
+func (s *APIV1Service) UpdateUserNotification(ctx context.Context, request *v1pb.UpdateUserNotificationRequest) (*v1pb.UserNotification, error) {
+	if request.Notification == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "notification is required")
+	}
+
+	notificationID, err := ExtractNotificationIDFromName(request.Notification.Name)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid notification name: %v", err)
+	}
+
+	currentUser, err := s.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+
+	// Verify ownership before updating
+	inboxes, err := s.Store.ListInboxes(ctx, &store.FindInbox{
+		ID: &notificationID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get inbox: %v", err)
+	}
+	if len(inboxes) == 0 {
+		return nil, status.Errorf(codes.NotFound, "notification not found")
+	}
+	inbox := inboxes[0]
+	if inbox.ReceiverID != currentUser.ID {
+		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+	}
+
+	// Build update request based on field mask
+	update := &store.UpdateInbox{
+		ID: notificationID,
+	}
+
+	for _, path := range request.UpdateMask.Paths {
+		switch path {
+		case "status":
+			// Convert API status enum to storage enum
+			var inboxStatus store.InboxStatus
+			switch request.Notification.Status {
+			case v1pb.UserNotification_UNREAD:
+				inboxStatus = store.UNREAD
+			case v1pb.UserNotification_ARCHIVED:
+				inboxStatus = store.ARCHIVED
+			default:
+				return nil, status.Errorf(codes.InvalidArgument, "invalid status")
+			}
+			update.Status = inboxStatus
+		default:
+			return nil, status.Errorf(codes.InvalidArgument, "invalid update path: %s", path)
+		}
+	}
+
+	updatedInbox, err := s.Store.UpdateInbox(ctx, update)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update inbox: %v", err)
+	}
+
+	notification, err := s.convertInboxToUserNotification(ctx, updatedInbox)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert inbox: %v", err)
+	}
+
+	return notification, nil
+}
+
+// DeleteUserNotification permanently deletes a notification.
+// Only the notification owner can delete their notifications.
+func (s *APIV1Service) DeleteUserNotification(ctx context.Context, request *v1pb.DeleteUserNotificationRequest) (*emptypb.Empty, error) {
+	notificationID, err := ExtractNotificationIDFromName(request.Name)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid notification name: %v", err)
+	}
+
+	currentUser, err := s.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+
+	// Verify ownership before deletion
+	inboxes, err := s.Store.ListInboxes(ctx, &store.FindInbox{
+		ID: &notificationID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get inbox: %v", err)
+	}
+	if len(inboxes) == 0 {
+		return nil, status.Errorf(codes.NotFound, "notification not found")
+	}
+	inbox := inboxes[0]
+	if inbox.ReceiverID != currentUser.ID {
+		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+	}
+
+	if err := s.Store.DeleteInbox(ctx, &store.DeleteInbox{
+		ID: notificationID,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete inbox: %v", err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+// convertInboxToUserNotification converts a storage-layer inbox to an API notification.
+// This handles the mapping between the internal inbox representation and the public API.
+func (*APIV1Service) convertInboxToUserNotification(_ context.Context, inbox *store.Inbox) (*v1pb.UserNotification, error) {
+	notification := &v1pb.UserNotification{
+		Name:       fmt.Sprintf("users/%d/notifications/%d", inbox.ReceiverID, inbox.ID),
+		Sender:     fmt.Sprintf("%s%d", UserNamePrefix, inbox.SenderID),
+		CreateTime: timestamppb.New(time.Unix(inbox.CreatedTs, 0)),
+	}
+
+	// Convert status from storage enum to API enum
+	switch inbox.Status {
+	case store.UNREAD:
+		notification.Status = v1pb.UserNotification_UNREAD
+	case store.ARCHIVED:
+		notification.Status = v1pb.UserNotification_ARCHIVED
+	default:
+		notification.Status = v1pb.UserNotification_STATUS_UNSPECIFIED
+	}
+
+	// Extract notification type and activity ID from inbox message
+	if inbox.Message != nil {
+		switch inbox.Message.Type {
+		case storepb.InboxMessage_MEMO_COMMENT:
+			notification.Type = v1pb.UserNotification_MEMO_COMMENT
+		default:
+			notification.Type = v1pb.UserNotification_TYPE_UNSPECIFIED
+		}
+
+		if inbox.Message.ActivityId != nil {
+			notification.ActivityId = inbox.Message.ActivityId
+		}
+	}
+
+	return notification, nil
+}
+
+// ExtractNotificationIDFromName extracts the notification ID from a resource name.
+// Expected format: users/{user_id}/notifications/{notification_id}.
+func ExtractNotificationIDFromName(name string) (int32, error) {
+	pattern := regexp.MustCompile(`^users/(\d+)/notifications/(\d+)$`)
+	matches := pattern.FindStringSubmatch(name)
+	if len(matches) != 3 {
+		return 0, errors.Errorf("invalid notification name: %s", name)
+	}
+
+	id, err := strconv.Atoi(matches[2])
+	if err != nil {
+		return 0, errors.Errorf("invalid notification id: %s", matches[2])
+	}
+
+	return int32(id), nil
 }

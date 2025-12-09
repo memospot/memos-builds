@@ -1,6 +1,7 @@
-import { Moon, Palette, Sun, Wallpaper } from "lucide-react";
+import { Monitor, Moon, Palette, Sun, Wallpaper } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { workspaceStore } from "@/store";
+import { instanceStore } from "@/store";
+import { THEME_OPTIONS } from "@/utils/theme";
 
 interface ThemeSelectProps {
   value?: string;
@@ -8,21 +9,22 @@ interface ThemeSelectProps {
   className?: string;
 }
 
-const ThemeSelect = ({ value, onValueChange, className }: ThemeSelectProps = {}) => {
-  const currentTheme = value || workspaceStore.state.theme || "default";
+const THEME_ICONS: Record<string, JSX.Element> = {
+  system: <Monitor className="w-4 h-4" />,
+  default: <Sun className="w-4 h-4" />,
+  "default-dark": <Moon className="w-4 h-4" />,
+  paper: <Palette className="w-4 h-4" />,
+  whitewall: <Wallpaper className="w-4 h-4" />,
+};
 
-  const themeOptions: { value: Theme; icon: JSX.Element; label: string }[] = [
-    { value: "default", icon: <Sun className="w-4 h-4" />, label: "Default Light" },
-    { value: "default-dark", icon: <Moon className="w-4 h-4" />, label: "Default Dark" },
-    { value: "paper", icon: <Palette className="w-4 h-4" />, label: "Paper" },
-    { value: "whitewall", icon: <Wallpaper className="w-4 h-4" />, label: "Whitewall" },
-  ];
+const ThemeSelect = ({ value, onValueChange, className }: ThemeSelectProps = {}) => {
+  const currentTheme = value || instanceStore.state.theme || "system";
 
   const handleThemeChange = (newTheme: Theme) => {
     if (onValueChange) {
       onValueChange(newTheme);
     } else {
-      workspaceStore.setTheme(newTheme);
+      instanceStore.setTheme(newTheme);
     }
   };
 
@@ -34,10 +36,10 @@ const ThemeSelect = ({ value, onValueChange, className }: ThemeSelectProps = {})
         </div>
       </SelectTrigger>
       <SelectContent>
-        {themeOptions.map((option) => (
+        {THEME_OPTIONS.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             <div className="flex items-center gap-2">
-              {option.icon}
+              {THEME_ICONS[option.value]}
               <span>{option.label}</span>
             </div>
           </SelectItem>

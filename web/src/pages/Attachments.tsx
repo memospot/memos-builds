@@ -1,57 +1,170 @@
 import dayjs from "dayjs";
-import { includes } from "lodash-es";
-import { PaperclipIcon, SearchIcon } from "lucide-react";
+import { ExternalLinkIcon, PaperclipIcon, SearchIcon, Trash } from "lucide-react";
 import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 import AttachmentIcon from "@/components/AttachmentIcon";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import Empty from "@/components/Empty";
 import MobileHeader from "@/components/MobileHeader";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { attachmentServiceClient } from "@/grpcweb";
+import useDialog from "@/hooks/useDialog";
 import useLoading from "@/hooks/useLoading";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
 import i18n from "@/i18n";
-import { memoStore } from "@/store";
-import { Attachment } from "@/types/proto/api/v1/attachment_service";
+import { attachmentStore } from "@/store";
+import type { Attachment } from "@/types/proto/api/v1/attachment_service";
 import { useTranslate } from "@/utils/i18n";
 
-function groupAttachmentsByDate(attachments: Attachment[]) {
+const PAGE_SIZE = 50;
+
+/**
+ * Groups attachments by month for organized display
+ */
+const groupAttachmentsByDate = (attachments: Attachment[]): Map<string, Attachment[]> => {
   const grouped = new Map<string, Attachment[]>();
-  attachments
-    .sort((a, b) => dayjs(b.createTime).unix() - dayjs(a.createTime).unix())
-    .forEach((item) => {
-      const monthStr = dayjs(item.createTime).format("YYYY-MM");
-      if (!grouped.has(monthStr)) {
-        grouped.set(monthStr, []);
-      }
-      grouped.get(monthStr)?.push(item);
-    });
+  const sorted = [...attachments].sort((a, b) => dayjs(b.createTime).unix() - dayjs(a.createTime).unix());
+
+  for (const attachment of sorted) {
+    const monthKey = dayjs(attachment.createTime).format("YYYY-MM");
+    const group = grouped.get(monthKey) ?? [];
+    group.push(attachment);
+    grouped.set(monthKey, group);
+  }
+
   return grouped;
+};
+
+/**
+ * Filters attachments based on search query
+ */
+const filterAttachments = (attachments: Attachment[], searchQuery: string): Attachment[] => {
+  if (!searchQuery.trim()) return attachments;
+  const query = searchQuery.toLowerCase();
+  return attachments.filter((attachment) => attachment.filename.toLowerCase().includes(query));
+};
+
+/**
+ * Individual attachment item component
+ */
+interface AttachmentItemProps {
+  attachment: Attachment;
 }
 
-interface State {
-  searchQuery: string;
-}
+const AttachmentItem = ({ attachment }: AttachmentItemProps) => (
+  <div className="w-24 sm:w-32 h-auto flex flex-col justify-start items-start">
+    <div className="w-24 h-24 flex justify-center items-center sm:w-32 sm:h-32 border border-border overflow-clip rounded-xl cursor-pointer hover:shadow hover:opacity-80">
+      <AttachmentIcon attachment={attachment} strokeWidth={0.5} />
+    </div>
+    <div className="w-full max-w-full flex flex-row justify-between items-center mt-1 px-1">
+      <p className="text-xs shrink text-muted-foreground truncate">{attachment.filename}</p>
+      {attachment.memo && (
+        <Link to={`/${attachment.memo}`} className="text-primary hover:opacity-80 transition-opacity shrink-0 ml-1" aria-label="View memo">
+          <ExternalLinkIcon className="w-3 h-3" />
+        </Link>
+      )}
+    </div>
+  </div>
+);
 
 const Attachments = observer(() => {
   const t = useTranslate();
   const { md } = useResponsiveWidth();
   const loadingState = useLoading();
-  const [state, setState] = useState<State>({
-    searchQuery: "",
-  });
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const filteredAttachments = attachments.filter((attachment) => includes(attachment.filename, state.searchQuery));
-  const groupedAttachments = groupAttachmentsByDate(filteredAttachments.filter((attachment) => attachment.memo));
-  const unusedAttachments = filteredAttachments.filter((attachment) => !attachment.memo);
+  const deleteUnusedAttachmentsDialog = useDialog();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [nextPageToken, setNextPageToken] = useState("");
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Memoized computed values
+  const filteredAttachments = useMemo(() => filterAttachments(attachments, searchQuery), [attachments, searchQuery]);
+
+  const usedAttachments = useMemo(() => filteredAttachments.filter((attachment) => attachment.memo), [filteredAttachments]);
+
+  const unusedAttachments = useMemo(() => filteredAttachments.filter((attachment) => !attachment.memo), [filteredAttachments]);
+
+  const groupedAttachments = useMemo(() => groupAttachmentsByDate(usedAttachments), [usedAttachments]);
+
+  // Fetch initial attachments
   useEffect(() => {
-    attachmentServiceClient.listAttachments({}).then(({ attachments }) => {
-      setAttachments(attachments);
+    const fetchInitialAttachments = async () => {
+      try {
+        const { attachments: fetchedAttachments, nextPageToken } = await attachmentServiceClient.listAttachments({
+          pageSize: PAGE_SIZE,
+        });
+        setAttachments(fetchedAttachments);
+        setNextPageToken(nextPageToken ?? "");
+      } catch (error) {
+        console.error("Failed to fetch attachments:", error);
+        toast.error("Failed to load attachments. Please try again.");
+      } finally {
+        loadingState.setFinish();
+      }
+    };
+
+    fetchInitialAttachments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load more attachments with pagination
+  const handleLoadMore = useCallback(async () => {
+    if (!nextPageToken || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      const { attachments: fetchedAttachments, nextPageToken: newPageToken } = await attachmentServiceClient.listAttachments({
+        pageSize: PAGE_SIZE,
+        pageToken: nextPageToken,
+      });
+      setAttachments((prev) => [...prev, ...fetchedAttachments]);
+      setNextPageToken(newPageToken ?? "");
+    } catch (error) {
+      console.error("Failed to load more attachments:", error);
+      toast.error("Failed to load more attachments. Please try again.");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [nextPageToken, isLoadingMore]);
+
+  // Refetch all attachments from the beginning
+  const handleRefetch = useCallback(async () => {
+    try {
+      loadingState.setLoading();
+      const { attachments: fetchedAttachments, nextPageToken } = await attachmentServiceClient.listAttachments({
+        pageSize: PAGE_SIZE,
+      });
+      setAttachments(fetchedAttachments);
+      setNextPageToken(nextPageToken ?? "");
       loadingState.setFinish();
-      Promise.all(attachments.map((attachment) => (attachment.memo ? memoStore.getOrFetchMemoByName(attachment.memo) : null)));
-    });
+    } catch (error) {
+      console.error("Failed to refetch attachments:", error);
+      loadingState.setError();
+      toast.error("Failed to refresh attachments. Please try again.");
+    }
+  }, [loadingState]);
+
+  // Delete all unused attachments
+  const handleDeleteUnusedAttachments = useCallback(async () => {
+    try {
+      await Promise.all(unusedAttachments.map((attachment) => attachmentStore.deleteAttachment(attachment.name)));
+      toast.success(t("resource.delete-all-unused-success"));
+    } catch (error) {
+      console.error("Failed to delete unused attachments:", error);
+      toast.error(t("resource.delete-all-unused-error"));
+    } finally {
+      await handleRefetch();
+    }
+  }, [unusedAttachments, t, handleRefetch]);
+
+  // Handle search input change
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   }, []);
 
   return (
@@ -67,12 +180,7 @@ const Attachments = observer(() => {
             <div>
               <div className="relative max-w-32">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder={t("common.search")}
-                  value={state.searchQuery}
-                  onChange={(e) => setState({ ...state, searchQuery: e.target.value })}
-                />
+                <Input className="pl-9" placeholder={t("common.search")} value={searchQuery} onChange={handleSearchChange} />
               </div>
             </div>
           </div>
@@ -89,67 +197,76 @@ const Attachments = observer(() => {
                     <p className="mt-4 text-muted-foreground">{t("message.no-data")}</p>
                   </div>
                 ) : (
-                  <div className={"w-full h-auto px-2 flex flex-col justify-start items-start gap-y-8"}>
-                    {Array.from(groupedAttachments.entries()).map(([monthStr, attachments]) => {
-                      return (
-                        <div key={monthStr} className="w-full flex flex-row justify-start items-start">
-                          <div className="w-16 sm:w-24 pt-4 sm:pl-4 flex flex-col justify-start items-start">
-                            <span className="text-sm opacity-60">{dayjs(monthStr).year()}</span>
-                            <span className="font-medium text-xl">
-                              {dayjs(monthStr).toDate().toLocaleString(i18n.language, { month: "short" })}
-                            </span>
-                          </div>
-                          <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
-                            {attachments.map((attachment) => {
-                              return (
-                                <div key={attachment.name} className="w-24 sm:w-32 h-auto flex flex-col justify-start items-start">
-                                  <div className="w-24 h-24 flex justify-center items-center sm:w-32 sm:h-32 border border-border overflow-clip rounded-xl cursor-pointer hover:shadow hover:opacity-80">
-                                    <AttachmentIcon attachment={attachment} strokeWidth={0.5} />
-                                  </div>
-                                  <div className="w-full max-w-full flex flex-row justify-between items-center mt-1 px-1">
-                                    <p className="text-xs shrink text-muted-foreground truncate">{attachment.filename}</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {unusedAttachments.length > 0 && (
-                      <>
-                        <Separator />
-                        <div className="w-full flex flex-row justify-start items-start">
-                          <div className="w-16 sm:w-24 sm:pl-4 flex flex-col justify-start items-start"></div>
-                          <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
-                            <div className="w-full flex flex-row justify-start items-center gap-2">
-                              <span className="text-muted-foreground">{t("resource.unused-resources")}</span>
-                              <span className="text-muted-foreground opacity-80">({unusedAttachments.length})</span>
+                  <>
+                    <div className={"w-full h-auto px-2 flex flex-col justify-start items-start gap-y-8"}>
+                      {Array.from(groupedAttachments.entries()).map(([monthStr, attachments]) => {
+                        return (
+                          <div key={monthStr} className="w-full flex flex-row justify-start items-start">
+                            <div className="w-16 sm:w-24 pt-4 sm:pl-4 flex flex-col justify-start items-start">
+                              <span className="text-sm opacity-60">{dayjs(monthStr).year()}</span>
+                              <span className="font-medium text-xl">
+                                {dayjs(monthStr).toDate().toLocaleString(i18n.language, { month: "short" })}
+                              </span>
                             </div>
-                            {unusedAttachments.map((attachment) => {
-                              return (
-                                <div key={attachment.name} className="w-24 sm:w-32 h-auto flex flex-col justify-start items-start">
-                                  <div className="w-24 h-24 flex justify-center items-center sm:w-32 sm:h-32 border border-border overflow-clip rounded-xl cursor-pointer hover:shadow hover:opacity-80">
-                                    <AttachmentIcon attachment={attachment} strokeWidth={0.5} />
-                                  </div>
-                                  <div className="w-full max-w-full flex flex-row justify-between items-center mt-1 px-1">
-                                    <p className="text-xs shrink text-muted-foreground truncate">{attachment.filename}</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                            <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
+                              {attachments.map((attachment) => (
+                                <AttachmentItem key={attachment.name} attachment={attachment} />
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </>
+                        );
+                      })}
+
+                      {unusedAttachments.length > 0 && (
+                        <>
+                          <Separator />
+                          <div className="w-full flex flex-row justify-start items-start">
+                            <div className="w-16 sm:w-24 sm:pl-4 flex flex-col justify-start items-start"></div>
+                            <div className="w-full max-w-[calc(100%-4rem)] sm:max-w-[calc(100%-6rem)] flex flex-row justify-start items-start gap-4 flex-wrap">
+                              <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div className="flex flex-row items-center gap-2">
+                                  <span className="text-muted-foreground">{t("resource.unused-resources")}</span>
+                                  <span className="text-muted-foreground opacity-80">({unusedAttachments.length})</span>
+                                </div>
+                                <div>
+                                  <Button variant="destructive" onClick={() => deleteUnusedAttachmentsDialog.open()} size="sm">
+                                    <Trash />
+                                    {t("resource.delete-all-unused")}
+                                  </Button>
+                                </div>
+                              </div>
+                              {unusedAttachments.map((attachment) => (
+                                <AttachmentItem key={attachment.name} attachment={attachment} />
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {nextPageToken && (
+                      <div className="w-full flex flex-row justify-center items-center mt-4">
+                        <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isLoadingMore}>
+                          {isLoadingMore ? t("resource.fetching-data") : t("memo.load-more")}
+                        </Button>
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
               </>
             )}
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteUnusedAttachmentsDialog.isOpen}
+        onOpenChange={deleteUnusedAttachmentsDialog.setOpen}
+        title={t("resource.delete-all-unused-confirm")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={handleDeleteUnusedAttachments}
+        confirmVariant="destructive"
+      />
     </section>
   );
 });

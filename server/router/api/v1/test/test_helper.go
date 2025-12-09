@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/usememos/memos/internal/profile"
+	"github.com/usememos/memos/plugin/markdown"
 	apiv1 "github.com/usememos/memos/server/router/api/v1"
 	"github.com/usememos/memos/store"
 	teststore "github.com/usememos/memos/store/test"
@@ -36,10 +37,14 @@ func NewTestService(t *testing.T) *TestService {
 
 	// Create APIV1Service with nil grpcServer since we're testing direct calls
 	secret := "test-secret"
+	markdownService := markdown.NewService(
+		markdown.WithTagExtension(),
+	)
 	service := &apiv1.APIV1Service{
-		Secret:  secret,
-		Profile: testProfile,
-		Store:   testStore,
+		Secret:          secret,
+		Profile:         testProfile,
+		Store:           testStore,
+		MarkdownService: markdownService,
 	}
 
 	return &TestService{
@@ -77,5 +82,5 @@ func (ts *TestService) CreateRegularUser(ctx context.Context, username string) (
 // CreateUserContext creates a context with the given user's ID for authentication.
 func (*TestService) CreateUserContext(ctx context.Context, userID int32) context.Context {
 	// Use the real context key from the parent package
-	return apiv1.CreateTestUserContext(ctx, userID)
+	return context.WithValue(ctx, apiv1.UserIDContextKey, userID)
 }

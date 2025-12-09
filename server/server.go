@@ -21,7 +21,6 @@ import (
 
 	"github.com/usememos/memos/internal/profile"
 	storepb "github.com/usememos/memos/proto/gen/store"
-	"github.com/usememos/memos/server/profiler"
 	apiv1 "github.com/usememos/memos/server/router/api/v1"
 	"github.com/usememos/memos/server/router/frontend"
 	"github.com/usememos/memos/server/router/rss"
@@ -36,7 +35,6 @@ type Server struct {
 
 	echoServer        *echo.Echo
 	grpcServer        *grpc.Server
-	profiler          *profiler.Profiler
 	runnerCancelFuncs []context.CancelFunc
 }
 
@@ -53,21 +51,14 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	echoServer.Use(middleware.Recover())
 	s.echoServer = echoServer
 
-	if profile.Mode != "prod" {
-		// Initialize profiler
-		s.profiler = profiler.NewProfiler()
-		s.profiler.RegisterRoutes(echoServer)
-		s.profiler.StartMemoryMonitor(ctx)
-	}
-
-	workspaceBasicSetting, err := s.getOrUpsertWorkspaceBasicSetting(ctx)
+	instanceBasicSetting, err := s.getOrUpsertInstanceBasicSetting(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get workspace basic setting")
+		return nil, errors.Wrap(err, "failed to get instance basic setting")
 	}
 
 	secret := "usememos"
 	if profile.Mode == "prod" {
-		secret = workspaceBasicSetting.SecretKey
+		secret = instanceBasicSetting.SecretKey
 	}
 	s.Secret = secret
 
@@ -80,9 +71,6 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	frontend.NewFrontendService(profile, store).Serve(ctx, echoServer)
 
 	rootGroup := echoServer.Group("")
-
-	// Create and register RSS routes.
-	rss.NewRSSService(s.Profile, s.Store).RegisterRoutes(rootGroup)
 
 	// Log full stacktraces if we're in dev
 	logStacktraces := profile.IsDev()
@@ -98,6 +86,9 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	s.grpcServer = grpcServer
 
 	apiV1Service := apiv1.NewAPIV1Service(s.Secret, profile, store, grpcServer)
+
+	// Create and register RSS routes (needs markdown service from apiV1Service).
+	rss.NewRSSService(s.Profile, s.Store, apiV1Service.MarkdownService).RegisterRoutes(rootGroup)
 	// Register gRPC gateway as api v1.
 	if err := apiV1Service.RegisterGateway(ctx, echoServer); err != nil {
 		return nil, errors.Wrap(err, "failed to register gRPC gateway")
@@ -185,20 +176,6 @@ func (s *Server) Shutdown(ctx context.Context) {
 	// Shutdown gRPC server.
 	s.grpcServer.GracefulStop()
 
-	// Stop the profiler
-	if s.profiler != nil {
-		slog.Info("stopping profiler")
-		// Log final memory stats
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		slog.Info("final memory stats before exit",
-			"heapAlloc", m.Alloc,
-			"heapSys", m.Sys,
-			"heapObjects", m.HeapObjects,
-			"numGoroutine", runtime.NumGoroutine(),
-		)
-	}
-
 	// Close database connection.
 	if err := s.Store.Close(); err != nil {
 		slog.Error("failed to close database", slog.String("error", err.Error()))
@@ -229,27 +206,27 @@ func (s *Server) StartBackgroundRunners(ctx context.Context) {
 	slog.Info("background runners started", "goroutines", runtime.NumGoroutine())
 }
 
-func (s *Server) getOrUpsertWorkspaceBasicSetting(ctx context.Context) (*storepb.WorkspaceBasicSetting, error) {
-	workspaceBasicSetting, err := s.Store.GetWorkspaceBasicSetting(ctx)
+func (s *Server) getOrUpsertInstanceBasicSetting(ctx context.Context) (*storepb.InstanceBasicSetting, error) {
+	instanceBasicSetting, err := s.Store.GetInstanceBasicSetting(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get workspace basic setting")
+		return nil, errors.Wrap(err, "failed to get instance basic setting")
 	}
 	modified := false
-	if workspaceBasicSetting.SecretKey == "" {
-		workspaceBasicSetting.SecretKey = uuid.NewString()
+	if instanceBasicSetting.SecretKey == "" {
+		instanceBasicSetting.SecretKey = uuid.NewString()
 		modified = true
 	}
 	if modified {
-		workspaceSetting, err := s.Store.UpsertWorkspaceSetting(ctx, &storepb.WorkspaceSetting{
-			Key:   storepb.WorkspaceSettingKey_BASIC,
-			Value: &storepb.WorkspaceSetting_BasicSetting{BasicSetting: workspaceBasicSetting},
+		instanceSetting, err := s.Store.UpsertInstanceSetting(ctx, &storepb.InstanceSetting{
+			Key:   storepb.InstanceSettingKey_BASIC,
+			Value: &storepb.InstanceSetting_BasicSetting{BasicSetting: instanceBasicSetting},
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to upsert workspace setting")
+			return nil, errors.Wrap(err, "failed to upsert instance setting")
 		}
-		workspaceBasicSetting = workspaceSetting.GetBasicSetting()
+		instanceBasicSetting = instanceSetting.GetBasicSetting()
 	}
-	return workspaceBasicSetting, nil
+	return instanceBasicSetting, nil
 }
 
 // stacktraceError wraps an underlying error and captures the stacktrace. It
