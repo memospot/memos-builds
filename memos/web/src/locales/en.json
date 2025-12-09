@@ -18,6 +18,7 @@
     "about": "About",
     "add": "Add",
     "admin": "Admin",
+    "all": "All",
     "archive": "Archive",
     "archived": "Archived",
     "attachments": "Attachments",
@@ -101,7 +102,8 @@
     "username": "Username",
     "version": "Version",
     "visibility": "Visibility",
-    "yourself": "Yourself"
+    "yourself": "Yourself",
+    "more": "More"
   },
   "days": {
     "fri": "Fri",
@@ -116,7 +118,9 @@
     "add-your-comment-here": "Add your comment here...",
     "any-thoughts": "Any thoughts...",
     "save": "Save",
-    "no-changes-detected": "No changes detected"
+    "no-changes-detected": "No changes detected",
+    "focus-mode": "Focus Mode",
+    "exit-focus-mode": "Exit Focus Mode"
   },
   "filters": {
     "has-code": "hasCode",
@@ -125,8 +129,10 @@
   },
   "inbox": {
     "memo-comment": "{{user}} has a comment on your {{memo}}.",
-    "version-update": "New version {{version}} is available now!",
-    "failed-to-load": "Failed to load inbox item"
+    "failed-to-load": "Failed to load inbox item",
+    "unread": "Unread",
+    "no-unread": "No unread notifications",
+    "no-archived": "No archived notifications"
   },
   "markdown": {
     "checkbox": "Checkbox",
@@ -225,6 +231,8 @@
     "delete-selected-resources": "Delete Selected Resources",
     "delete-all-unused": "Delete all unused",
     "delete-all-unused-confirm": "Are you sure you want to delete all unused resources? THIS ACTION IS IRREVERSIBLE",
+    "delete-all-unused-success": "Resources deleted successfully",
+    "delete-all-unused-error": "Failed to delete unused resources",
     "fetching-data": "Fetching data…",
     "file-drag-drop-prompt": "Drag and drop your file here to upload file",
     "linked-amount": "Linked amount",
@@ -438,7 +446,7 @@
       "title": "Webhooks",
       "url": "URL"
     },
-    "workspace-section": {
+    "instance-section": {
       "disallow-change-nickname": "Disallow changing nickname",
       "disallow-change-username": "Disallow changing username",
       "disallow-password-auth": "Disallow password auth",

@@ -1,21 +1,21 @@
 import { uniqueId } from "lodash-es";
-import { makeAutoObservable, computed } from "mobx";
-import { authServiceClient, inboxServiceClient, userServiceClient, shortcutServiceClient } from "@/grpcweb";
-import { Inbox } from "@/types/proto/api/v1/inbox_service";
+import { computed, makeAutoObservable } from "mobx";
+import { authServiceClient, shortcutServiceClient, userServiceClient } from "@/grpcweb";
 import { Shortcut } from "@/types/proto/api/v1/shortcut_service";
 import {
   User,
+  UserNotification,
   UserSetting,
-  UserSetting_Key,
-  UserSetting_GeneralSetting,
-  UserSetting_SessionsSetting,
   UserSetting_AccessTokensSetting,
+  UserSetting_GeneralSetting,
+  UserSetting_Key,
+  UserSetting_SessionsSetting,
   UserSetting_WebhooksSetting,
   UserStats,
 } from "@/types/proto/api/v1/user_service";
 import { findNearestMatchedLanguage } from "@/utils/i18n";
-import { RequestDeduplicator, createRequestKey, StoreError } from "./store-utils";
-import workspaceStore from "./workspace";
+import instanceStore from "./instance";
+import { createRequestKey, RequestDeduplicator, StoreError } from "./store-utils";
 
 class LocalState {
   currentUser?: string;
@@ -24,7 +24,7 @@ class LocalState {
   userAccessTokensSetting?: UserSetting_AccessTokensSetting;
   userWebhooksSetting?: UserSetting_WebhooksSetting;
   shortcuts: Shortcut[] = [];
-  inboxes: Inbox[] = [];
+  notifications: UserNotification[] = [];
   userMapByName: Record<string, User> = {};
   userStatsByName: Record<string, UserStats> = {};
 
@@ -52,7 +52,8 @@ class LocalState {
     if (!this.currentUser) {
       return undefined;
     }
-    return this.userStatsByName[this.currentUser];
+    // Backend returns stats with key "users/{id}/stats"
+    return this.userStatsByName[`${this.currentUser}/stats`];
   }
 
   constructor() {
@@ -194,8 +195,11 @@ const userStore = (() => {
       return;
     }
 
-    const { settings } = await userServiceClient.listUserSettings({ parent: state.currentUser });
-    const { shortcuts } = await shortcutServiceClient.listShortcuts({ parent: state.currentUser });
+    // Fetch settings and shortcuts in parallel for better performance
+    const [{ settings }, { shortcuts }] = await Promise.all([
+      userServiceClient.listUserSettings({ parent: state.currentUser }),
+      shortcutServiceClient.listShortcuts({ parent: state.currentUser }),
+    ]);
 
     // Extract and store each setting type
     const generalSetting = settings.find((s) => s.generalSetting)?.generalSetting;
@@ -215,40 +219,40 @@ const userStore = (() => {
   // Note: fetchShortcuts is now handled by fetchUserSettings
   // The shortcuts are extracted from the user shortcuts setting
 
-  const fetchInboxes = async () => {
+  const fetchNotifications = async () => {
     if (!state.currentUser) {
       throw new Error("No current user available");
     }
 
-    const { inboxes } = await inboxServiceClient.listInboxes({
+    const { notifications } = await userServiceClient.listUserNotifications({
       parent: state.currentUser,
     });
 
     state.setPartial({
-      inboxes,
+      notifications,
     });
   };
 
-  const updateInbox = async (inbox: Partial<Inbox>, updateMask: string[]) => {
-    const updatedInbox = await inboxServiceClient.updateInbox({
-      inbox,
+  const updateNotification = async (notification: Partial<UserNotification>, updateMask: string[]) => {
+    const updatedNotification = await userServiceClient.updateUserNotification({
+      notification,
       updateMask,
     });
     state.setPartial({
-      inboxes: state.inboxes.map((i) => {
-        if (i.name === updatedInbox.name) {
-          return updatedInbox;
+      notifications: state.notifications.map((n) => {
+        if (n.name === updatedNotification.name) {
+          return updatedNotification;
         }
-        return i;
+        return n;
       }),
     });
-    return updatedInbox;
+    return updatedNotification;
   };
 
-  const deleteInbox = async (name: string) => {
-    await inboxServiceClient.deleteInbox({ name });
+  const deleteNotification = async (name: string) => {
+    await userServiceClient.deleteUserNotification({ name });
     state.setPartial({
-      inboxes: state.inboxes.filter((i) => i.name !== name),
+      notifications: state.notifications.filter((n) => n.name !== name),
     });
   };
 
@@ -264,13 +268,14 @@ const userStore = (() => {
           }
         } else {
           const userStats = await userServiceClient.getUserStats({ name: user });
-          userStatsByName[user] = userStats;
+          userStatsByName[userStats.name] = userStats; // Use userStats.name as key for consistency
         }
         state.setPartial({
           userStatsByName: {
             ...state.userStatsByName,
             ...userStatsByName,
           },
+          statsStateId: uniqueId(), // Update state ID to trigger reactivity
         });
       } catch (error) {
         throw StoreError.wrap("FETCH_USER_STATS_FAILED", error);
@@ -293,9 +298,9 @@ const userStore = (() => {
     updateUserGeneralSetting,
     getUserGeneralSetting,
     fetchUserSettings,
-    fetchInboxes,
-    updateInbox,
-    deleteInbox,
+    fetchNotifications,
+    updateNotification,
+    deleteNotification,
     fetchUserStats,
     setStatsStateId,
   };
@@ -308,7 +313,7 @@ const userStore = (() => {
  * 1. Fetch current authenticated user session
  * 2. Set current user in store (required for subsequent calls)
  * 3. Fetch user settings (depends on currentUser being set)
- * 4. Apply user preferences to workspace store
+ * 4. Apply user preferences to instance store
  *
  * @throws Never - errors are handled internally with fallback behavior
  */
@@ -326,7 +331,7 @@ export const initialUserStore = async () => {
       });
 
       const locale = findNearestMatchedLanguage(navigator.language);
-      workspaceStore.state.setPartial({ locale });
+      instanceStore.state.setPartial({ locale });
       return;
     }
 
@@ -340,31 +345,31 @@ export const initialUserStore = async () => {
       },
     });
 
-    // Step 3: Fetch user settings
+    // Step 3: Fetch user settings and stats
     // CRITICAL: This must happen after currentUser is set in step 2
-    // The fetchUserSettings() method checks state.currentUser internally
-    await userStore.fetchUserSettings();
+    // The fetchUserSettings() and fetchUserStats() methods check state.currentUser internally
+    await Promise.all([userStore.fetchUserSettings(), userStore.fetchUserStats()]);
 
-    // Step 4: Apply user preferences to workspace
+    // Step 4: Apply user preferences to instance
     // CRITICAL: This must happen after fetchUserSettings() completes
     // We need userGeneralSetting to be populated before accessing it
     const generalSetting = userStore.state.userGeneralSetting;
     if (generalSetting) {
       // Note: setPartial will validate theme automatically
-      workspaceStore.state.setPartial({
+      instanceStore.state.setPartial({
         locale: generalSetting.locale,
         theme: generalSetting.theme || "default", // Validation handled by setPartial
       });
     } else {
       // Fallback if settings weren't loaded
       const locale = findNearestMatchedLanguage(navigator.language);
-      workspaceStore.state.setPartial({ locale });
+      instanceStore.state.setPartial({ locale });
     }
   } catch (error) {
     // On any error, fall back to browser language detection
     console.error("Failed to initialize user store:", error);
     const locale = findNearestMatchedLanguage(navigator.language);
-    workspaceStore.state.setPartial({ locale });
+    instanceStore.state.setPartial({ locale });
   }
 };
 

@@ -60,10 +60,12 @@ pnpm build                       # Build to web/dist/
 pnpm release                     # Build and copy to server/router/frontend/dist/
 ```
 
-**Lint:**
+**Lint and Format:**
 ```bash
 cd web
-pnpm lint                        # TypeScript check + ESLint
+pnpm lint                        # TypeScript check + Biome lint
+pnpm lint:fix                    # Auto-fix linting issues
+pnpm format                      # Format code with Biome
 ```
 
 ### CLI Flags and Environment Variables
@@ -122,7 +124,7 @@ The server uses `cmux` (connection multiplexer) to serve both gRPC and HTTP on t
 - **HTTP/1.1** → Echo server (REST API via gRPC-Gateway, static files, RSS)
 
 **API Services** (defined in `proto/api/v1/*.proto`):
-- `WorkspaceService` - Workspace settings and profiles
+- `InstanceService` - Instance settings and profiles
 - `AuthService` - Authentication and session management
 - `UserService` - User management
 - `MemoService` - Core memo CRUD operations
@@ -147,7 +149,7 @@ The `store.Driver` interface (`store/driver.go`) defines all data access methods
 - `store/db/postgres/` - PostgreSQL driver
 
 **Migrations:**
-Each driver contains its own migration files in subdirectories. Schema version tracking is stored in `workspace_setting` (key: `bb.general.version`). The `store/migrator.go` orchestrates migrations across all drivers.
+Each driver contains its own migration files in subdirectories. Schema version tracking is stored in `instance_setting` (key: `bb.general.version`). The `store/migrator.go` orchestrates migrations across all drivers.
 
 **Key Models:**
 - `Memo` - Core note/memo entity
@@ -157,7 +159,7 @@ Each driver contains its own migration files in subdirectories. Schema version t
 - `Activity` - Activity log entries
 - `Inbox` - Inbox items
 - `Reaction` - Emoji reactions
-- `WorkspaceSetting` - Workspace-level configuration
+- `InstanceSetting` - Instance-level configuration
 - `UserSetting` - User preferences
 - `IdentityProvider` - OAuth/SSO provider configs
 
@@ -209,9 +211,10 @@ The frontend uses `nice-grpc-web` to call backend services. Client setup is in `
 
 - **Components:** PascalCase filenames (e.g., `MemoEditor.tsx`)
 - **Hooks:** camelCase filenames (e.g., `useMemoList.ts`)
-- **Formatting:** Prettier enforced (see `web/.prettierrc.js`)
-- **Import Ordering:** Managed by `@trivago/prettier-plugin-sort-imports`
+- **Formatting:** Biome enforced (see `web/biome.json`)
+- **Import Ordering:** Automatic via Biome's organize imports
 - **Styling:** Tailwind utility classes preferred over custom CSS
+- **Linting:** Biome replaces ESLint and Prettier for faster, unified tooling
 
 ### Commit Messages
 
@@ -338,6 +341,7 @@ For SQLite (default), all data is stored in the directory specified by `--data` 
 - `react-router-dom` - Routing
 - `mobx` / `mobx-react-lite` - State management
 - `tailwindcss` - Styling
+- `@biomejs/biome` - Fast linter and formatter (replaces ESLint + Prettier)
 - `nice-grpc-web` - gRPC-Web client
 - `@radix-ui/*` - Headless UI components
 - `react-i18next` - Internationalization

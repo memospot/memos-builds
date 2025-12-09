@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
 import { Routes } from "@/router";
-import { memoStore, viewStore } from "@/store";
+import { memoStore, userStore, viewStore } from "@/store";
 import { State } from "@/types/proto/api/v1/common";
-import { Memo } from "@/types/proto/api/v1/memo_service";
+import type { Memo } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import Empty from "../Empty";
-import MasonryView, { MemoRenderContext } from "../MasonryView";
+import type { MemoRenderContext } from "../MasonryView";
+import MasonryView from "../MasonryView";
 import MemoEditor from "../MemoEditor";
+import MemoFilters from "../MemoFilters";
+import MemoSkeleton from "../MemoSkeleton";
 
 interface Props {
   renderer: (memo: Memo, context?: MemoRenderContext) => JSX.Element;
@@ -22,6 +25,7 @@ interface Props {
   orderBy?: string;
   filter?: string;
   pageSize?: number;
+  showCreator?: boolean;
 }
 
 const PagedMemoList = observer((props: Props) => {
@@ -34,6 +38,8 @@ const PagedMemoList = observer((props: Props) => {
 
   // Ref to manage auto-fetch timeout to prevent memory leaks
   const autoFetchTimeoutRef = useRef<number | null>(null);
+  // Ref to track if initial fetch has been triggered to prevent duplicates
+  const initialFetchTriggeredRef = useRef(false);
 
   // Apply custom sorting if provided, otherwise use store memos directly
   const sortedMemoList = props.listSort ? props.listSort(memoStore.state.memos) : memoStore.state.memos;
@@ -42,29 +48,39 @@ const PagedMemoList = observer((props: Props) => {
   const showMemoEditor = Boolean(matchPath(Routes.ROOT, window.location.pathname));
 
   // Fetch more memos with pagination support
-  const fetchMoreMemos = async (pageToken: string) => {
-    setIsRequesting(true);
+  const fetchMoreMemos = useCallback(
+    async (pageToken: string) => {
+      setIsRequesting(true);
 
-    try {
-      const response = await memoStore.fetchMemos({
-        state: props.state || State.NORMAL,
-        orderBy: props.orderBy || "display_time desc",
-        filter: props.filter,
-        pageSize: props.pageSize || DEFAULT_LIST_MEMOS_PAGE_SIZE,
-        pageToken,
-      });
+      try {
+        const response = await memoStore.fetchMemos({
+          state: props.state || State.NORMAL,
+          orderBy: props.orderBy || "display_time desc",
+          filter: props.filter,
+          pageSize: props.pageSize || DEFAULT_LIST_MEMOS_PAGE_SIZE,
+          pageToken,
+        });
 
-      setNextPageToken(response?.nextPageToken || "");
-    } finally {
-      setIsRequesting(false);
-    }
-  };
+        setNextPageToken(response?.nextPageToken || "");
+
+        // Batch-fetch creators in parallel to avoid individual fetches in MemoView
+        // This significantly improves perceived performance by pre-populating the cache
+        if (response?.memos && props.showCreator) {
+          const uniqueCreators = Array.from(new Set(response.memos.map((memo) => memo.creator)));
+          await Promise.allSettled(uniqueCreators.map((creator) => userStore.getOrFetchUserByName(creator)));
+        }
+      } finally {
+        setIsRequesting(false);
+      }
+    },
+    [props.state, props.orderBy, props.filter, props.pageSize, props.showCreator],
+  );
 
   // Helper function to check if page has enough content to be scrollable
-  const isPageScrollable = () => {
+  const isPageScrollable = useCallback(() => {
     const documentHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
     return documentHeight > window.innerHeight + 100; // 100px buffer for safe measure
-  };
+  }, []);
 
   // Auto-fetch more content if page isn't scrollable and more data is available
   const checkAndFetchIfNeeded = useCallback(async () => {
@@ -87,26 +103,43 @@ const PagedMemoList = observer((props: Props) => {
         checkAndFetchIfNeeded();
       }, 500);
     }
-  }, [nextPageToken, isRequesting, sortedMemoList.length]);
+  }, [nextPageToken, isRequesting, sortedMemoList.length, isPageScrollable, fetchMoreMemos]);
 
   // Refresh the entire memo list from the beginning
-  const refreshList = async () => {
+  const refreshList = useCallback(async () => {
     memoStore.state.updateStateId();
     setNextPageToken("");
     await fetchMoreMemos("");
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchMoreMemos]);
+
+  // Track previous props to detect changes
+  const propsKey = `${props.state}-${props.orderBy}-${props.filter}-${props.pageSize}`;
+  const prevPropsKeyRef = useRef<string>();
 
   // Initial load and reload when props change
   useEffect(() => {
-    refreshList();
-  }, [props.state, props.orderBy, props.filter, props.pageSize]);
+    const propsChanged = prevPropsKeyRef.current !== undefined && prevPropsKeyRef.current !== propsKey;
+    prevPropsKeyRef.current = propsKey;
+
+    // Skip first render if we haven't marked it yet
+    if (!initialFetchTriggeredRef.current) {
+      initialFetchTriggeredRef.current = true;
+      refreshList();
+      return;
+    }
+    // For subsequent changes, refresh if props actually changed
+    if (propsChanged) {
+      refreshList();
+    }
+  }, [refreshList, propsKey]);
 
   // Auto-fetch more content when list changes and page isn't full
   useEffect(() => {
     if (!isRequesting && sortedMemoList.length > 0) {
       checkAndFetchIfNeeded();
     }
-  }, [sortedMemoList.length, isRequesting, nextPageToken, checkAndFetchIfNeeded]);
+  }, [sortedMemoList.length, isRequesting, checkAndFetchIfNeeded]);
 
   // Cleanup timeout on component unmount
   useEffect(() => {
@@ -130,36 +163,50 @@ const PagedMemoList = observer((props: Props) => {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [nextPageToken, isRequesting]);
+  }, [nextPageToken, isRequesting, fetchMoreMemos]);
 
   const children = (
     <div className="flex flex-col justify-start items-start w-full max-w-full">
-      <MasonryView
-        memoList={sortedMemoList}
-        renderer={props.renderer}
-        prefixElement={showMemoEditor ? <MemoEditor className="mb-2" cacheKey="home-memo-editor" /> : undefined}
-        listMode={viewStore.state.layout === "LIST"}
-      />
-
-      {/* Loading indicator */}
-      {isRequesting && (
-        <div className="w-full flex flex-row justify-center items-center my-4">
-          <LoaderIcon className="animate-spin text-muted-foreground" />
+      {/* Show skeleton loader during initial load */}
+      {isRequesting && sortedMemoList.length === 0 ? (
+        <div className="w-full flex flex-col justify-start items-center">
+          <MemoSkeleton showCreator={props.showCreator} count={4} />
         </div>
-      )}
-
-      {/* Empty state or back-to-top button */}
-      {!isRequesting && (
+      ) : (
         <>
-          {!nextPageToken && sortedMemoList.length === 0 ? (
-            <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
-              <Empty />
-              <p className="mt-2 text-muted-foreground">{t("message.no-data")}</p>
+          <MasonryView
+            memoList={sortedMemoList}
+            renderer={props.renderer}
+            prefixElement={
+              <>
+                {showMemoEditor ? <MemoEditor className="mb-2" cacheKey="home-memo-editor" /> : undefined}
+                <MemoFilters />
+              </>
+            }
+            listMode={viewStore.state.layout === "LIST"}
+          />
+
+          {/* Loading indicator for pagination */}
+          {isRequesting && (
+            <div className="w-full flex flex-row justify-center items-center my-4">
+              <LoaderIcon className="animate-spin text-muted-foreground" />
             </div>
-          ) : (
-            <div className="w-full opacity-70 flex flex-row justify-center items-center my-4">
-              <BackToTop />
-            </div>
+          )}
+
+          {/* Empty state or back-to-top button */}
+          {!isRequesting && (
+            <>
+              {!nextPageToken && sortedMemoList.length === 0 ? (
+                <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
+                  <Empty />
+                  <p className="mt-2 text-muted-foreground">{t("message.no-data")}</p>
+                </div>
+              ) : (
+                <div className="w-full opacity-70 flex flex-row justify-center items-center my-4">
+                  <BackToTop />
+                </div>
+              )}
+            </>
           )}
         </>
       )}

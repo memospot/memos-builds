@@ -15,9 +15,9 @@ import (
 )
 
 func (s *APIV1Service) ListAllUserStats(ctx context.Context, _ *v1pb.ListAllUserStatsRequest) (*v1pb.ListAllUserStatsResponse, error) {
-	workspaceMemoRelatedSetting, err := s.Store.GetWorkspaceMemoRelatedSetting(ctx)
+	instanceMemoRelatedSetting, err := s.Store.GetInstanceMemoRelatedSetting(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get workspace memo related setting")
+		return nil, errors.Wrap(err, "failed to get instance memo related setting")
 	}
 
 	normalStatus := store.Normal
@@ -49,14 +49,59 @@ func (s *APIV1Service) ListAllUserStats(ctx context.Context, _ *v1pb.ListAllUser
 
 	userMemoStatMap := make(map[int32]*v1pb.UserStats)
 	for _, memo := range memos {
+		// Initialize user stats if not exists
+		if _, exists := userMemoStatMap[memo.CreatorID]; !exists {
+			userMemoStatMap[memo.CreatorID] = &v1pb.UserStats{
+				Name:                  fmt.Sprintf("users/%d/stats", memo.CreatorID),
+				TagCount:              make(map[string]int32),
+				MemoDisplayTimestamps: []*timestamppb.Timestamp{},
+				PinnedMemos:           []string{},
+				MemoTypeStats: &v1pb.UserStats_MemoTypeStats{
+					LinkCount: 0,
+					CodeCount: 0,
+					TodoCount: 0,
+					UndoCount: 0,
+				},
+			}
+		}
+
+		stats := userMemoStatMap[memo.CreatorID]
+
+		// Add display timestamp
 		displayTs := memo.CreatedTs
-		if workspaceMemoRelatedSetting.DisplayWithUpdateTime {
+		if instanceMemoRelatedSetting.DisplayWithUpdateTime {
 			displayTs = memo.UpdatedTs
 		}
-		userMemoStatMap[memo.CreatorID] = &v1pb.UserStats{
-			Name: fmt.Sprintf("users/%d/stats", memo.CreatorID),
+		stats.MemoDisplayTimestamps = append(stats.MemoDisplayTimestamps, timestamppb.New(time.Unix(displayTs, 0)))
+
+		// Count memo stats
+		stats.TotalMemoCount++
+
+		// Count tags and other properties
+		if memo.Payload != nil {
+			for _, tag := range memo.Payload.Tags {
+				stats.TagCount[tag]++
+			}
+			if memo.Payload.Property != nil {
+				if memo.Payload.Property.HasLink {
+					stats.MemoTypeStats.LinkCount++
+				}
+				if memo.Payload.Property.HasCode {
+					stats.MemoTypeStats.CodeCount++
+				}
+				if memo.Payload.Property.HasTaskList {
+					stats.MemoTypeStats.TodoCount++
+				}
+				if memo.Payload.Property.HasIncompleteTasks {
+					stats.MemoTypeStats.UndoCount++
+				}
+			}
 		}
-		userMemoStatMap[memo.CreatorID].MemoDisplayTimestamps = append(userMemoStatMap[memo.CreatorID].MemoDisplayTimestamps, timestamppb.New(time.Unix(displayTs, 0)))
+
+		// Track pinned memos
+		if memo.Pinned {
+			stats.PinnedMemos = append(stats.PinnedMemos, fmt.Sprintf("users/%d/memos/%d", memo.CreatorID, memo.ID))
+		}
 	}
 
 	userMemoStats := []*v1pb.UserStats{}
@@ -101,9 +146,9 @@ func (s *APIV1Service) GetUserStats(ctx context.Context, request *v1pb.GetUserSt
 		return nil, status.Errorf(codes.Internal, "failed to list memos: %v", err)
 	}
 
-	workspaceMemoRelatedSetting, err := s.Store.GetWorkspaceMemoRelatedSetting(ctx)
+	instanceMemoRelatedSetting, err := s.Store.GetInstanceMemoRelatedSetting(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get workspace memo related setting")
+		return nil, errors.Wrap(err, "failed to get instance memo related setting")
 	}
 
 	displayTimestamps := []*timestamppb.Timestamp{}
@@ -116,7 +161,7 @@ func (s *APIV1Service) GetUserStats(ctx context.Context, request *v1pb.GetUserSt
 
 	for _, memo := range memos {
 		displayTs := memo.CreatedTs
-		if workspaceMemoRelatedSetting.DisplayWithUpdateTime {
+		if instanceMemoRelatedSetting.DisplayWithUpdateTime {
 			displayTs = memo.UpdatedTs
 		}
 		displayTimestamps = append(displayTimestamps, timestamppb.New(time.Unix(displayTs, 0)))

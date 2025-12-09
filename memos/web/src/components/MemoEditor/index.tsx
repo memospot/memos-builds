@@ -1,69 +1,55 @@
 import copy from "copy-to-clipboard";
 import { isEqual } from "lodash-es";
-import { LoaderIcon } from "lucide-react";
+import { LoaderIcon, Minimize2Icon } from "lucide-react";
 import { observer } from "mobx-react-lite";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import useLocalStorage from "react-use/lib/useLocalStorage";
-import VisibilityIcon from "@/components/VisibilityIcon";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { memoServiceClient } from "@/grpcweb";
 import { TAB_SPACE_WIDTH } from "@/helpers/consts";
 import { isValidUrl } from "@/helpers/utils";
 import useAsyncEffect from "@/hooks/useAsyncEffect";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { cn } from "@/lib/utils";
-import { memoStore, attachmentStore, userStore, workspaceStore } from "@/store";
+import { attachmentStore, instanceStore, memoStore, userStore } from "@/store";
 import { extractMemoIdFromName } from "@/store/common";
 import { Attachment } from "@/types/proto/api/v1/attachment_service";
 import { Location, Memo, MemoRelation, MemoRelation_Type, Visibility } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString } from "@/utils/memo";
 import DateTimeInput from "../DateTimeInput";
-import AddMemoRelationPopover from "./ActionButton/AddMemoRelationPopover";
-import LocationSelector from "./ActionButton/LocationSelector";
-import MarkdownMenu from "./ActionButton/MarkdownMenu";
-import TagSelector from "./ActionButton/TagSelector";
-import UploadAttachmentButton from "./ActionButton/UploadAttachmentButton";
-import AttachmentListView from "./AttachmentListView";
+import type { LocalFile } from "../memo-metadata";
+import { AttachmentList, LocationDisplay, RelationList } from "../memo-metadata";
+import InsertMenu from "./ActionButton/InsertMenu";
+import VisibilitySelector from "./ActionButton/VisibilitySelector";
+import { FOCUS_MODE_EXIT_KEY, FOCUS_MODE_STYLES, FOCUS_MODE_TOGGLE_KEY, LOCALSTORAGE_DEBOUNCE_DELAY } from "./constants";
 import Editor, { EditorRefActions } from "./Editor";
-import RelationListView from "./RelationListView";
+import ErrorBoundary from "./ErrorBoundary";
 import { handleEditorKeydownWithMarkdownShortcuts, hyperlinkHighlightedText } from "./handlers";
+import { useDebounce } from "./hooks/useDebounce";
+import { useDragAndDrop } from "./hooks/useDragAndDrop";
+import { useLocalFileManager } from "./hooks/useLocalFileManager";
 import { MemoEditorContext } from "./types";
+import type { MemoEditorProps, MemoEditorState } from "./types/memo-editor";
 
-export interface Props {
-  className?: string;
-  cacheKey?: string;
-  placeholder?: string;
-  // The name of the memo to be edited.
-  memoName?: string;
-  // The name of the parent memo if the memo is a comment.
-  parentMemoName?: string;
-  autoFocus?: boolean;
-  onConfirm?: (memoName: string) => void;
-  onCancel?: () => void;
-}
+// Re-export for backward compatibility
+export type { MemoEditorProps as Props };
 
-interface State {
-  memoVisibility: Visibility;
-  attachmentList: Attachment[];
-  relationList: MemoRelation[];
-  location: Location | undefined;
-  isUploadingAttachment: boolean;
-  isRequesting: boolean;
-  isComposing: boolean;
-  isDraggingFile: boolean;
-}
-
-const MemoEditor = observer((props: Props) => {
+const MemoEditor = observer((props: MemoEditorProps) => {
   const { className, cacheKey, memoName, parentMemoName, autoFocus, onConfirm, onCancel } = props;
   const t = useTranslate();
   const { i18n } = useTranslation();
   const currentUser = useCurrentUser();
-  const [state, setState] = useState<State>({
+
+  // Custom hooks for file management
+  const { localFiles, addFiles, removeFile, clearFiles } = useLocalFileManager();
+
+  // Internal component state
+  const [state, setState] = useState<MemoEditorState>({
     memoVisibility: Visibility.PRIVATE,
+    isFocusMode: false,
     attachmentList: [],
     relationList: [],
     location: undefined,
@@ -85,7 +71,7 @@ const MemoEditor = observer((props: Props) => {
           relation.memo?.name === memoName && relation.relatedMemo?.name !== memoName && relation.type === MemoRelation_Type.REFERENCE,
       )
     : state.relationList.filter((relation) => relation.type === MemoRelation_Type.REFERENCE);
-  const workspaceMemoRelatedSetting = workspaceStore.state.memoRelatedSetting;
+  const instanceMemoRelatedSetting = instanceStore.state.memoRelatedSetting;
 
   useEffect(() => {
     editorRef.current?.setContent(contentCache || "");
@@ -99,7 +85,7 @@ const MemoEditor = observer((props: Props) => {
 
   useAsyncEffect(async () => {
     let visibility = convertVisibilityFromString(userGeneralSetting?.memoVisibility || "PRIVATE");
-    if (workspaceMemoRelatedSetting.disallowPublicVisibility && visibility === Visibility.PUBLIC) {
+    if (instanceMemoRelatedSetting.disallowPublicVisibility && visibility === Visibility.PUBLIC) {
       visibility = Visibility.PROTECTED;
     }
     if (parentMemoName) {
@@ -110,7 +96,7 @@ const MemoEditor = observer((props: Props) => {
       ...prevState,
       memoVisibility: convertVisibilityFromString(visibility),
     }));
-  }, [parentMemoName, userGeneralSetting?.memoVisibility, workspaceMemoRelatedSetting.disallowPublicVisibility]);
+  }, [parentMemoName, userGeneralSetting?.memoVisibility, instanceMemoRelatedSetting.disallowPublicVisibility]);
 
   useAsyncEffect(async () => {
     if (!memoName) {
@@ -155,12 +141,33 @@ const MemoEditor = observer((props: Props) => {
     }
 
     const isMetaKey = event.ctrlKey || event.metaKey;
+
+    // Focus Mode toggle: Cmd/Ctrl + Shift + F
+    if (isMetaKey && event.shiftKey && event.key.toLowerCase() === FOCUS_MODE_TOGGLE_KEY) {
+      event.preventDefault();
+      toggleFocusMode();
+      return;
+    }
+
+    // Exit Focus Mode: Escape
+    if (event.key === FOCUS_MODE_EXIT_KEY && state.isFocusMode) {
+      event.preventDefault();
+      toggleFocusMode();
+      return;
+    }
+
     if (isMetaKey) {
       if (event.key === "Enter") {
+        event.preventDefault();
         handleSaveBtnClick();
         return;
       }
-      if (!workspaceMemoRelatedSetting.disableMarkdownShortcuts) {
+      if (event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        handleSaveBtnClick();
+        return;
+      }
+      if (!instanceMemoRelatedSetting.disableMarkdownShortcuts) {
         handleEditorKeydownWithMarkdownShortcuts(event, editorRef.current);
       }
     }
@@ -177,6 +184,21 @@ const MemoEditor = observer((props: Props) => {
     }
   };
 
+  /**
+   * Toggle Focus Mode on/off
+   * Focus Mode provides a distraction-free writing experience with:
+   * - Expanded editor taking ~80-90% of viewport
+   * - Semi-transparent backdrop
+   * - Centered layout with optimal width
+   * - All editor functionality preserved
+   */
+  const toggleFocusMode = () => {
+    setState((prevState) => ({
+      ...prevState,
+      isFocusMode: !prevState.isFocusMode,
+    }));
+  };
+
   const handleMemoVisibilityChange = (visibility: Visibility) => {
     setState((prevState) => ({
       ...prevState,
@@ -191,6 +213,20 @@ const MemoEditor = observer((props: Props) => {
     }));
   };
 
+  // Add local files from InsertMenu
+  // Drag-and-drop for file uploads
+  const { isDragging, dragHandlers } = useDragAndDrop({
+    onDrop: (files) => addFiles(files),
+  });
+
+  // Sync drag state with component state
+  useEffect(() => {
+    setState((prevState) => ({
+      ...prevState,
+      isDraggingFile: isDragging,
+    }));
+  }, [isDragging]);
+
   const handleSetRelationList = (relationList: MemoRelation[]) => {
     setState((prevState) => ({
       ...prevState,
@@ -198,108 +234,10 @@ const MemoEditor = observer((props: Props) => {
     }));
   };
 
-  const handleUploadResource = async (file: File) => {
-    setState((state) => {
-      return {
-        ...state,
-        isUploadingAttachment: true,
-      };
-    });
-
-    const { name: filename, size, type } = file;
-    const buffer = new Uint8Array(await file.arrayBuffer());
-
-    try {
-      const attachment = await attachmentStore.createAttachment({
-        attachment: Attachment.fromPartial({
-          filename,
-          size,
-          type,
-          content: buffer,
-        }),
-        attachmentId: "",
-      });
-      setState((state) => {
-        return {
-          ...state,
-          isUploadingAttachment: false,
-        };
-      });
-      return attachment;
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.details);
-      setState((state) => {
-        return {
-          ...state,
-          isUploadingAttachment: false,
-        };
-      });
-    }
-  };
-
-  const uploadMultiFiles = async (files: FileList) => {
-    const uploadedAttachmentList: Attachment[] = [];
-    for (const file of files) {
-      const attachment = await handleUploadResource(file);
-      if (attachment) {
-        uploadedAttachmentList.push(attachment);
-        if (memoName) {
-          await attachmentStore.updateAttachment({
-            attachment: Attachment.fromPartial({
-              name: attachment.name,
-              memo: memoName,
-            }),
-            updateMask: ["memo"],
-          });
-        }
-      }
-    }
-    if (uploadedAttachmentList.length > 0) {
-      setState((prevState) => ({
-        ...prevState,
-        attachmentList: [...prevState.attachmentList, ...uploadedAttachmentList],
-      }));
-    }
-  };
-
-  const handleDropEvent = async (event: React.DragEvent) => {
-    if (event.dataTransfer && event.dataTransfer.files.length > 0) {
-      event.preventDefault();
-      setState((prevState) => ({
-        ...prevState,
-        isDraggingFile: false,
-      }));
-
-      await uploadMultiFiles(event.dataTransfer.files);
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent) => {
-    if (event.dataTransfer && event.dataTransfer.types.includes("Files")) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
-      if (!state.isDraggingFile) {
-        setState((prevState) => ({
-          ...prevState,
-          isDraggingFile: true,
-        }));
-      }
-    }
-  };
-
-  const handleDragLeave = (event: React.DragEvent) => {
-    event.preventDefault();
-    setState((prevState) => ({
-      ...prevState,
-      isDraggingFile: false,
-    }));
-  };
-
   const handlePasteEvent = async (event: React.ClipboardEvent) => {
     if (event.clipboardData && event.clipboardData.files.length > 0) {
       event.preventDefault();
-      await uploadMultiFiles(event.clipboardData.files);
+      addFiles(event.clipboardData.files);
     } else if (
       editorRef.current != null &&
       editorRef.current.getSelectedContent().length != 0 &&
@@ -310,13 +248,18 @@ const MemoEditor = observer((props: Props) => {
     }
   };
 
-  const handleContentChange = (content: string) => {
-    setHasContent(content !== "");
+  // Debounced cache setter to avoid writing to localStorage on every keystroke
+  const saveContentToCache = useDebounce((content: string) => {
     if (content !== "") {
       setContentCache(content);
     } else {
       localStorage.removeItem(contentCacheKey);
     }
+  }, LOCALSTORAGE_DEBOUNCE_DELAY);
+
+  const handleContentChange = (content: string) => {
+    setHasContent(content !== "");
+    saveContentToCache(content);
   };
 
   const handleSaveBtnClick = async () => {
@@ -324,15 +267,35 @@ const MemoEditor = observer((props: Props) => {
       return;
     }
 
-    setState((state) => {
-      return {
-        ...state,
-        isRequesting: true,
-      };
-    });
+    setState((state) => ({ ...state, isRequesting: true }));
     const content = editorRef.current?.getContent() ?? "";
     try {
-      // Update memo.
+      // 1. Upload all local files and create attachments
+      const newAttachments: Attachment[] = [];
+      if (localFiles.length > 0) {
+        setState((state) => ({ ...state, isUploadingAttachment: true }));
+        try {
+          for (const { file } of localFiles) {
+            const buffer = new Uint8Array(await file.arrayBuffer());
+            const attachment = await attachmentStore.createAttachment({
+              attachment: Attachment.fromPartial({
+                filename: file.name,
+                size: file.size,
+                type: file.type,
+                content: buffer,
+              }),
+              attachmentId: "",
+            });
+            newAttachments.push(attachment);
+          }
+        } finally {
+          // Always reset upload state, even on error
+          setState((state) => ({ ...state, isUploadingAttachment: false }));
+        }
+      }
+      // 2. Update attachmentList with new attachments
+      const allAttachments = [...state.attachmentList, ...newAttachments];
+      // 3. Save memo (create or update)
       if (memoName) {
         const prevMemo = await memoStore.getOrFetchMemoByName(memoName);
         if (prevMemo) {
@@ -349,9 +312,9 @@ const MemoEditor = observer((props: Props) => {
             updateMask.add("visibility");
             memoPatch.visibility = state.memoVisibility;
           }
-          if (!isEqual(state.attachmentList, prevMemo.attachments)) {
+          if (!isEqual(allAttachments, prevMemo.attachments)) {
             updateMask.add("attachments");
-            memoPatch.attachments = state.attachmentList;
+            memoPatch.attachments = allAttachments;
           }
           if (!isEqual(state.relationList, prevMemo.relations)) {
             updateMask.add("relations");
@@ -391,14 +354,11 @@ const MemoEditor = observer((props: Props) => {
               memo: Memo.fromPartial({
                 content,
                 visibility: state.memoVisibility,
-                attachments: state.attachmentList,
+                attachments: allAttachments,
                 relations: state.relationList,
                 location: state.location,
               }),
-              // Optional fields can be omitted
               memoId: "",
-              validateOnly: false,
-              requestId: "",
             })
           : memoServiceClient
               .createMemoComment({
@@ -418,6 +378,8 @@ const MemoEditor = observer((props: Props) => {
         }
       }
       editorRef.current?.setContent("");
+      // Clean up local files after successful save
+      clearFiles();
     } catch (error: any) {
       console.error(error);
       toast.error(error.details);
@@ -436,14 +398,6 @@ const MemoEditor = observer((props: Props) => {
     });
   };
 
-  const handleCancelBtnClick = () => {
-    localStorage.removeItem(contentCacheKey);
-
-    if (onCancel) {
-      onCancel();
-    }
-  };
-
   const handleEditorFocus = () => {
     editorRef.current?.focus();
   };
@@ -455,134 +409,153 @@ const MemoEditor = observer((props: Props) => {
       placeholder: props.placeholder ?? t("editor.any-thoughts"),
       onContentChange: handleContentChange,
       onPaste: handlePasteEvent,
+      isFocusMode: state.isFocusMode,
+      isInIME: state.isComposing,
+      onCompositionStart: handleCompositionStart,
+      onCompositionEnd: handleCompositionEnd,
     }),
-    [i18n.language],
+    [i18n.language, state.isFocusMode, state.isComposing],
   );
 
-  const allowSave = (hasContent || state.attachmentList.length > 0) && !state.isUploadingAttachment && !state.isRequesting;
+  const allowSave =
+    (hasContent || state.attachmentList.length > 0 || localFiles.length > 0) && !state.isUploadingAttachment && !state.isRequesting;
 
   return (
-    <MemoEditorContext.Provider
-      value={{
-        attachmentList: state.attachmentList,
-        relationList: state.relationList,
-        setAttachmentList: (attachmentList: Attachment[]) => {
-          setState((prevState) => ({
-            ...prevState,
-            attachmentList,
-          }));
-        },
-        setRelationList: (relationList: MemoRelation[]) => {
-          setState((prevState) => ({
-            ...prevState,
-            relationList,
-          }));
-        },
-        memoName,
-      }}
-    >
-      <div
-        className={cn(
-          "group relative w-full flex flex-col justify-start items-start bg-card px-4 pt-3 pb-2 rounded-lg border",
-          state.isDraggingFile ? "border-dashed border-muted-foreground cursor-copy" : "border-border cursor-auto",
-          className,
-        )}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        onDrop={handleDropEvent}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onFocus={handleEditorFocus}
-        onCompositionStart={handleCompositionStart}
-        onCompositionEnd={handleCompositionEnd}
+    <ErrorBoundary>
+      <MemoEditorContext.Provider
+        value={{
+          attachmentList: state.attachmentList,
+          relationList: state.relationList,
+          setAttachmentList: handleSetAttachmentList,
+          addLocalFiles: (files) => addFiles(Array.from(files.map((f) => f.file))),
+          removeLocalFile: removeFile,
+          localFiles,
+          setRelationList: (relationList: MemoRelation[]) => {
+            setState((prevState) => ({
+              ...prevState,
+              relationList,
+            }));
+          },
+          memoName,
+        }}
       >
-        <Editor ref={editorRef} {...editorConfig} />
-        <AttachmentListView attachmentList={state.attachmentList} setAttachmentList={handleSetAttachmentList} />
-        <RelationListView relationList={referenceRelations} setRelationList={handleSetRelationList} />
-        <div className="relative w-full flex flex-row justify-between items-center py-1 gap-2" onFocus={(e) => e.stopPropagation()}>
-          <div className="flex flex-row justify-start items-center opacity-60 shrink-1">
-            <TagSelector editorRef={editorRef} />
-            <MarkdownMenu editorRef={editorRef} />
-            <UploadAttachmentButton isUploading={state.isUploadingAttachment} />
-            <AddMemoRelationPopover />
-            <LocationSelector
-              location={state.location}
-              onChange={(location) =>
-                setState((prevState) => ({
-                  ...prevState,
-                  location,
-                }))
-              }
-            />
-          </div>
-          <div className="shrink-0 -mr-1 flex flex-row justify-end items-center gap-1">
-            {props.onCancel && (
-              <Button variant="ghost" className="opacity-60" disabled={state.isRequesting} onClick={handleCancelBtnClick}>
-                {t("common.cancel")}
-              </Button>
-            )}
-            <Button disabled={!allowSave || state.isRequesting} onClick={handleSaveBtnClick}>
-              {t("editor.save")}
-              {!state.isRequesting ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <span className="pointer-events-auto">
-                      <VisibilityIcon visibility={state.memoVisibility} className="w-4 h-auto ml-1 text-primary-foreground opacity-80" />
-                    </span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" alignOffset={-12} sideOffset={12} onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={() => handleMemoVisibilityChange(Visibility.PRIVATE)}>
-                      <VisibilityIcon visibility={Visibility.PRIVATE} className="w-4 h-4" />
-                      {t("memo.visibility.private")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleMemoVisibilityChange(Visibility.PROTECTED)}>
-                      <VisibilityIcon visibility={Visibility.PROTECTED} className="w-4 h-4" />
-                      {t("memo.visibility.protected")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleMemoVisibilityChange(Visibility.PUBLIC)}>
-                      <VisibilityIcon visibility={Visibility.PUBLIC} className="w-4 h-4" />
-                      {t("memo.visibility.public")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <LoaderIcon className="w-4 h-auto ml-1 animate-spin" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+        {/* Focus Mode Backdrop */}
+        {state.isFocusMode && <div className={FOCUS_MODE_STYLES.backdrop} onClick={toggleFocusMode} />}
 
-      {/* Show memo metadata if memoName is provided */}
-      {memoName && (
-        <div className="w-full -mt-1 mb-4 text-xs leading-5 px-4 opacity-60 font-mono text-muted-foreground">
-          <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 items-center">
-            {!isEqual(createTime, updateTime) && updateTime && (
-              <>
-                <span className="text-left">Updated</span>
-                <DateTimeInput value={updateTime} onChange={setUpdateTime} />
-              </>
-            )}
-            {createTime && (
-              <>
-                <span className="text-left">Created</span>
-                <DateTimeInput value={createTime} onChange={setCreateTime} />
-              </>
-            )}
-            <span className="text-left">ID</span>
-            <span
-              className="px-1 border border-transparent cursor-default"
-              onClick={() => {
-                copy(extractMemoIdFromName(memoName));
-                toast.success(t("message.copied"));
-              }}
+        <div
+          className={cn(
+            "group relative w-full flex flex-col justify-start items-start bg-card px-4 pt-3 pb-2 rounded-lg border",
+            FOCUS_MODE_STYLES.transition,
+            state.isDraggingFile ? "border-dashed border-muted-foreground cursor-copy" : "border-border cursor-auto",
+            state.isFocusMode && cn(FOCUS_MODE_STYLES.container.base, FOCUS_MODE_STYLES.container.spacing),
+            className,
+          )}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+          {...dragHandlers}
+          onFocus={handleEditorFocus}
+        >
+          {/* Focus Mode Exit Button */}
+          {state.isFocusMode && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={FOCUS_MODE_STYLES.exitButton}
+              onClick={toggleFocusMode}
+              title={t("editor.exit-focus-mode")}
             >
-              {extractMemoIdFromName(memoName)}
-            </span>
+              <Minimize2Icon className="w-4 h-4" />
+            </Button>
+          )}
+
+          <Editor ref={editorRef} {...editorConfig} />
+          <LocationDisplay
+            mode="edit"
+            location={state.location}
+            onRemove={() =>
+              setState((prevState) => ({
+                ...prevState,
+                location: undefined,
+              }))
+            }
+          />
+          {/* Show attachments and pending files together */}
+          <AttachmentList
+            mode="edit"
+            attachments={state.attachmentList}
+            onAttachmentsChange={handleSetAttachmentList}
+            localFiles={localFiles}
+            onRemoveLocalFile={removeFile}
+          />
+          <RelationList mode="edit" relations={referenceRelations} onRelationsChange={handleSetRelationList} />
+          <div className="relative w-full flex flex-row justify-between items-center pt-2 gap-2" onFocus={(e) => e.stopPropagation()}>
+            <div className="flex flex-row justify-start items-center gap-1">
+              <InsertMenu
+                isUploading={state.isUploadingAttachment}
+                location={state.location}
+                onLocationChange={(location) =>
+                  setState((prevState) => ({
+                    ...prevState,
+                    location,
+                  }))
+                }
+                onToggleFocusMode={toggleFocusMode}
+              />
+            </div>
+            <div className="shrink-0 flex flex-row justify-end items-center">
+              <VisibilitySelector value={state.memoVisibility} onChange={(visibility) => handleMemoVisibilityChange(visibility)} />
+              <div className="flex flex-row justify-end gap-1">
+                {props.onCancel && (
+                  <Button
+                    variant="ghost"
+                    disabled={state.isRequesting}
+                    onClick={() => {
+                      clearFiles();
+                      if (props.onCancel) props.onCancel();
+                    }}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                )}
+                <Button disabled={!allowSave || state.isRequesting} onClick={handleSaveBtnClick}>
+                  {state.isRequesting ? <LoaderIcon className="w-4 h-4 animate-spin" /> : t("editor.save")}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      )}
-    </MemoEditorContext.Provider>
+
+        {/* Show memo metadata if memoName is provided */}
+        {memoName && (
+          <div className="w-full -mt-1 mb-4 text-xs leading-5 px-4 opacity-60 font-mono text-muted-foreground">
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 items-center">
+              {!isEqual(createTime, updateTime) && updateTime && (
+                <>
+                  <span className="text-left">Updated</span>
+                  <DateTimeInput value={updateTime} onChange={setUpdateTime} />
+                </>
+              )}
+              {createTime && (
+                <>
+                  <span className="text-left">Created</span>
+                  <DateTimeInput value={createTime} onChange={setCreateTime} />
+                </>
+              )}
+              <span className="text-left">ID</span>
+              <span
+                className="px-1 border border-transparent cursor-default"
+                onClick={() => {
+                  copy(extractMemoIdFromName(memoName));
+                  toast.success(t("message.copied"));
+                }}
+              >
+                {extractMemoIdFromName(memoName)}
+              </span>
+            </div>
+          </div>
+        )}
+      </MemoEditorContext.Provider>
+    </ErrorBoundary>
   );
 });
 

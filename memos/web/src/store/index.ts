@@ -11,7 +11,7 @@
  * These stores fetch and cache data from the backend API:
  * - **memoStore**: Memo CRUD operations
  * - **userStore**: User authentication and settings
- * - **workspaceStore**: Workspace configuration
+ * - **instanceStore**: Instance configuration
  * - **attachmentStore**: File attachment management
  *
  * Features:
@@ -46,49 +46,44 @@
  */
 // Server State Stores
 import attachmentStore from "./attachment";
+import instanceStore from "./instance";
 import memoStore from "./memo";
 // Client State Stores
 import memoFilterStore from "./memoFilter";
 import userStore from "./user";
 import viewStore from "./view";
-import workspaceStore from "./workspace";
 
-// Utilities and Types
-export { StoreError, RequestDeduplicator, createRequestKey } from "./store-utils";
-export { StandardState, createServerStore, createClientStore } from "./base-store";
-export type { BaseState, ServerStoreConfig, ClientStoreConfig } from "./base-store";
-
+export type { BaseState, ClientStoreConfig, ServerStoreConfig } from "./base-store";
+export { createClientStore, createServerStore, StandardState } from "./base-store";
+// Re-export common utilities
+export {
+  activityNamePrefix,
+  extractIdentityProviderIdFromName,
+  extractMemoIdFromName,
+  extractUserIdFromName,
+  identityProviderNamePrefix,
+  instanceSettingNamePrefix,
+  memoNamePrefix,
+  userNamePrefix,
+} from "./common";
+// Re-export instance types
+export type { Theme } from "./instance";
+export { isValidTheme } from "./instance";
 // Re-export filter types
 export type { FilterFactor, MemoFilter } from "./memoFilter";
 export { getMemoFilterKey, parseFilterQuery, stringifyFilters } from "./memoFilter";
-
+// Utilities and Types
+export { createRequestKey, RequestDeduplicator, StoreError } from "./store-utils";
 // Re-export view types
 export type { LayoutMode } from "./view";
-
-// Re-export workspace types
-export type { Theme } from "./workspace";
-export { isValidTheme } from "./workspace";
-
-// Re-export common utilities
-export {
-  workspaceSettingNamePrefix,
-  userNamePrefix,
-  memoNamePrefix,
-  identityProviderNamePrefix,
-  activityNamePrefix,
-  extractUserIdFromName,
-  extractMemoIdFromName,
-  extractIdentityProviderIdFromName,
-} from "./common";
 
 // Export store instances
 export {
   // Server state stores
   memoStore,
   userStore,
-  workspaceStore,
+  instanceStore,
   attachmentStore,
-
   // Client state stores
   memoFilterStore,
   viewStore,
@@ -102,7 +97,7 @@ export const stores = {
   server: {
     memo: memoStore,
     user: userStore,
-    workspace: workspaceStore,
+    instance: instanceStore,
     attachment: attachmentStore,
   },
 
