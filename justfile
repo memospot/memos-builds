@@ -419,10 +419,22 @@ git-reset:
 
 # Update the `memos` subtree, tag and push to GitHub, triggering the `release` workflow.
 [script]
-publish TAG:
+publish-tag TAG:
     set -euo pipefail
     TAG="v{{trim_start_matches(TAG, 'v')}}"
     just git-subtree-pull "tags/$TAG"
+    just git-retag "{{TAG}}"
+    git push origin main
+
+[doc('Update the `memos` subtree, tag and push to GitHub, triggering the `release` workflow.
+
+Memos versioning is not reliable and can be inconsistent, so the commit hash must be used instead.
+https://github.com/usememos/memos/actions/workflows/build-and-push-stable-image.yml
+')]
+[script]
+publish TAG COMMIT:
+    TAG="v{{trim_start_matches(TAG, 'v')}}"
+    just git-subtree-pull "{{COMMIT}}"
     just git-retag "{{TAG}}"
     git push origin main
 
