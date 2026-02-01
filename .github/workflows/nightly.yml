@@ -185,13 +185,13 @@ jobs:
           platforms: ${{ env.DOCKER_PLATFORMS }}
 
       - name: Log-in to Docker Hub
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           username: lincolnthalles
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Log-in to GitHub's Container registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
