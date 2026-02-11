@@ -24,9 +24,6 @@ on:
 env:
   DAGGER_NO_NAG: "1"
   DO_NOT_TRACK: "1"
-  # Experimental: Use GitHub Actions cache for Dagger
-  DAGGER_CACHE_FROM: type=gha,scope=dagger
-  DAGGER_CACHE_TO: type=gha,mode=max,scope=dagger
 
 jobs:
   build-and-release:
@@ -35,6 +32,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      actions: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -77,6 +75,8 @@ jobs:
         env:
           DOCKER_TOKEN: "${{ secrets.DOCKER_TOKEN }}"
           GHCR_TOKEN: "${{ secrets.GHCR_TOKEN }}"
+          DAGGER_CACHE_FROM: type=gha
+          DAGGER_CACHE_TO: type=gha,mode=max
 
       - name: List build artifacts
         run: ls -la ./dist
@@ -88,8 +88,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: "Memos ${{ steps.version.outputs.version }}"
           body: |
-            ## Memos ${{ steps.version.outputs.version }}
-
             Built from [usememos/memos@${{ steps.version.outputs.version }}](https://github.com/usememos/memos/releases/tag/${{ steps.version.outputs.version }})
 
             ---
@@ -114,8 +112,6 @@ jobs:
           tag_name: nightly
           name: "Nightly Build"
           body: |
-            ## Nightly Build
-
             Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
 
             > [!WARNING]
