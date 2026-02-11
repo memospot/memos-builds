@@ -15,11 +15,11 @@ on:
           Leave empty for nightly build from main branch.
         required: false
         type: string
-      publish-containers:
-        description: "Publish containers to registries"
-        required: false
-        type: boolean
-        default: true
+        publish-containers:
+          description: "Publish containers to registries"
+          required: false
+          type: boolean
+          default: ${{ secrets.DOCKER_TOKEN && secrets.GHCR_TOKEN }}
 
 env:
   DAGGER_NO_NAG: "1"
