@@ -15,11 +15,11 @@ on:
           Leave empty for nightly build from main branch.
         required: false
         type: string
-        publish-containers:
-          description: "Publish containers to registries"
-          required: false
-          type: boolean
-          default: ${{ secrets.DOCKER_TOKEN && secrets.GHCR_TOKEN }}
+      publish-containers:
+        description: "Publish containers to registries"
+        required: false
+        type: boolean
+        default: ${{ secrets.DOCKER_TOKEN && secrets.GHCR_TOKEN }}
 
 env:
   DAGGER_NO_NAG: "1"
@@ -55,7 +55,9 @@ jobs:
       - name: Determine publish args
         id: publish
         run: |
-          if [ "${{ inputs.publish-containers }}" = "true" ]; then
+          if [ "${{ inputs.publish-containers }}" = "true" ] || \
+             [ "${{ github.event_name }}" = "push" ] || \
+             [ "${{ github.event_name }}" = "schedule" ]; then
             echo "args=--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user ${{ github.actor }} --ghcr-password env:GHCR_TOKEN" >> $GITHUB_OUTPUT
           else
             echo "args=" >> $GITHUB_OUTPUT
