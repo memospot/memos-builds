@@ -158,23 +158,13 @@ func (m *MemosBuilds) Publish(
 	ghcrUser string,
 	ghcrPassword *dagger.Secret,
 ) (*dagger.Directory, error) {
-	if version == "" {
-		version = "nightly"
-	}
-
-	// Resolve version first to ensure consistent versioning across build and publish.
-	_, resolvedVersion, err := m.resolveVersion(ctx, version)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve version: %w", err)
-	}
-
-	out, err := m.Build(ctx, source, resolvedVersion, "")
+	out, err := m.Build(ctx, source, version, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to build: %w", err)
 	}
 
 	if (dockerHubUser != "" && dockerHubPassword != nil) || (ghcrUser != "" && ghcrPassword != nil) {
-		_, err := m.publishContainers(ctx, source, resolvedVersion, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
+		_, err := m.publishContainers(ctx, source, version, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
 		if err != nil {
 			return nil, fmt.Errorf("failed to publish containers: %w", err)
 		}
