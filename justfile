@@ -286,6 +286,23 @@ build-docker VERSION='nightly' PLATFORMS='':
 
     echo -e "\n{{ GREEN }}✓ Build and load complete!{{ NORMAL }}"
 
+pull-nightly:
+    #!/usr/bin/env bash
+    docker stop memos-nightly 2>/dev/null || true
+    docker rm memos-nightly 2>/dev/null || true
+    docker run \
+        --rm \
+        --detach \
+        --init \
+        --name memos-nightly \
+        --publish "0:5230" \
+        --env "MEMOS_DEMO=true" \
+        --env "TZ=America/Sao_Paulo" \
+        --platform "{{ DEFAULT_BUILD_TARGET }}" \
+        "ghcr.io/memospot/memos-builds:nightly"
+    port=$(docker port memos-nightly 5230 | cut -d: -f2)
+    echo -e "{{ GREEN }}Container memos-nightly running listening at http://localhost:${port}{{ NORMAL }}"
+
 # Clean built Docker containers and images
 [confirm('This will stop and remove all Docker containers and images starting with memos-. Are you sure?')]
 clean-docker:
