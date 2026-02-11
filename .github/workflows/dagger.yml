@@ -54,24 +54,6 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Determine build flags
-        id: flags
-        run: |
-          PUBLISH=false
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            PUBLISH=true
-          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
-            PUBLISH=true
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.publish-containers }}" == "true" ]]; then
-            PUBLISH=true
-          fi
-
-          ARGS=""
-          if [[ "$PUBLISH" == "true" ]]; then
-            ARGS="--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user ${{ github.actor }} --ghcr-password env:GHCR_TOKEN"
-          fi
-          echo "publish_args=$ARGS" >> $GITHUB_OUTPUT
-
       - name: Build release artifacts
         uses: dagger/dagger-for-github@d913e70051faf3b907d4dd96ef1161083c88c644 # 8.2.0
         with:
@@ -81,7 +63,7 @@ jobs:
             publish
             --source .
             --version ${{ steps.version.outputs.version }}
-            ${{ steps.flags.outputs.publish_args }}
+            ${{ inputs.publish-containers && format('--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user {0} --ghcr-password env:GHCR_TOKEN', github.actor) || '' }}
             export --path ./dist
         env:
           DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
