@@ -107,6 +107,7 @@ func (m *MemosBuilds) containerTags(version string) []string {
 func (m *MemosBuilds) publishContainers(
 	ctx context.Context,
 	source *dagger.Directory,
+	gitSrc *dagger.Directory,
 	version string,
 	dockerHubUser string,
 	dockerHubPassword *dagger.Secret,
@@ -119,7 +120,7 @@ func (m *MemosBuilds) publishContainers(
 		return "No Linux targets configured, skipping container publish", nil
 	}
 
-	platformVariants, err := m.buildContainers(ctx, source, version, linuxTargets)
+	platformVariants, err := m.buildContainers(ctx, source, gitSrc, version, linuxTargets)
 	if err != nil {
 		return "", fmt.Errorf("failed to build containers: %w", err)
 	}

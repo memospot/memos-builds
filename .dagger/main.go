@@ -119,18 +119,33 @@ func (m *MemosBuilds) Build(
 	version string,
 	platforms string,
 ) (*dagger.Directory, error) {
+	out, _, _, err := m.buildInternal(ctx, source, version, platforms)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// buildInternal is the core build logic.
+// It returns the artifacts directory, the resolved source directory, the resolved version string, and an error.
+func (m *MemosBuilds) buildInternal(
+	ctx context.Context,
+	source *dagger.Directory,
+	version string,
+	platforms string,
+) (*dagger.Directory, *dagger.Directory, string, error) {
 	if version == "" {
 		version = "nightly"
 	}
 
 	targets, err := filterTargets(platforms)
 	if err != nil {
-		return nil, fmt.Errorf("invalid platforms: %w", err)
+		return nil, nil, "", fmt.Errorf("invalid platforms: %w", err)
 	}
 
 	gitSrc, version, err := m.prepareSource(ctx, source, version)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 
 	gitSrc = m.generateProto(gitSrc)
@@ -138,15 +153,16 @@ func (m *MemosBuilds) Build(
 
 	binaries, err := m.buildBackend(ctx, gitSrc, frontendDist, version, targets)
 	if err != nil {
-		return nil, err
+		return nil, nil, "", err
 	}
 
 	archives := m.createReleaseArchives(binaries, version, targets)
 	checksums := m.generateChecksums(archives, version)
 	out := archives.WithFile(fmt.Sprintf(buildconsts.CHECKSUM_FILE_FORMAT, version), checksums)
 
-	return out, nil
+	return out, gitSrc, version, nil
 }
+
 
 // Publish builds release artifacts and optionally publishes containers.
 func (m *MemosBuilds) Publish(
@@ -158,13 +174,13 @@ func (m *MemosBuilds) Publish(
 	ghcrUser string,
 	ghcrPassword *dagger.Secret,
 ) (*dagger.Directory, error) {
-	out, err := m.Build(ctx, source, version, "")
+	out, gitSrc, resolvedVersion, err := m.buildInternal(ctx, source, version, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to build: %w", err)
 	}
 
 	if (dockerHubUser != "" && dockerHubPassword != nil) || (ghcrUser != "" && ghcrPassword != nil) {
-		_, err := m.publishContainers(ctx, source, version, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
+		_, err := m.publishContainers(ctx, source, gitSrc, resolvedVersion, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
 		if err != nil {
 			return nil, fmt.Errorf("failed to publish containers: %w", err)
 		}
@@ -194,7 +210,12 @@ func (m *MemosBuilds) BuildContainers(
 		return nil, fmt.Errorf("no Linux platforms in the selected targets")
 	}
 
-	containers, err := m.buildContainers(ctx, source, version, containerTargets)
+	gitSrc, version, err := m.prepareSource(ctx, source, version)
+	if err != nil {
+		return nil, err
+	}
+
+	containers, err := m.buildContainers(ctx, source, gitSrc, version, containerTargets)
 	if err != nil {
 		return nil, err
 	}

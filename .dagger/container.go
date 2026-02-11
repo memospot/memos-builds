@@ -141,16 +141,11 @@ func (m *MemosBuilds) buildBusyBoxARMv5Container(
 func (m *MemosBuilds) buildContainers(
 	ctx context.Context,
 	source *dagger.Directory,
+	gitSrc *dagger.Directory,
 	version string,
 	targets []BuildMatrix,
 ) ([]*dagger.Container, error) {
-	// 1. Resolve version and source
-	gitSrc, version, err := m.prepareSource(ctx, source, version)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare source: %w", err)
-	}
-
-	// 2. Generate proto and build frontend (shared across all targets)
+	// 1. Generate proto and build frontend (shared across all targets)
 	gitSrc = m.generateProto(gitSrc)
 	frontendDist := m.buildFrontend(gitSrc)
 
