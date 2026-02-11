@@ -10,15 +10,16 @@ insert_final_newline = true
 indent_style = space
 # (Don't specify an indent_size here; that has too many unintended consequences.)
 
-[*.{md,yml,yaml,sh,toml}]
-indent_style = space
-indent_size = 2
-
-[*.py]
-max_line_length = 96
-indent_style = space
+[justfile]
 indent_size = 4
+
+[*.go]
+indent_size = 2
+indent_style = tab
+
+[*.{json,md,sh,toml,yml,yaml}]
+indent_size = 2
 
 [.{gitignore,gitattributes}]
 indent_style = tab
-indent_size = 8
+indent_size = 4

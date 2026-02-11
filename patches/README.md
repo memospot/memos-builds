@@ -1,8 +1,8 @@
 # Patches
 
-- 0.24.4-sqlite-1.37.1
+Any patch files put in here will be applied to the source code using `git apply`,
+with fallback to `patch`.
 
-  Fixes a compilation failure on alternate platforms due to mismatch between the version of `modernc.org/sqlite` and `modernc.org/libc`.
-  See:
-  - <https://pkg.go.dev/modernc.org/sqlite#hdr-Fragile_modernc_org_libc_dependency>
-  - <https://gitlab.com/cznic/sqlite/-/issues/177>
+> [!NOTE]
+> The modernc.org/sqlite patching is now done programatically.
+> The logic can be found in [`patch.go`](../.dagger/patch.go).

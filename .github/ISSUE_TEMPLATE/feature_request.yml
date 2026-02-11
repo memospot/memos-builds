@@ -1,28 +1,75 @@
 name: Feature Request
-description: Suggest an idea for this project
+description: Suggest an improvement to the build process or releases
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to suggest an idea!
+        ## ⚠️ Important: Is this the right place?
+
+        This repository provides **alternate builds** for [usememos/memos](https://github.com/usememos/memos).
+
+        **Request here if** your idea relates to:
+        - Platform/architecture support
+        - Docker image improvements (base image, labels, configuration)
+        - Build process enhancements
+        - Release artifact formats or distribution
+        - CI/CD pipeline changes
+
+        **Request upstream if** your idea relates to:
+        - Memos application features
+        - Web UI enhancements
+        - API changes
+        - New integrations or plugins
+
+        👉 [Open a feature request on usememos/memos](https://github.com/usememos/memos/issues/new/choose)
+
+        ---
+
+  - type: dropdown
+    attributes:
+      label: Feature category
+      description: What area does this feature relate to?
+      options:
+        - Platform/architecture support
+        - Docker image improvements
+        - Binary release improvements
+        - Build process / CI pipeline
+        - Documentation
+        - Other
+    validations:
+      required: true
+
   - type: textarea
     attributes:
-      label: Is your feature request related to a problem?
+      label: Problem or motivation
       description: |
-        A clear and concise description of what the problem is.
+        What problem does this solve? Why would this be useful?
       placeholder: |
-        I'm always frustrated when [...]
+        I would like to run Memos on [platform] but there's no build for it...
     validations:
       required: true
+
   - type: textarea
     attributes:
-      label: Describe the solution you'd like
+      label: Proposed solution
       description: |
-        A clear and concise description of what you want to happen.
+        Describe what you'd like to see implemented.
     validations:
       required: true
+
+  - type: textarea
+    attributes:
+      label: Alternatives considered
+      description: |
+        Have you considered any workarounds or alternative approaches?
+    validations:
+      required: false
+
   - type: textarea
     attributes:
       label: Additional context
-      description: Add any other context or screenshots about the feature request.
+      description: |
+        Add any other context, links, or references that might help.
+    validations:
+      required: false

@@ -1,0 +1,132 @@
+name: Build and Release (Dagger)
+
+on:
+  schedule:
+    - cron: '25 5 * * *'  # Daily nightly build at 5:25 AM UTC
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: |
+          Version tag to build (e.g., v0.25.3)
+          Leave empty for nightly build from main branch.
+        required: false
+        type: string
+      publish-containers:
+        description: "Publish containers to registries"
+        required: false
+        type: boolean
+        default: true
+
+env:
+  DAGGER_NO_NAG: "1"
+  DO_NOT_TRACK: "1"
+  # Experimental: Use GitHub Actions cache for Dagger
+  DAGGER_CACHE_FROM: type=gha,scope=dagger
+  DAGGER_CACHE_TO: type=gha,mode=max,scope=dagger
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          elif [[ "${{ github.ref_name }}" == v* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="nightly"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build release artifacts
+        uses: dagger/dagger-for-github@d913e70051faf3b907d4dd96ef1161083c88c644 # 8.2.0
+        with:
+          version: "0.19"
+          verb: call
+          args: |
+            publish
+            --source .
+            --version ${{ steps.version.outputs.version }}
+            ${{ inputs.publish-containers && format('--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user {0} --ghcr-password env:GHCR_TOKEN', github.actor) || '' }}
+            export --path ./dist
+        env:
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
+      - name: List build artifacts
+        run: ls -la ./dist
+
+      - name: Create GitHub Release
+        if: startsWith(steps.version.outputs.version, 'v')
+        uses: softprops/action-gh-release@e798e6a1ede8d07b74ac4cdac6bdfa4cc1653907
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "Memos ${{ steps.version.outputs.version }}"
+          body: |
+            ## Memos ${{ steps.version.outputs.version }}
+
+            Built from [usememos/memos@${{ steps.version.outputs.version }}](https://github.com/usememos/memos/releases/tag/${{ steps.version.outputs.version }})
+
+            ---
+            ```bash
+            docker pull ghcr.io/memospot/memos-builds:${{ steps.version.outputs.version }}
+            ```
+            ```bash
+            docker pull docker.io/lincolnthalles/memos:${{ steps.version.outputs.version }}
+            ```
+          files: ./dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Nightly Release
+        if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, '-pre')"
+        uses: softprops/action-gh-release@e798e6a1ede8d07b74ac4cdac6bdfa4cc1653907
+        with:
+          tag_name: nightly
+          name: "Nightly Build"
+          body: |
+            ## Nightly Build
+
+            Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
+
+            > [!WARNING]
+            > **This is an automated development build and may be unstable, or may not even run at all.**
+
+            > [!CAUTION]
+            > Ensure that you use a different database from the one you use for stable releases.
+
+            > [!NOTE]
+            > - Release assets are overwritten by the daily automated builds.
+            >
+            > - The version identifier is generated during the build process by bumping the patch version and appending the `-pre` suffix, based on what's on the source code.
+
+            ---
+            ```bash
+            docker pull ghcr.io/memospot/memos-builds:nightly
+            ```
+          files: ./dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

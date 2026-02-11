@@ -1,31 +1,109 @@
 name: Bug Report
-description: Create a report to help us improve
+description: Report an issue specific to memos-builds (alternate builds)
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        If you are reporting a new issue, make sure that we do not have any duplicates already open. You can ensure this by searching the issue list for this repository. If there is a duplicate, please close your issue and add a comment to the existing issue instead.
+        ## ⚠️ Important: Is this the right place?
+
+        This repository provides **alternate builds** for [usememos/memos](https://github.com/usememos/memos).
+
+        **Report here if** your issue is related to:
+        - Broken builds
+        - Build artifacts (binaries, Docker images) from this repository
+        - Platform-specific issues with our builds (ARM, x86 variants, etc.)
+        - Docker image configuration or labels
+        - Missing or broken release assets
+
+        **Report upstream if** your issue is related to:
+        - Memos application features or functionality
+        - Web UI bugs
+        - API behavior
+        - Database or storage issues
+
+        👉 [Open an issue on usememos/memos](https://github.com/usememos/memos/issues/new/choose)
+
+        ---
+
+        Before submitting, please search [existing issues](https://github.com/memospot/memos-builds/issues) to avoid duplicates.
+
+  - type: dropdown
+    attributes:
+      label: Build type
+      description: Which build are you using?
+      options:
+        - Docker image (ghcr.io/memospot/memos)
+        - Binary release (tar.gz/zip)
+        - Self-compiled using this repo
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Build version
+      description: The version/tag you are using (e.g., v0.25.3, latest, or commit hash)
+      placeholder: "v0.25.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Platform / Architecture
+      description: What platform are you running on?
+      options:
+        - linux/amd64
+        - linux/arm64
+        - linux/arm/v7
+        - linux/arm/v6
+        - linux/arm/v5
+        - linux/386
+        - darwin/amd64 (macOS Intel)
+        - darwin/arm64 (macOS Apple Silicon)
+        - windows/amd64
+        - windows/arm64
+        - Android (Termux)
+        - Other (specify in description)
+    validations:
+      required: true
+
   - type: textarea
     attributes:
       label: Describe the bug
-      description: |
-        Briefly describe the problem you are having in a few paragraphs.
+      description: A clear and concise description of the issue.
     validations:
       required: true
+
   - type: textarea
     attributes:
       label: Steps to reproduce
-      description: |
-        Provide the steps to reproduce the issue.
+      description: How can we reproduce this issue?
       placeholder: |
-        1. Go to '...'
-        2. Click on '....'
+        1. Download the release from '...'
+        2. Run with '...'
         3. See error
     validations:
       required: true
+
   - type: textarea
     attributes:
-      label: Screenshots or additional context
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Logs or error messages
+      description: Paste any relevant logs or error output. This will be formatted as code.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional context
       description: |
-        Add screenshots or any other context about the problem.
+        Add any other context, screenshots, or information that might help.
+    validations:
+      required: false

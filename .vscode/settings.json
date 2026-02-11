@@ -12,5 +12,21 @@
     "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
+  },
+  "go.buildTags": "mage",
+  "gopls": {
+    // "directoryFilters": [
+    // Ignore Dagger generated files so gopls doesn't block refactoring.
+    // "-**/dagger.gen.go"
+    // "+.dagger"
+    // ],
+    "build.directoryFilters": [
+      "-**/dagger.gen.go"
+    ]
   }
 }

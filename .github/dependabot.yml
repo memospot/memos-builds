@@ -9,3 +9,13 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: monthly
+
+  - package-ecosystem: gomod
+    directory: "/magefiles"
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: gomod
+    directory: "/.dagger"
+    schedule:
+      interval: monthly

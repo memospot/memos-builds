@@ -1,412 +1,334 @@
 #!/usr/bin/env -S just --justfile
 # https://just.systems
-
-# Typical internal recipe workflow for a Memos build:
-# git-subtree-pull -> build-buf -> build-backend-tidy -> build-frontend -> [goreleaser] -> [docker] -> [publish]
+# Build recipes for https://github.com/usememos/memos
 #
-# Run `just` in the root of the project to see a list of recipes relevant to manual builds.
+# This justfile supports:
+# - Building binary archives via Dagger
+# - Building containers and loading them locally for testing
+# - Screenshot capture for documentation
+# - Version publishing workflows
 
 set script-interpreter := ['bash', '-euo', 'pipefail']
 set shell := ["bash", "-c"]
 
-CI := env("CI", "false")
-NPROC := env("NPROC", num_cpus())
-GITHUB_ENV := env("GITHUB_ENV", ".GITHUB_ENV")
-
-GIT_WIN := join(env('PROGRAMFILES',''), 'Git','usr','bin')
-PATH := if os() == 'windows' { GIT_WIN +';'+ env('PATH') } else { env('PATH') }
-
-set export
+DOCKER_NAMES_FMT := "{{" + ".Names" + "}}"
+DEFAULT_BUILD_OS := if os() == 'macos' { 'darwin' } else { os() }
+DEFAULT_BUILD_ARCH := if arch() == 'aarch64' { 'arm64' } else if arch() == 'x86_64' { 'amd64' } else { arch() }
+DEFAULT_BUILD_TARGET := DEFAULT_BUILD_OS + '/' + DEFAULT_BUILD_ARCH
+GIT_WIN := join(env('PROGRAMFILES', ''), 'Git', 'usr', 'bin')
+export PATH := if os() == 'windows' { GIT_WIN + ';' + env('PATH') } else { env('PATH') }
+export CI := env("CI", "false")
+export DAGGER_NO_NAG := "1"
+export DO_NOT_TRACK := "1"
 
 [private]
 [script]
 default:
-    echo -e "{{BOLD}}This justfile contains recipes for building v0.21.1 and onwards versions of {{UNDERLINE}}https://github.com/usememos/memos{{NORMAL}}.\n"
-    if [[ "{{os()}}" == "windows" ]]; then
-        program_files="{{replace(env('PROGRAMFILES', 'C:\Program Files'), '\\', '\\\\')}}"
-        echo -e "To use this justfile on Windows, make sure Git is installed under {{BOLD}}{{UNDERLINE}}$program_files\\Git{{NORMAL}}."
-        echo -e "{{BOLD}}{{UNDERLINE}}https://git-scm.com/download/win{{NORMAL}}"
+    echo -e "{{ BOLD }}This justfile contains recipes for building {{ UNDERLINE }}https://github.com/usememos/memos{{ NORMAL }}\n"
+    if [[ "{{ os() }}" == "windows" ]]; then
+        program_files="{{ replace(env('PROGRAMFILES', 'C:\\Program Files'), '\\', '\\\\') }}"
+        echo -e "To use this justfile on Windows, make sure Git is installed under {{ BOLD }}{{ UNDERLINE }}$program_files\\Git{{ NORMAL }}."
+        echo -e "{{ BOLD }}{{ UNDERLINE }}https://git-scm.com/download/win{{ NORMAL }}"
         echo ""
     fi
     deps=(
-        "buf"
-        "git"
-        "go"
-        "goreleaser"
-        "node"
-        "pnpm"
+        "dagger"
     )
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
-            echo -e "{{RED}}ERROR:{{NORMAL}} Please install {{MAGENTA}}{{BOLD}}{{UNDERLINE}}$dep{{NORMAL}}." & exit 1
+            echo -e "{{ RED }}ERROR:{{ NORMAL }} Please install {{ MAGENTA }}{{ BOLD }}{{ UNDERLINE }}$dep{{ NORMAL }}." && exit 1
         fi
     done
-    echo -e "{{GREEN}}Basic project tooling is installed.{{NORMAL}}"
-    echo -e "{{YELLOW}}This quick test does not verify tool versions. If you experience any errors, consider updating the related tool.{{NORMAL}}\n"
+    echo -e "{{ GREEN }}Basic project tooling is installed.{{ NORMAL }}"
+    echo -e "{{ YELLOW }}If you experience any errors, consider updating the related tool.{{ NORMAL }}\n"
     just --list
 
-# Tidy go.mod, ensuring compatibility with Go 1.25.
-[private]
-[group('CI')]
-[script]
-build-backend-tidy:
-    set -euo pipefail
-    cd memos
-    go mod tidy -go=1.25
-
-# Generate protobuf-related code.
-[private]
-[group('CI')]
-[script]
-build-buf:
-    set -euo pipefail
-    # `pnpm install` already does this at `build-frontend` recipe, but the front-end is built separately on CI.
-    cd memos/proto
-    buf generate
-
-# Build front-end.
-[private]
-[group('CI')]
-[script]
-build-frontend:
-    set -euo pipefail
-    cd memos/web
-    pnpm install
-    pnpm release # added on v0.22.1
-
-# Build nightly binaries. Front-end must be built beforehand.
-[private]
-[group('CI')]
-[script]
-build-nightly-backend-only: build-buf build-backend-tidy
-    set -euo pipefail
-    goreleaser release --snapshot --clean --timeout 60m
-
-# Add variables to the GitHub Actions environment.
-[private]
-[group('CI')]
-[script]
-add-to-env KEY VALUE:
-    set -euo pipefail
-    echo -e " {{BOLD}}{{MAGENTA}}$KEY{{YELLOW}}={{CYAN}}$VALUE{{NORMAL}}"
-    echo "$KEY=$VALUE" >> $GITHUB_ENV
-
-[private]
-[group('CI')]
-[script]
-setup-env NIGHTLY='':
-    set -euo pipefail
-    version_from_file=v$(grep --color=never -Po 'var Version = "\K[^"]+' < ./memos/internal/version/version.go)
-    devversion_from_file=v$(grep --color=never -Po 'var DevVersion = "\K[^"]+' < ./memos/internal/version/version.go)
-    version_from_git_tag=$(git describe --tags --abbrev=0)
-    version_from_ref="{{replace(env('GITHUB_REF_NAME', 'NOT_SET'), 'release/', '')}}"
-    git_previous_tag=""
-    if [[ "{{NIGHTLY}}" == "--nightly" ]]; then
-        echo -e "\n: Setting up {{BLUE}}Nightly{{NORMAL}} build environment…"
-        version_from_file=$(test -n "$devversion_from_file" && echo $devversion_from_file || echo $version_from_file)
+# Stop the Dagger engine container
+dagger-stop:
+    #!/usr/bin/env bash
+    containers=$(docker container list --all --filter "name=^dagger-engine-*" --format '{{ DOCKER_NAMES_FMT }}')
+    if [ -n "$containers" ]; then
+        docker container stop $containers
     else
-        echo -e "\n: Setting up {{GREEN}}Release{{NORMAL}} build environment…"
+        echo "No Dagger engine containers found."
     fi
-    if [[ -n "$git_previous_tag" ]]; then
-        git_previous_tag=$(git describe --tags --abbrev=0 --exclude=*-pre || echo "")
-    fi
-    version="v$(date +%Y.%m.%d).0"
-    for v in $version_from_file $version_from_git_tag $version_from_ref; do
-        if [[ $v =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            version=$v
-            break
-        fi
-    done
-    echo -e "{{MAGENTA}}Current{{NORMAL}} Memos version is {{GREEN}}$version{{NORMAL}}"
-    just add-to-env "CACHE_KEY" $(date +%Y%m%d)
-    just add-to-env "MEMOS_VERSION" $version_from_file
-    just add-to-env "GIT_TAG" $version_from_git_tag
-    just add-to-env "REF_VERSION" $version_from_ref
-    canonical_version=$(echo $version | sed -E 's/^v//g')
-    if [[ "{{NIGHTLY}}" == "--nightly" ]]; then
-        canonical_version=$(echo $canonical_version | sed -E 's/-pre$//g')
-        major=$(echo $canonical_version | grep -Po '^([0-9]+)')
-        minor=$(echo $canonical_version | grep -Po '(?<=\.)([0-9]+)(?=\.)')
-        patch=$(echo $canonical_version | grep -Po '(?<=\.)([0-9]+)$')
-        patch=$((patch + 1))
-        if [[ $patch -gt 99 ]]; then
-            major=$((major + 1))
-            patch=0
-        fi
-        nightly_version="v${major}.${minor}.${patch}-pre"
-        echo -e "{{MAGENTA}}Build{{NORMAL}} version set to {{GREEN}}$nightly_version{{NORMAL}}"
-        just add-to-env "BUILD_VERSION" $nightly_version
-        # If not set, goreleaser will infer tags from the git history.
-        just add-to-env "GORELEASER_PREVIOUS_TAG" $version-pre
-        just add-to-env "GORELEASER_CURRENT_TAG" $nightly_version
+
+# Stop and remove the Dagger engine container
+dagger-rm: dagger-stop
+    #!/usr/bin/env bash
+    containers=$(docker container list --all --filter 'name=^dagger-engine-*' --format '{{ DOCKER_NAMES_FMT }}')
+    if [ -n "$containers" ]; then
+        docker container rm $containers
     else
-        echo -e "{{MAGENTA}}Build{{NORMAL}} version set to {{GREEN}}$version{{NORMAL}}"
-        just add-to-env "BUILD_VERSION" $version
-        just add-to-env "GORELEASER_CURRENT_TAG" $version
-        major=$(echo $canonical_version | grep -Po '^([0-9]+)')
-        minor=$(echo $canonical_version | grep -Po '(?<=\.)([0-9]+)(?=\.)')
-        patch=$(echo $canonical_version | grep -Po '(?<=\.)([0-9]+)$')
-        if [[ $patch -gt 0 ]]; then
-            patch=$((patch - 1))
-            previous_version="v${major}.${minor}.${patch}"
-            just add-to-env "GORELEASER_PREVIOUS_TAG" $previous_version
-        elif [[ -n "$git_previous_tag" ]]; then
-            just add-to-env "GORELEASER_PREVIOUS_TAG" $git_previous_tag
-        fi
-    fi
-    echo -e ": Build environment setup complete.\n"
-
-# Commit any changes
-[private]
-[group('CI')]
-[script]
-git-commit-any MESSAGE='chore(ci): ensure clean git state': git-setup
-    git add -A && git commit -m "{{MESSAGE}}" || true
-
-# Remove a git tag and push it again.
-[private]
-[group('CI')]
-[script]
-git-retag TAG:
-    set +e
-    TAG="v{{trim_start_matches(TAG, 'v')}}"
-    git push origin :refs/tags/$TAG
-    git tag -d $TAG
-    git tag -a $TAG -m "Tag $TAG"
-    git push origin $TAG
-
-[private]
-[group('CI')]
-[script]
-git-setup:
-    git_email="$(git config user.email || true)"
-    git_user="$(git config user.name || true)"
-    if [ -z "$git_email" ] || [ -z "$git_user" ]; then
-        if [ "{{CI}}" == "true" ]; then
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git config --global user.name "github-actions[bot]"
-        else
-            echo -e "{{RED}}ERROR: Git user email or name is not set.{{NORMAL}}"
-            echo "To fix this issue, run the following commands:"
-            echo -e " {{BOLD}}{{UNDERLINE}}git config [--global] user.email <your-email>{{NORMAL}}"
-            echo -e " {{BOLD}}{{UNDERLINE}}git config [--global] user.name <your-name>{{NORMAL}}"
-            exit 1
-        fi
+        echo "No Dagger engine containers to remove."
     fi
 
-# Pull a specific branch or commit from usememos/memos.
-[private]
-[group('CI')]
-[script]
-git-subtree-pull COMMIT: git-setup
-    set -euo pipefail
-    git subtree pull --prefix=memos "https://github.com/usememos/memos.git" "{{COMMIT}}" --squash --message="chore(ci): pull {{COMMIT}} from usememos/memos"
+# Clean Dagger cache and Docker build cache
+[confirm('This will aggressively prune ALL Docker resources (not just Dagger). This may delete data from other projects. Are you sure?')]
+dagger-clean:
+    #!/usr/bin/env bash
+    echo "Pruning Dagger cache…"
+    dagger core engine local-cache prune || true
+    echo "Pruning Docker build cache…"
+    docker builder prune -a -f || true
+    echo "Pruning Docker images…"
+    docker image prune -a -f || true
+    echo "Pruning Docker volumes…"
+    docker volume prune -a -f || true
+    echo "Pruning Docker system…"
+    docker system prune -a -f || true
+    echo "Dagger and Docker cleanup complete."
 
-    if [ -d "{{justfile_directory()}}/patches" ]; then
-        echo -e "{{MAGENTA}}Applying patches from ./patches to ./memos…{{NORMAL}}"
-        for patch in {{justfile_directory()}}/patches/*.patch ; do
-            echo -e "  Checking for patch {{CYAN}}$patch{{NORMAL}}…"
-            if [ -f "$patch" ]; then
-                echo -e "  Applying {{CYAN}}$patch{{NORMAL}}…"
-                if git -C memos apply "$patch"; then
-                    echo -e "{{GREEN}}Patch $patch applied successfully.{{NORMAL}}"
-                    git add memos && git commit -m "chore(ci): apply patches" || true
-                else
-                    echo -e "{{YELLOW}}Failed to apply patch $patch. Skipping.{{NORMAL}}"
-                    continue
-                fi
-            fi
-        done
-    fi
+# Regenerate Dagger files after SDK changes
+dagger-dev:
+    dagger develop --compat=skip
 
-# Pull a specific tag from usememos/memos.
-[private]
-[group('CI')]
-[script]
-git-subtree-pull-tag TAG:
-    TAG="v{{trim_start_matches(TAG, 'v')}}"
-    just git-subtree-pull "tags/$TAG"
-
-# Rename goreleaser build artifacts to the format expected by the Dockerfile.
-[private]
-[group('CI')]
-[script]
-rename-to-docker:
-    declare -A go_to_docker
-    go_to_docker["amd64_v1"]="amd64"
-    go_to_docker["amd64_v([2-4])"]="amd64v\1"
-    go_to_docker["arm_([5-7])"]="armv\1"
-    # GoReleaser >= v2.4.0
-    go_to_docker["386_sse2"]="386"
-    go_to_docker["arm64_v8.0"]="arm64"
-    go_to_docker["mips64le_hardfloat"]="mips64le"
-    go_to_docker["ppc64le_power8"]="ppc64le"
-    go_to_docker["riscv64_rva20u64"]="riscv64"
-
-    echo -e "\n{{MAGENTA}}: Renaming goreleaser builds to the format expected by the Dockerfile…{{NORMAL}}"
-    for folder in $(find ./build/memos_linux* -type d); do
-        folder_name=$(basename $folder)
-        for go in "${!go_to_docker[@]}"; do
-            if [[ $folder_name =~ $go ]]; then
-                new_name=$(echo "$folder_name" | sed -E "s/$go/${go_to_docker[$go]}/g")
-                if [[ $new_name == $folder_name ]]; then
-                    echo -e "  {{CYAN}}Skipping{{NORMAL}} {{BLUE}}$folder_name{{NORMAL}}"
-                    continue
-                fi
-                if [ -z "$new_name" ]; then
-                    echo -e "  {{RED}}Failed to rename{{NORMAL}} {{YELLOW}}$folder_name{{NORMAL}}"
-                    continue
-                fi
-                new_folder="./build/$new_name"
-                echo -en "  Renaming {{CYAN}}$folder_name{{NORMAL}} to {{BLUE}}$new_name{{NORMAL}}…"
-                if mv "$folder" "$new_folder"; then
-                    echo -e " {{GREEN}}SUCCESS{{NORMAL}}"
-                    continue
-                fi
-                echo -e " {{RED}}FAILED{{NORMAL}}"
-            fi
-        done
-    done
-    echo -e ": Renaming complete.\n"
-
-# Build Memos tag (v*.*.* or nightly). Use `--cross` to cross-compile for all supported platforms.
-[script]
-build TAG CROSS='':
-    set -euo pipefail
-    TAG="v{{trim_start_matches(TAG, 'v')}}"
-    CROSS_COMPILE=false
-    if [[ "{{TAG}}" == "nightly" ]]; then
-        just git-subtree-pull main
-    elif [[ "{{TAG}}" == "testing" ]]; then
-        echo -e "{{YELLOW}}Testing mode. Skipping subtree update.{{NORMAL}}"
+[doc('Build Memos binaries for the specified version and platforms.
+    - VERSION: v*.*.*, nightly, or commit hash.
+    - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".')]
+build VERSION='nightly' PLATFORMS='':
+    #!/usr/bin/env bash
+    if [ -n "{{ PLATFORMS }}" ]; then
+        PLATFORMS="{{ PLATFORMS }}"
     else
-        just git-subtree-pull "tags/$TAG"
+        PLATFORMS="{{ DEFAULT_BUILD_TARGET }}"
     fi
-    just build-buf build-backend-tidy build-frontend
-    if [[ "{{CROSS}}" == "--cross" ]] || [[ "{{CROSS}}" == "-c" ]]; then
-        CROSS_COMPILE=true
-    fi
-    if $CROSS_COMPILE; then
-        echo -e "{{MAGENTA}}Cross-compiling for all supported platforms.{{NORMAL}}\n"
-        goreleaser release --skip=publish --clean --skip=validate --parallelism={{NPROC}} --timeout=60m
-    else
-        echo -e "{{MAGENTA}}Building for the current platform.{{NORMAL}}"
-        echo -e "Use {{BOLD}}{{UNDERLINE}}--cross{{NORMAL}} to cross-compile for all supported platforms.{{NORMAL}}\n"
-        goreleaser build  --single-target --clean --skip=validate --parallelism={{NPROC}}
+    echo -e "Building {{ BLUE }}{{ VERSION }}{{ NORMAL }} for {{ BLUE }}${PLATFORMS}{{ NORMAL }}…"
+    dagger call build --source=. --version="{{ VERSION }}" --platforms="${PLATFORMS}" export --path=./dist
+    echo -e "{{ GREEN }}Build complete. Artifacts in ./dist/{{ NORMAL }}"
+
+[doc('Build Memos containers for the specified version and platforms.
+    - VERSION: v*.*.*, nightly, or commit hash.
+    - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".')]
+build-docker VERSION='nightly' PLATFORMS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Version to commit mapping for known versions
+    declare -A known_versions=(
+        ["0.25.2"]="bfad0708e2c8062664e852f6f18223fd943ad5f5"
+        ["0.25.3"]="07a030ddfdbe5ac8a22c235be7b5771cc01f8498"
+        ["0.26.0"]="43b5a51ec73214d3c56aa48c82783ccfeec1a127"
+        ["0.26.1"]="b623162d37f87f9f174d8f6cd8e54c7034cfc789"
+    )
+
+    version="{{ VERSION }}"
+    original_version="$version"
+
+    # Resolve version to commit if it's a known version
+    if [[ "$version" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+        ver="${BASH_REMATCH[1]}"
+        if [[ -n "${known_versions[$ver]:-}" ]]; then
+            commit="${known_versions[$ver]}"
+            echo -e "{{ YELLOW }}Using known commit hash ${commit} for version ${ver}{{ NORMAL }}"
+            version="$commit"
+        fi
     fi
 
-# Build local Docker images. If the current OS is not Linux, `--cross` will be passed implicitly.
-[script]
-build-docker TAG CROSS='':
-    set -euo pipefail
-    CROSS="{{CROSS}}"
-    if [[ "{{os()}}" != "linux" ]] && [[ -z "$CROSS" ]]; then
-        CROSS="--cross"
+    # Determine platforms
+    platforms="{{ PLATFORMS }}"
+    if [ -z "$platforms" ]; then
+        platforms="{{ DEFAULT_BUILD_TARGET }}"
     fi
-    TAG="v{{trim_start_matches(TAG, 'v')}}"
-    just build "{{TAG}}" "$CROSS"
-    just rename-to-docker
-    export DOCKER_BUILDKIT=1
-    export DOCKER_CLI_EXPERIMENTAL=enabled
-    docker_platforms=()
-    for plat in $(find ./build/memos_linux* -type d); do
-        go_name=$(basename $plat)
-        docker_platform="${go_name#memos_}"
-        docker_platform="${docker_platform//_//}"
-        docker_platform=$(echo "$docker_platform" | sed -E 's/^(armv[5-7])|(v[1-4])/\L\1\2/')
-        docker_platforms+=("$docker_platform")
-    done
-    echo -e "{{GREEN}}>> Will build Docker images for the following platforms:{{NORMAL}}"
-    for platform in "${docker_platforms[@]}"; do
-        echo -e "  {{GREEN}}${platform}{{NORMAL}}"
-    done
-    for platform in "${docker_platforms[@]}"; do
-        container_name="memos-${TAG}-${platform//\//-}"
-        docker stop $container_name >/dev/null 2>&1 || true
-        docker rm -f $container_name >/dev/null 2>&1 || true
-        docker ps -a --filter ancestor=$container_name --format="\{\{.ID\}\}" \
-            | xargs -r docker rm -f >/dev/null 2>&1 || true
-        docker image rm -f $container_name >/dev/null 2>&1 || true
-    done
-    docker image prune -f
-    docker volume prune -f
-    declare -A listen_ports
-    for platform in "${docker_platforms[@]}"; do
-        container_name="memos-${TAG}-${platform//\//-}"
-        echo -e "{{MAGENTA}}Building Docker image ${container_name} for ${platform}.{{NORMAL}}"
-        docker buildx build --tag $container_name --file ./docker/Dockerfile . --platform=$platform
-        if [ $? -ne 0 ]; then
-            echo -e "{{RED}}>> Docker build failed for ${platform} <<{{NORMAL}}"
-        fi
-        docker run --detach --init --rm --name $container_name \
-            --publish "0:5230" --env MEMOS_MODE=demo \
-            --env TZ=America/Sao_Paulo \
-            --platform $platform \
-            $container_name
-        if [ $? -ne 0 ]; then
-            echo -e "{{RED}}>> Failed to run container ${platform} <<{{NORMAL}}"
-        else
-            port=$(docker port $container_name 5230 | cut -d':' -f2)
-            listen_ports["$container_name"]="$port"
-        fi
-    done
-    docker ps
-    if [ ${#listen_ports[@]} -eq 0 ]; then
-        echo -e "{{RED}}No containers are running.{{NORMAL}}"
+
+    echo -e "{{ CYAN }}Building containers for version ${original_version} (${version})…{{ NORMAL }}"
+
+    # Clean old build directory
+    rm -rf ./dist/container
+    mkdir -p ./dist/container
+
+    # Build containers via Dagger
+    echo -e "{{ BLUE }}Calling Dagger to build containers…{{ NORMAL }}"
+    if ! dagger call build-containers \
+        --source . \
+        --version "$version" \
+        --platforms "$platforms" \
+        export \
+        --path ./dist/container; then
+        echo -e "{{ RED }}ERROR: Dagger build failed{{ NORMAL }}"
         exit 1
     fi
-    echo "Build results:"
-    for ct in "${!listen_ports[@]}"; do
-        echo -e "  {{GREEN}}${ct}{{NORMAL}}\tis listening on {{CYAN}}http://localhost:${listen_ports[$ct]}{{NORMAL}}"
-    done
 
-# Clean built Docker images
-[confirm('This will stop and remove all Docker containers and images starting with memos-v*. Are you sure?')]
-[script]
-clean-docker:
-    set -euo pipefail
-    containers=$(docker ps -a --filter "name=memos-v*" --format={\{.ID\}} | xargs -er)
-    if [ ! -z "$containers" ]; then
-        for ct in $containers; do
-            echo -e "{{MAGENTA}}Cleaning ${ct}.{{NORMAL}}"
-            docker stop $ct >/dev/null 2>&1 || true
-            docker rm $ct >/dev/null 2>&1 || true
-        done
+    # Find all exported tarballs
+    tarballs=(./dist/container/*.tar)
+    if [ ! -f "${tarballs[0]:-}" ]; then
+        echo -e "{{ RED }}ERROR: No container tarballs found in ./dist/container/{{ NORMAL }}"
+        exit 1
     fi
-    images=$(docker images --filter "reference=memos-v*" --format={\{.ID\}} | xargs -er)
-    if [ ! -z "$images" ]; then
-        for img in $images; do
-            echo -e "{{MAGENTA}}Cleaning ${img}.{{NORMAL}}"
-            docker image rm $img >/dev/null 2>&1 || true
-        done
-    fi
-    echo -e "{{GREEN}}Cleaning complete.{{NORMAL}}"
 
-# Clean-up build artifacts, dangling Docker images, volumes and go cache.
-[confirm('This will clean-up build artifacts, Go cache, dangling Docker images and Docker build cache. Are you sure?')]
-[script]
-clean:
-    set +e
-    artifacts=(
-        "./.task"
-        "./build"
-        "./memos/web/node_modules"
-        "./memos/web/dist"
-        "./memos/server/frontend/dist"
-        "./memos/server/frontend/dist.bak"
-    )
-    for artifact in "${artifacts[@]}"; do
-        if [ -d "$artifact" ]; then
-            rm -rf "$artifact"
+    echo -e "{{ GREEN }}Found ${#tarballs[@]} container tarball(s){{ NORMAL }}"
+
+    # Arrays to track containers
+    declare -a container_names=()
+    declare -a container_ports=()
+    declare -a container_platforms=()
+
+    for tarball in "${tarballs[@]}"; do
+        filename=$(basename "$tarball")
+        echo -e "\n{{ CYAN }}Processing ${filename}…{{ NORMAL }}"
+
+        # Extract platform from filename (memos-linux-amd64.tar -> linux-amd64)
+        platform_dashed="${filename#memos-}"
+        platform_dashed="${platform_dashed%.tar}"
+
+        # Load the image
+        echo -e "{{ BLUE }}Loading image from tarball…{{ NORMAL }}"
+        load_output=$(docker load -i "$tarball" 2>&1)
+
+        # Extract image ID from docker load output
+        image_id=""
+        if [[ "$load_output" =~ Loaded\ image\ ID:\ (sha256:[a-f0-9]+) ]]; then
+            image_id="${BASH_REMATCH[1]}"
+        elif [[ "$load_output" =~ Loaded\ image:\ ([^[:space:]]+) ]]; then
+            image_id="${BASH_REMATCH[1]}"
         fi
-    done
-    docker builder prune -f
-    docker buildx prune -f
-    docker image prune -f
-    echo -e "{{MAGENTA}}Cleaning Go cache…{{NORMAL}} This may take a while."
-    go clean -cache -modcache
 
-# Reset main branch to origin/main. Excludes ALL untracked files and changes.
+        if [ -z "$image_id" ]; then
+            echo -e "{{ RED }}ERROR: Failed to extract image ID from docker load output{{ NORMAL }}"
+            echo "$load_output"
+            continue
+        fi
+
+        echo -e "{{ GREEN }}Loaded image: ${image_id}{{ NORMAL }}"
+
+        # Create tag and container name
+        container_name="memos-${original_version}-${platform_dashed}"
+        image_tag="${container_name}:local"
+
+        # Tag the image
+        if ! docker tag "$image_id" "$image_tag" 2>/dev/null; then
+            echo -e "{{ YELLOW }}Warning: Failed to tag image (may already be tagged){{ NORMAL }}"
+        fi
+
+        # Cleanup old container with same name
+        echo -e "{{ BLUE }}Cleaning up old container ${container_name}…{{ NORMAL }}"
+        docker stop "$container_name" 2>/dev/null || true
+        docker rm -f "$container_name" 2>/dev/null || true
+
+        # Get platform info from image
+        echo -e "{{ BLUE }}Inspecting image platform…{{ NORMAL }}"
+        inspect_output=$(docker inspect "$image_tag" 2>&1) || inspect_output=$(docker inspect "$image_id" 2>&1)
+
+        img_os=$(echo "$inspect_output" | grep -o '"Os": "[^"]*"' | head -1 | cut -d'"' -f4) || img_os=""
+        img_arch=$(echo "$inspect_output" | grep -o '"Architecture": "[^"]*"' | head -1 | cut -d'"' -f4) || img_arch=""
+        img_variant=$(echo "$inspect_output" | grep -o '"Variant": "[^"]*"' | head -1 | cut -d'"' -f4) || img_variant=""
+
+        docker_platform="${img_os}/${img_arch}"
+        if [ -n "$img_variant" ]; then
+            docker_platform="${docker_platform}/${img_variant}"
+        fi
+
+        echo -e "{{ CYAN }}Platform: ${docker_platform}{{ NORMAL }}"
+
+        # Run the container
+        echo -e "{{ BLUE }}Starting container ${container_name}…{{ NORMAL }}"
+        if ! docker run \
+            --rm \
+            --detach \
+            --init \
+            --name "$container_name" \
+            --publish "0:5230" \
+            --env "MEMOS_DEMO=true" \
+            --env "TZ=America/Sao_Paulo" \
+            --platform "$docker_platform" \
+            "$image_tag" 2>/dev/null; then
+            echo -e "{{ RED }}ERROR: Failed to start container ${container_name}{{ NORMAL }}"
+            continue
+        fi
+
+        # Wait for container to start
+        sleep 2
+
+        # Check if container is still running
+        if ! docker inspect -f '{{{{.State.Running}}}}' "$container_name" 2>/dev/null | grep -q "true"; then
+            echo -e "{{ RED }}ERROR: Container ${container_name} exited unexpectedly{{ NORMAL }}"
+            echo -e "{{ YELLOW }}Container logs:{{ NORMAL }}"
+            docker logs "$container_name" 2>&1 || true
+            continue
+        fi
+
+        # Get the mapped port
+        port_output=$(docker port "$container_name" 5230 2>/dev/null || true)
+        if [ -z "$port_output" ]; then
+            echo -e "{{ YELLOW }}Warning: No public port found for ${container_name} (init might be slow){{ NORMAL }}"
+            continue
+        fi
+
+        # Extract port number (format: 0.0.0.0:PORT or :::PORT)
+        port=$(echo "$port_output" | grep -oE '[0-9]+$' | head -1)
+
+        if [ -z "$port" ]; then
+            echo -e "{{ YELLOW }}Warning: Could not parse port for ${container_name}{{ NORMAL }}"
+            continue
+        fi
+
+        container_names+=("$container_name")
+        container_ports+=("$port")
+        container_platforms+=("$docker_platform")
+
+        echo -e "{{ GREEN }}Container ${container_name} running on port ${port}{{ NORMAL }}"
+    done
+
+    # Show running containers
+    echo -e "\n{{ CYAN }}=== Running Containers ==={{ NORMAL }}"
+    docker ps --filter "name=memos-"
+
+    # Final report
+    echo -e "\n{{ BOLD }}Build Results:{{ NORMAL }}"
+    if [ ${#container_names[@]} -eq 0 ]; then
+        echo -e "{{ RED }}No containers are running.{{ NORMAL }}"
+        exit 1
+    fi
+
+    for i in "${!container_names[@]}"; do
+        echo -e "  {{ GREEN }}${container_names[$i]} {{ CYAN }}→ http://localhost:${container_ports[$i]}{{ NORMAL }}"
+    done
+
+    echo -e "\n{{ GREEN }}✓ Build and load complete!{{ NORMAL }}"
+
+# Clean built Docker containers and images
+[confirm('This will stop and remove all Docker containers and images starting with memos-. Are you sure?')]
+clean-docker:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    containers=$(docker ps -a --filter "name=^memos-" --format='{{ "{{.Names}}" }}' || true)
+    if [ -n "$containers" ]; then
+        echo "$containers" | while read -r ct; do
+            echo "Stopping container ${ct}..."
+            docker stop "$ct" >/dev/null 2>&1 || true
+            docker rm "$ct" >/dev/null 2>&1 || true
+        done
+    fi
+    images=$(docker images --filter "reference=memos-*" --format '{{ "{{.Repository}}:{{.Tag}}" }}' || true)
+    if [ -n "$images" ]; then
+        echo "$images" | while read -r img; do
+            echo "Removing image ${img}..."
+            docker rmi "$img" >/dev/null 2>&1 || true
+        done
+    fi
+    docker image prune -f
+    echo "Cleaning complete."
+
+# Clean build artifacts, Docker cache, and optionally Go cache
+[confirm('This will clean build artifacts, Go cache, dangling Docker images and Docker build cache. Are you sure?')]
+[script]
+clean GOCACHE='false':
+    echo "Cleaning build artifacts…"
+    rm -rf dist/
+
+    echo "Cleaning Docker…"
+    docker builder prune -f
+    docker buildx prune -f 2>/dev/null || true
+    docker image prune -f
+
+    if [[ "{{ GOCACHE }}" == "true" ]]; then
+        echo "Cleaning Go cache…"
+        go clean -cache -modcache
+    fi
+
+    echo "Cleaning complete."
+
+# Reset main branch to origin/main (destructive)
 [confirm('This will exclude ANY changes and untracked files on the working tree, resetting the local repo to origin/main. Are you sure?')]
 [script]
 git-reset:
@@ -417,33 +339,54 @@ git-reset:
     git checkout -- .
     git checkout -
 
-# Update the `memos` subtree, tag and push to GitHub, triggering the `release` workflow.
+# Remove a git tag and push it again (internal use)
+[private]
 [script]
-publish-tag TAG:
-    set -euo pipefail
-    TAG="v{{trim_start_matches(TAG, 'v')}}"
-    just git-subtree-pull "tags/$TAG"
-    just git-retag "{{TAG}}"
+git-retag TAG:
+    set +e
+    TAG="v{{ trim_start_matches(TAG, 'v') }}"
+    git push origin :refs/tags/$TAG
+    git tag -d $TAG
+    git tag -a $TAG -m "Tag $TAG"
+    git push origin $TAG
+
+[doc('Tag and push to GitHub, triggering the release workflow.')]
+[script]
+publish TAG:
+    TAG="v{{ trim_start_matches(TAG, 'v') }}"
+    just git-retag "$TAG"
     git push origin main
 
-[doc('Update the `memos` subtree, tag and push to GitHub, triggering the `release` workflow.
-
-Memos versioning is not reliable and can be inconsistent, so the commit hash must be used instead.
-https://github.com/usememos/memos/actions/workflows/build-and-push-stable-image.yml
-')]
-[script]
-publish TAG COMMIT:
-    TAG="v{{trim_start_matches(TAG, 'v')}}"
-    just git-subtree-pull "{{COMMIT}}"
-    just git-retag "{{TAG}}"
-    git push origin main
-
-# Update README.md captures. Requires `https://github.com/sindresorhus/capture-website-cli` and a running Memos instance.
-[script]
-update-captures PORT='5230' TOKEN='':
-    COOKIE=''
-    if ! [ -z "{{TOKEN}}" ]; then
-        COOKIE='--cookie="memos.access-token={{TOKEN}}"'
+[doc('Update README.md captures. Requires a running Memos instance and bunx.')]
+update-captures PORT='':
+    #!/usr/bin/env bash
+    port="{{ PORT }}"
+    if [ -z "${port}" ]; then
+        container="$(docker ps --format '{{ DOCKER_NAMES_FMT }}' | grep -m1 '^memos-' || true)"
+        if [ -z "${container}" ]; then
+            echo "ERROR: No running Docker containers found matching memos-*."
+            exit 1
+        fi
+        port="$(docker port "$container" 5230/tcp | head -n1 | cut -d: -f2)"
     fi
-    capture-website --overwrite --type=webp --output=assets/capture_dark.webp --dark-mode $COOKIE http://localhost:{{PORT}}/ &
-    capture-website --overwrite --type=webp --output=assets/capture_light.webp $COOKIE http://localhost:{{PORT}}/
+    ARGS=(
+        --launch-options='{"args":["--accept-lang=en-US"]}'
+        --module='document.querySelector("article").remove()'
+        --width=1280
+        --height=800
+        --scale-factor=3
+        --overwrite
+        --type=webp
+        http://localhost:${port}/
+    )
+
+    bunx capture-website \
+        ${ARGS[@]} \
+        --local-storage="memos-theme=midnight" \
+        --output=assets/capture_dark.webp --dark-mode &
+
+    bunx capture-website \
+        ${ARGS[@]} \
+        --local-storage="memos-theme=paper" \
+        --output=assets/capture_light.webp \
+        http://localhost:${port}/

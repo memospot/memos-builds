@@ -1,1 +1,5 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Memos Application Issues
+    url: https://github.com/usememos/memos/issues/new/choose
+    about: Report bugs or request features for the Memos application itself (not build-related)

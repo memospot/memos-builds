@@ -2,7 +2,7 @@
   "recommendations": [
     "DavidAnson.vscode-markdownlint",
     "EditorConfig.EditorConfig",
-    "exiasr.hadolint",
+    "golang.Go",
     "nefrob.vscode-just-syntax",
     "oderwat.indent-rainbow",
     "timonwong.shellcheck"

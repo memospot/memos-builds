@@ -1,0 +1,12 @@
+# See the dedicated "version" documentation section.
+version: "2"
+
+linters:
+  exclusions:
+    paths:
+      - .dagger/internal
+      - .dagger/dagger.gen.go
+  settings:
+    errcheck:
+      exclude-functions:
+        - os.Setenv

@@ -1,4 +1,4 @@
-# Memos Anywhere
+# Memos Builds
 
 Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
 
@@ -44,7 +44,14 @@ This project provides optimized Memos images for the following platforms:
 To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants).
 
 > [!TIP]
-> The optimizations include build flags, smaller images, and health check.
+> The optimizations include build flags and smaller images.
+>
+> (v0.26.0+) You can inject an env file as `$MEMOS_DATA/memos.env`.
+> This file has precedence over environment variables passed to the container.
+
+> [!NOTE]
+> In advanced setups, you can mount the database DSN with [Docker Secrets](https://docs.docker.com/build/building/secrets/#secret-mounts).
+> E.g., Pass in the secret id `MEMOS_DSN` to the container, and it will be loaded automatically from the default Docker secret mount `/run/secrets/MEMOS_DSN`.
 
 ### Quick start
 
@@ -66,16 +73,38 @@ docker run --detach --name memos-nightly --publish 5231:5230 \
 
 ```sh
 docker run --detach --rm --name memos-throwaway --publish 5232:5230 \
-  --env MEMOS_MODE=demo lincolnthalles/memos:nightly
+  --env MEMOS_DEMO=true lincolnthalles/memos:nightly
 ```
+
+> [!IMPORTANT]
+> Starting from v0.26.0, `MEMOS_MODE` is now retired. Database is always in `prod` mode unless `MEMOS_DEMO=true` is set.
 
 #### Keeping containers up to date
 
-Use [Watchtower](https://containrrr.dev/watchtower/).
+### Automatically
+
+Use [Watchtower](https://watchtower.nickfedor.com).
 
 ```sh
 docker run --detach --name watchtower \
-  --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower
+  --volume /var/run/docker.sock:/var/run/docker.sock nickfedor/watchtower
+```
+
+### Manually
+
+```sh
+# Pull the latest image
+docker pull lincolnthalles/memos:latest
+
+# Stop the current container
+docker stop memos
+
+# Remove the current container
+docker rm memos
+
+# Start a new container with the latest image
+docker run --detach --name memos --publish 5230:5230 \
+  --volume ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
 ```
 
 ### About images
@@ -86,22 +115,23 @@ docker run --detach --name watchtower \
 
 - Image packages are auto-upgraded at build time.
 
-- Nightly images are built daily at 00:25 UTC.
+- Nightly images are built daily at 05:25 UTC.
 
 - Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
 | Platform  | Image                 |
 | --------- | --------------------- |
-| arm/v5    | busybox:1.36.1-uclibc |
-| All other | alpine:3.21           |
+| arm/v5    | busybox:1.37-glibc    |
+| All other | alpine:3.23           |
 
 ## Platform variants
 
-Multiple builds for `arm` and `amd64` platforms exists, with different hardware optimizations. Choose the build that best suits the host CPU.
+Multiple builds for `arm` and `amd64` platforms exist, with different hardware optimizations. Choose the build that best suits the host CPU.
 
 Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architecture. For an `ARMv8` or `aarch64` CPU, use the ARM64 build.
 
-⚠ Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders the performance of applications that were not specifically written to this architecture.
+> [!IMPORTANT]
+> Avoid using the `arm/v5` variant unless the host CPU can't handle anything newer. While it works, the lack of VFP hinders the performance of applications that were not specifically written for this architecture.
 
 | Variant  | Target CPUs                                            |
 | -------- | ------------------------------------------------------ |
@@ -113,54 +143,28 @@ Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architectu
 | arm/v7   | VFPv3: Cortex-A cores                                  |
 | arm64    | Recent ARM64/AArch64 CPUs                              |
 
-## Notes
+## Building
 
-Linux binaries are packed with [UPX](https://upx.github.io/). This may trigger false positives on some antivirus software. You can unpack the binaries with `upx -d memos*`, if you will.
+- [Building with Dagger](docs/build-automated.md).
+- [Building Memos from Source (manual)](docs/build-manual.md).
 
 ## Support
 
-Memos' official first-class [support](https://github.com/usememos/memos/issues) is for its
-[Docker container](https://hub.docker.com/r/neosmemo/memos).
+Memos' official first-class [support](https://github.com/usememos/memos/issues) is for its [Docker container](https://hub.docker.com/r/neosmemo/memos).
 These binaries and images are provided as a convenience for some specific use cases. They may work fine, and they may not. Use them at your discretion.
 
-Please do not open issues on the official Memos repository regarding these builds, unless you can reproduce the issue on the official Docker container.
+Please do not open issues on the official Memos repository regarding these builds unless you can reproduce the issue on the official Docker container.
 
 ## Running as a Service
 
-To start Memos at system boot, you must manually set up a system service.
+To start Memos at system boot, you must manually set up a system service:
 
-[Memos Service Guide](docs/service.md)
-
-[Memos Windows Service Guide](docs/windows-service.md)
+- [Memos Linux Service Guide](docs/service-linux.md)
+- [Memos Windows Service Guide](docs/service-windows.md)
 
 ## Running on Android
 
-To run Memos using [Termux](https://play.google.com/store/apps/details?id=com.termux) on Android:
-
-- Download a Linux build suiting device CPU architecture (most modern devices are `arm64`).
-
-- Extract the downloaded file and copy the `memos` binary to internal storage.
-
-Run this on Termux:
-
-```bash
-# This will prompt you for storage access permission
-termux-setup-storage
-
-# Copy the binary to Termux home directory
-cp ~/storage/shared/memos .
-
-# Make it executable
-chmod +x ./memos
-
-# Run Memos
-MEMOS_MODE=prod MEMOS_DATA=. MEMOS_PORT=5230 ./memos
-
-# Memos will be available at http://localhost:5230
-# and on local network at http://<device-ip>:5230
-```
-
-⚠ As stated at [Termux Wiki](https://wiki.termux.com/wiki/Internal_and_external_storage), all data under Termux's home directory will be deleted if you uninstall the app.
+[Memos server on Android](docs/android.md)
 
 ## Supporting
 
