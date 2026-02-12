@@ -22,6 +22,8 @@ func (m *MemosBuilds) addContainerAnnotations(c *dagger.Container) *dagger.Conta
 	}
 	for k, v := range labels {
 		c = c.WithLabel("org.opencontainers.image."+k, v)
+		// For multi-arch images.
+		c = c.WithAnnotation("org.opencontainers.image."+k, v)
 	}
 	return c
 }

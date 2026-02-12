@@ -59,8 +59,8 @@ jobs:
           HAS_GHCR="${{ secrets.GHCR_TOKEN != '' }}"
 
           if ([ "${{ inputs.publish-containers }}" = "true" ] && [ "$HAS_DOCKER" = "true" ] && [ "$HAS_GHCR" = "true" ]) || \
-             [ "${{ github.event_name }}" = "push" ] || \
-             [ "${{ github.event_name }}" = "schedule" ]; then
+              [ "${{ github.event_name }}" = "push" ] || \
+              [ "${{ github.event_name }}" = "schedule" ]; then
             echo "args=--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user ${{ github.actor }} --ghcr-password env:GHCR_TOKEN" >> $GITHUB_OUTPUT
           else
             echo "args=" >> $GITHUB_OUTPUT
