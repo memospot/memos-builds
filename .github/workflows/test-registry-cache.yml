@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
 
       - name: Build with registry cache
-        uses: dagger/dagger-for-github@d913e70051faf3b907d4dd96ef1161083c88c644 # 8.2.0
+        uses: memospot/action-dagger@v1
         with:
           version: latest
           verb: call
@@ -44,14 +44,8 @@ jobs:
             --platforms "${{ inputs.platforms }}"
         env:
           GHCR_TOKEN: "${{ secrets.GHCR_TOKEN }}"
-          DAGGER_CACHE_FROM: type=registry,ref=ghcr.io/memospot/memos-builds:cache
-          DAGGER_CACHE_TO: type=registry,ref=ghcr.io/memospot/memos-builds:cache,mode=max
-
       - name: Report cache status
         run: |
-          echo "Build completed with registry cache."
+          echo "Build completed."
           echo ""
-          echo "To verify cache was created, check:"
-          echo "https://github.com/memospot/memos-builds/pkgs/container/memos-builds"
-          echo ""
-          echo "Look for the 'cache' tag in the package versions."
+
