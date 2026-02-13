@@ -1,18 +1,18 @@
-name: Test Registry Cache
+name: Test build cache
 
 on:
   workflow_dispatch:
     inputs:
       platforms:
-        description: 'Platforms to build (empty for all)'
+        description: "Platforms to build (empty for all)"
         required: false
         type: string
-        default: ''
+        default: ""
       version:
-        description: 'Version tag for testing'
+        description: "Version tag for testing"
         required: false
         type: string
-        default: 'nightly'
+        default: "nightly"
 
 env:
   DAGGER_NO_NAG: "1"
@@ -43,9 +43,9 @@ jobs:
             --version ${{ inputs.version }}
             --platforms "${{ inputs.platforms }}"
         env:
-          GHCR_TOKEN: "${{ secrets.GHCR_TOKEN }}"
+          DAGGER_CLOUD_TOKEN: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
+
       - name: Report cache status
         run: |
           echo "Build completed."
           echo ""
-
