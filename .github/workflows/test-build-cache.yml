@@ -20,7 +20,7 @@ env:
 
 jobs:
   test-cache:
-    name: Test Registry Cache
+    name: Test build Cache
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -32,9 +32,10 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Build with registry cache
+      - name: Build with cache
         uses: memospot/action-dagger@v1
         with:
+          cache-compression: -1
           version: latest
           verb: call
           args: >-
