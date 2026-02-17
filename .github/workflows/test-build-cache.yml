@@ -19,9 +19,9 @@ env:
   DO_NOT_TRACK: "1"
 
 jobs:
-  test-cache:
-    name: Test build Cache
-    runs-on: ubuntu-24.04
+  test-cache-creation:
+    name: Test build cache creation
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -35,7 +35,40 @@ jobs:
       - name: Build with cache
         uses: memospot/action-dagger@v1
         with:
-          cache-compression: -1
+          cache-mode: direct
+          version: latest
+          verb: call
+          args: >-
+            build
+            --source .
+            --version ${{ inputs.version }}
+            --platforms "${{ inputs.platforms }}"
+        env:
+          DAGGER_CLOUD_TOKEN: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
+
+      - name: Report cache status
+        run: |
+          echo "Build completed."
+          echo ""
+
+  test-usage:
+    needs: test-cache-creation
+    name: Test build cache usage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Build with cache
+        uses: memospot/action-dagger@v1
+        with:
+          cache-mode: direct
           version: latest
           verb: call
           args: >-
