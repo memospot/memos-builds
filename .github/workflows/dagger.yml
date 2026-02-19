@@ -109,6 +109,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Clean up old nightly assets
+        if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, '-pre')"
+        run: |
+          gh release view nightly --json assets --jq '.assets[].name' 2>/dev/null | while read -r asset; do
+            echo "Deleting asset: $asset"
+            gh release delete-asset nightly "$asset" --yes
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create Nightly Release
         if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, '-pre')"
         uses: softprops/action-gh-release@e798e6a1ede8d07b74ac4cdac6bdfa4cc1653907
