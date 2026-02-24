@@ -56,15 +56,14 @@ corepack enable pnpm
 Before compiling the Go code, you need to build the frontend assets:
 
 ```bash
-# Install frontend dependencies
+cd web
 pnpm install
-
-# Build the frontend for production
 pnpm run release
+cd ..
 ```
 
 > [!IMPORTANT]
-> If you skip this step, you'll get a `No embeddable frontend found.` when accessing the web interface.
+> If you skip this step, you'll get a `No embeddable frontend found.` message when accessing the web interface.
 
 ### 5. Build the Backend Binary
 

@@ -36,7 +36,7 @@ Security: in case of vulnerabilities.
 
 - (container) Run as `nonroot` user by default. Group and user can be overriden by passing `PGID` and `PUID` environment variables to the container.
 
-- (upstream) Now `MEMOS_MODE` is now retired. Database is always in `prod` mode unless `MEMOS_DEMO=true` is set.
+- (upstream) `MEMOS_MODE` is now retired. Database is always in `prod` mode unless `MEMOS_DEMO=true` is set.
 
 - Builds are now using [Dagger](https://dagger.io).
 

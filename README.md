@@ -5,6 +5,8 @@ Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful
 Some of these builds are used by [Memospot](https://github.com/memospot/memospot),
 a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
+[Nightly](https://github.com/memospot/memos-builds/releases/tag/nightly) and [Stable](https://github.com/memospot/memos-builds/releases/latest) builds are available.
+
 [![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
 <div align="center">
@@ -59,21 +61,21 @@ To use an image for a specific CPU architecture, add `--platform=<platform>` to 
 
 ```sh
 docker run --detach --name memos --publish 5230:5230 \
-  --volume ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
+  --volume ~/.memos/:/var/opt/memos ghcr.io/memospot/memos-builds:latest
 ```
 
 #### Docker run (nightly)
 
 ```sh
 docker run --detach --name memos-nightly --publish 5231:5230 \
-  --volume ~/.memos-nightly/:/var/opt/memos lincolnthalles/memos:nightly
+  --volume ~/.memos-nightly/:/var/opt/memos ghcr.io/memospot/memos-builds:nightly
 ```
 
 #### Docker run (throwaway nightly in demo mode)
 
 ```sh
 docker run --detach --rm --name memos-throwaway --publish 5232:5230 \
-  --env MEMOS_DEMO=true lincolnthalles/memos:nightly
+  --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:nightly
 ```
 
 > [!IMPORTANT]
@@ -94,7 +96,7 @@ docker run --detach --name watchtower \
 
 ```sh
 # Pull the latest image
-docker pull lincolnthalles/memos:latest
+docker pull ghcr.io/memospot/memos-builds:latest
 
 # Stop the current container
 docker stop memos
@@ -104,7 +106,7 @@ docker rm memos
 
 # Start a new container with the latest image
 docker run --detach --name memos --publish 5230:5230 \
-  --volume ~/.memos/:/var/opt/memos lincolnthalles/memos:latest
+  --volume ~/.memos/:/var/opt/memos ghcr.io/memospot/memos-builds:latest
 ```
 
 ### About images
