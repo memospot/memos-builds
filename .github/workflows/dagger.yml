@@ -90,7 +90,6 @@ jobs:
         uses: softprops/action-gh-release@e798e6a1ede8d07b74ac4cdac6bdfa4cc1653907
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: "Memos ${{ steps.version.outputs.version }}"
           body: |
             Built from [usememos/memos@${{ steps.version.outputs.version }}](https://github.com/usememos/memos/releases/tag/${{ steps.version.outputs.version }})
 
@@ -124,7 +123,6 @@ jobs:
         uses: softprops/action-gh-release@e798e6a1ede8d07b74ac4cdac6bdfa4cc1653907
         with:
           tag_name: nightly
-          name: "Nightly Build"
           body: |
             Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
 
