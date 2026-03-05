@@ -374,6 +374,10 @@ publish TAG:
     just git-retag "$TAG"
     git push origin main
 
+update:
+    cd .dagger && go mod tidy
+    go work sync
+
 [doc('Update README.md captures. Requires a running Memos instance and bunx.')]
 update-captures PORT='':
     #!/usr/bin/env bash
