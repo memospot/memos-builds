@@ -82,6 +82,7 @@ dagger-clean:
 # Regenerate Dagger files after SDK changes
 dagger-dev:
     dagger develop --compat=skip
+    rm .dagger/.gitignore
 
 [doc('Build Memos binaries for the specified version and platforms.
     - VERSION: v*.*.*, nightly, or commit hash.
