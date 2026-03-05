@@ -378,6 +378,7 @@ publish TAG:
 update:
     cd .dagger && go mod tidy
     go work sync
+    rm .dagger/.gitignore || true
 
 [doc('Update README.md captures. Requires a running Memos instance and bunx.')]
 update-captures PORT='':
