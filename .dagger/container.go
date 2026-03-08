@@ -55,12 +55,14 @@ func (m *MemosBuilds) buildContainer(
 	// 	- BusyBox lacks package manager, tz-data and needs a pre-built su-exec.
 	if platform == "linux/arm/v5" {
 		ctr := m.buildBusyBoxARMv5Container(binary, platform, source)
-		return m.ensurePlatformVariant(ctr, platform)
+		ctr = m.ensurePlatformVariant(ctr, platform)
+		return m.addContainerAnnotations(ctr)
 	}
 
 	// All other platforms use a standard Alpine-based container.
 	ctr := m.buildAlpineContainer(binary, platform, source)
-	return m.ensurePlatformVariant(ctr, platform)
+	ctr = m.ensurePlatformVariant(ctr, platform)
+	return m.addContainerAnnotations(ctr)
 }
 
 // ensurePlatformVariant preserves amd64 microarchitecture variants.
@@ -93,7 +95,6 @@ func (m *MemosBuilds) buildAlpineContainer(
 
 	return dag.Container(dagger.ContainerOpts{Platform: dagger.Platform(platform)}).
 		From(buildconsts.PRIMARY_IMAGE).
-		With(m.addContainerAnnotations).
 		WithExec([]string{"apk", "add", "--no-cache", "tzdata", "ca-certificates", "su-exec"}).
 		WithDirectory("/var/opt/memos", dag.Directory()).
 		WithWorkdir("/usr/local/bin").
@@ -131,7 +132,6 @@ func (m *MemosBuilds) buildBusyBoxARMv5Container(
 
 	return dag.Container(dagger.ContainerOpts{Platform: dagger.Platform(platform)}).
 		From(buildconsts.ALTERNATE_IMAGE).
-		With(m.addContainerAnnotations).
 		WithFile("/init", entrypointFile, newFilePerms).
 		WithFile("/usr/local/bin/su-exec", suExecFile, newFilePerms).
 		WithDirectory("/usr/share/zoneinfo", distrolessCt.Directory("/usr/share/zoneinfo")).

@@ -183,14 +183,15 @@ func (m *MemosBuilds) publishContainers(
 		if target.user != "" && target.password != nil {
 			address := strings.Split(target.registry, "/")[0]
 			tags := m.tagsForRegistry(version, target.registry)
+			publisher := dag.Container().
+				WithRegistryAuth(address, target.user, target.password).
+				With(m.addContainerAnnotations)
 			for _, tag := range tags {
 				addr := fmt.Sprintf("%s:%s", target.registry, tag)
-				ref, err := dag.Container().
-					WithRegistryAuth(address, target.user, target.password).
-					Publish(ctx, addr, dagger.ContainerPublishOpts{
-						PlatformVariants: platformVariants,
-						MediaTypes:       target.media,
-					})
+				ref, err := publisher.Publish(ctx, addr, dagger.ContainerPublishOpts{
+					PlatformVariants: platformVariants,
+					MediaTypes:       target.media,
+				})
 				if err != nil {
 					return "", fmt.Errorf("failed to publish to %s: %w", target.registry, err)
 				}
