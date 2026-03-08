@@ -16,4 +16,5 @@ jobs:
         uses: dataaxiom/ghcr-cleanup-action@244b3e8a35c266981a44b7e35da0c0e6a29b48a0
         with:
           delete-tags: nightly-*
+          older-than: 7 days
           delete-untagged: true
