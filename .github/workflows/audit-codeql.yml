@@ -5,13 +5,9 @@ on:
   push:
     paths:
       - "**/workflows/*.yml"
-      - "**/go.{mod,sum}"
-      - "**/*.go"
   pull_request:
     paths:
       - "**/workflows/*.yml"
-      - "**/go.{mod,sum}"
-      - "**/*.go"
   schedule:
     - cron: "0 9 */15 * *" # 9 AM, every 15 days
   workflow_dispatch:
@@ -34,7 +30,6 @@ jobs:
       matrix:
         language:
           - actions
-          - go
 
     steps:
       - name: Checkout repository
@@ -44,9 +39,6 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: "${{matrix.language}}"
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
