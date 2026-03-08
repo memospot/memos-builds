@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ghcr.io/memospot/memos-builds
+      start_after_tag:
+        description: Start copying after this exact tag
+        required: false
+        type: string
+        default: ""
 
 jobs:
   sync-images:
@@ -49,6 +54,7 @@ jobs:
         env:
           SOURCE_IMAGE: ${{ inputs.source_image }}
           TARGET_IMAGE: ${{ inputs.target_image }}
+          START_AFTER_TAG: ${{ inputs.start_after_tag }}
         run: |
           set -euo pipefail
 
@@ -64,9 +70,30 @@ jobs:
             exit 1
           fi
 
+          start_copying=true
+          found_start_tag=false
+
+          if [ -n "${START_AFTER_TAG:-}" ]; then
+            start_copying=false
+            echo "Resuming after tag: ${START_AFTER_TAG}"
+          fi
+
           for tag in "${tags[@]}"; do
+            if [ "$start_copying" = false ]; then
+              if [ "$tag" = "$START_AFTER_TAG" ]; then
+                found_start_tag=true
+                start_copying=true
+              fi
+              continue
+            fi
+
             src="docker://docker.io/${SOURCE_IMAGE}:${tag}"
             dst="docker://${TARGET_IMAGE}:${tag}"
             echo "Copying ${src} -> ${dst}"
             skopeo copy --all "$src" "$dst"
           done
+
+          if [ -n "${START_AFTER_TAG:-}" ] && [ "$found_start_tag" = false ]; then
+            echo "start_after_tag '${START_AFTER_TAG}' was not found in source tags."
+            exit 1
+          fi
