@@ -132,9 +132,20 @@ func (m *MemosBuilds) publishContainers(
 		registry string
 		user     string
 		password *dagger.Secret
+		media    dagger.ImageMediaTypes
 	}{
-		{"docker.io/lincolnthalles/memos", dockerHubUser, dockerHubPassword},
-		{"ghcr.io/memospot/memos-builds", ghcrUser, ghcrPassword},
+		{
+			"docker.io/lincolnthalles/memos",
+			dockerHubUser,
+			dockerHubPassword,
+			dagger.ImageMediaTypesDockerMediaTypes,
+		},
+		{
+			"ghcr.io/memospot/memos-builds",
+			ghcrUser,
+			ghcrPassword,
+			dagger.ImageMediaTypesOcimediaTypes,
+		},
 	}
 	for _, target := range publishTargets {
 		if target.user != "" && target.password != nil {
@@ -145,6 +156,7 @@ func (m *MemosBuilds) publishContainers(
 					WithRegistryAuth(address, target.user, target.password).
 					Publish(ctx, addr, dagger.ContainerPublishOpts{
 						PlatformVariants: platformVariants,
+						MediaTypes:       target.media,
 					})
 				if err != nil {
 					return "", fmt.Errorf("failed to publish to %s: %w", target.registry, err)

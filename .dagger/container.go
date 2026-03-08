@@ -6,6 +6,7 @@ import (
 	"dagger/memos-builds/buildconsts"
 	"dagger/memos-builds/internal/dagger"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -53,11 +54,31 @@ func (m *MemosBuilds) buildContainer(
 	// 	- It's only supported on BusyBox.
 	// 	- BusyBox lacks package manager, tz-data and needs a pre-built su-exec.
 	if platform == "linux/arm/v5" {
-		return m.buildBusyBoxARMv5Container(binary, platform, source)
+		ctr := m.buildBusyBoxARMv5Container(binary, platform, source)
+		return m.ensurePlatformVariant(ctr, platform)
 	}
 
 	// All other platforms use a standard Alpine-based container.
-	return m.buildAlpineContainer(binary, platform, source)
+	ctr := m.buildAlpineContainer(binary, platform, source)
+	return m.ensurePlatformVariant(ctr, platform)
+}
+
+// ensurePlatformVariant preserves amd64 microarchitecture variants.
+//
+// Dagger's `Container.From` resolves platform to the base image manifest.
+// Since upstream base images publish amd64 without microarchitecture variants,
+// linux/amd64/v2 and linux/amd64/v3 collapse to linux/amd64 unless we
+// re-import into a container explicitly pinned to the target platform.
+func (m *MemosBuilds) ensurePlatformVariant(
+	ctr *dagger.Container,
+	platform string,
+) *dagger.Container {
+	parts := strings.Split(platform, "/")
+	if len(parts) != 3 || parts[1] != "amd64" || parts[2] == "v1" {
+		return ctr
+	}
+	return dag.Container(dagger.ContainerOpts{Platform: dagger.Platform(platform)}).
+		Import(ctr.AsTarball())
 }
 
 // buildAlpineContainer creates an Alpine-based container.
