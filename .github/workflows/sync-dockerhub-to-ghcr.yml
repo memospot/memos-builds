@@ -1,0 +1,72 @@
+name: Sync Docker Hub to GHCR
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_image:
+        description: Source image in Docker Hub (without tag)
+        required: false
+        type: string
+        default: lincolnthalles/memos
+      target_image:
+        description: Target image in GHCR (without tag)
+        required: false
+        type: string
+        default: ghcr.io/memospot/memos-builds
+
+jobs:
+  sync-images:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install skopeo and jq
+        run: sudo apt-get update && sudo apt-get install --yes skopeo jq
+
+      - name: Login to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: lincolnthalles
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DOCKERHUB_USERNAME:-}" ] || [ -z "${DOCKERHUB_TOKEN:-}" ]; then
+            echo "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is not set."
+            exit 1
+          fi
+          printf '%s' "$DOCKERHUB_TOKEN" | skopeo login docker.io --username "$DOCKERHUB_USERNAME" --password-stdin
+
+      - name: Login to GHCR
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GHCR_USERNAME:-}" ] || [ -z "${GHCR_TOKEN:-}" ]; then
+            echo "GHCR_USERNAME or GHCR_TOKEN is not set."
+            exit 1
+          fi
+          printf '%s' "$GHCR_TOKEN" | skopeo login ghcr.io --username "$GHCR_USERNAME" --password-stdin
+
+      - name: Copy all tags from Docker Hub to GHCR
+        env:
+          SOURCE_IMAGE: ${{ inputs.source_image }}
+          TARGET_IMAGE: ${{ inputs.target_image }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SOURCE_IMAGE:-}" ] || [ -z "${TARGET_IMAGE:-}" ]; then
+            echo "source_image and target_image are required."
+            exit 1
+          fi
+
+          mapfile -t tags < <(skopeo list-tags "docker://docker.io/${SOURCE_IMAGE}" | jq -r '.Tags[]')
+
+          if [ "${#tags[@]}" -eq 0 ]; then
+            echo "No tags found for docker.io/${SOURCE_IMAGE}."
+            exit 1
+          fi
+
+          for tag in "${tags[@]}"; do
+            src="docker://docker.io/${SOURCE_IMAGE}:${tag}"
+            dst="docker://${TARGET_IMAGE}:${tag}"
+            echo "Copying ${src} -> ${dst}"
+            skopeo copy --all "$src" "$dst"
+          done
