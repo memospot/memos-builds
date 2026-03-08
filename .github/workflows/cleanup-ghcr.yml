@@ -14,4 +14,5 @@ jobs:
     steps:
       - name: Delete untagged images
         uses: dataaxiom/ghcr-cleanup-action@244b3e8a35c266981a44b7e35da0c0e6a29b48a0
-        delete-untagged: true
+        with:
+          delete-untagged: true
