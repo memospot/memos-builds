@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"dagger/memos-builds/buildconsts"
 	"dagger/memos-builds/internal/dagger"
@@ -79,9 +80,8 @@ func (m *MemosBuilds) generateChecksums(
 	return ctr.File("/work/" + checksumFile)
 }
 
-// containerTags returns the tags to use for container images based on version.
-// For releases (v0.25.3): ["latest", "0.25", "0.25.3"]
-// For nightlies (v0.25.4-pre): ["nightly"]
+// containerTags returns tags for release images.
+// Releases (v0.25.3): ["latest", "0.25", "0.25.3"]
 func (m *MemosBuilds) containerTags(version string) []string {
 	v, err := semver.NewVersion(version)
 	if err != nil {
@@ -99,6 +99,39 @@ func (m *MemosBuilds) containerTags(version string) []string {
 		fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
 		fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
 	}
+}
+
+func (m *MemosBuilds) ghcrNightlyTags(version string) []string {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return []string{"nightly"}
+	}
+
+	shortSHA := v.Metadata()
+	if shortSHA == "" {
+		shortSHA = "unknown"
+	}
+
+	date := time.Now().UTC().Format("20060102")
+	nightlyWithDate := fmt.Sprintf("nightly-%s-%s", date, shortSHA)
+	return []string{nightlyWithDate, "nightly"}
+}
+
+func (m *MemosBuilds) tagsForRegistry(version string, registry string) []string {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return []string{"latest"}
+	}
+
+	if v.Prerelease() == "" {
+		return m.containerTags(version)
+	}
+
+	if strings.HasPrefix(registry, "ghcr.io") {
+		return m.ghcrNightlyTags(version)
+	}
+
+	return []string{"nightly"}
 }
 
 // publishContainers builds and publishes multi-arch Docker images to registries.
@@ -125,7 +158,6 @@ func (m *MemosBuilds) publishContainers(
 		return "", fmt.Errorf("failed to build containers: %w", err)
 	}
 
-	tags := m.containerTags(version)
 	var allPublished []string
 
 	publishTargets := []struct {
@@ -150,6 +182,7 @@ func (m *MemosBuilds) publishContainers(
 	for _, target := range publishTargets {
 		if target.user != "" && target.password != nil {
 			address := strings.Split(target.registry, "/")[0]
+			tags := m.tagsForRegistry(version, target.registry)
 			for _, tag := range tags {
 				addr := fmt.Sprintf("%s:%s", target.registry, tag)
 				ref, err := dag.Container().
