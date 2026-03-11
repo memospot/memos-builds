@@ -18,6 +18,9 @@ env:
   DAGGER_NO_NAG: "1"
   DO_NOT_TRACK: "1"
 
+permissions:
+  contents: read
+
 jobs:
   test-cache-creation:
     name: Test build cache creation
@@ -26,14 +29,19 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
           persist-credentials: false
 
       - name: Build with cache
-        uses: memospot/action-dagger@v1
+        uses: memospot/action-dagger@ce84470b762a5673acd1099d5cde40bf4ac7a4a4 # v1.0.1
         with:
           cache-mode: direct
           version: latest
@@ -59,14 +67,19 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 1
           persist-credentials: false
 
       - name: Build with cache
-        uses: memospot/action-dagger@v1
+        uses: memospot/action-dagger@ce84470b762a5673acd1099d5cde40bf4ac7a4a4 # v1.0.1
         with:
           cache-mode: direct
           version: latest
