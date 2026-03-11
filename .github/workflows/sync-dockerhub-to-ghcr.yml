@@ -19,10 +19,18 @@ on:
         type: string
         default: ""
 
+permissions:
+  contents: read
+
 jobs:
   sync-images:
     runs-on: ubuntu-24.04
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
       - name: Install skopeo and jq
         run: sudo apt-get update && sudo apt-get install --yes skopeo jq
 
