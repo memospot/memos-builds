@@ -32,7 +32,7 @@ dagger call publish --source=. --version=v0.25.3 \
 
 ## Function Map
 
-```
+```text
 dagger call build
   ├── resolveVersion         # Determine git ref, resolve nightly version
   │   ├── patchModerncSqlite # Fix libc/sqlite version mismatch

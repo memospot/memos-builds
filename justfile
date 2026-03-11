@@ -111,14 +111,23 @@ lint:
     golangci-lint run ./.dagger/.
 
 test:
-    go test ./.dagger/.
+    go test -v ./.dagger/.
 
 validate: fmt lint test
+    cd .dagger && go mod tidy -go=$(cat ../.go-version) && git diff --exit-code go.mod
+    go work sync && git diff --exit-code go.work
     pre-commit
 
 update:
     dagger develop && rm .dagger/.gitignore || true
     cd .dagger && go mod tidy
+    go work sync
+
+tidy GO_VERSION:
+    [[ -n "{{ GO_VERSION }}" ]] || { echo "{{ RED }}ERROR:{{ NORMAL }} Please provide a GO_VERSION."; exit 1; }
+    echo "{{ GO_VERSION }}" > .go-version
+    cd .dagger && go mod tidy -go={{ GO_VERSION }}
+    go work edit -go={{ GO_VERSION }}
     go work sync
 
 [doc('
@@ -398,13 +407,11 @@ git-retag TAG:
     git push origin $TAG
 
 [doc('Tag and push to GitHub, triggering the release workflow.')]
-publish TAG:
+publish TAG: validate
     #!/usr/bin/env bash
     TAG="v{{ trim_start_matches(TAG, 'v') }}"
     just git-retag "$TAG"
     git push origin main
-
-
 
 [doc('Update README.md captures. Requires a running Memos instance and bunx.')]
 update-captures PORT='':
