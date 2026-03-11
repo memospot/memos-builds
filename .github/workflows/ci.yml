@@ -2,11 +2,13 @@ name: Code Integration
 
 on:
   push:
-    branches:
-      - main
+    paths:
+      - "**/ci.yml"
+      - "**/go.{mod,sum}"
+      - "**.go"
+      - go.work
+      - go.work.sum
   pull_request:
-    branches:
-      - main
     paths:
       - "**/ci.yml"
       - "**/go.{mod,sum}"

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  translate:
     runs-on: ubuntu-slim
     steps:
       - name: Harden the runner (Audit all outbound calls)
