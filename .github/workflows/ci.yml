@@ -8,12 +8,18 @@ on:
     branches:
       - main
     paths:
+      - "**/ci.yml"
       - "**/go.{mod,sum}"
       - "**.go"
+      - go.work
+      - go.work.sum
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   static-checks:
