@@ -22,8 +22,8 @@ export DAGGER_NO_NAG := "1"
 export DO_NOT_TRACK := "1"
 
 [private]
-[script]
 default:
+    #!/usr/bin/env bash
     echo -e "{{ BOLD }}This justfile contains recipes for building {{ UNDERLINE }}https://github.com/usememos/memos{{ NORMAL }}\n"
     if [[ "{{ os() }}" == "windows" ]]; then
         program_files="{{ replace(env('PROGRAMFILES', 'C:\\Program Files'), '\\', '\\\\') }}"
@@ -64,7 +64,9 @@ dagger-rm: dagger-stop
     fi
 
 # Clean Dagger cache and Docker build cache
-[confirm('This will aggressively prune ALL Docker resources (not just Dagger). This may delete data from other projects. Are you sure?')]
+[confirm('This will aggressively prune ALL Docker resources (not just Dagger).
+This may delete data from other projects.
+Are you sure?')]
 dagger-clean:
     #!/usr/bin/env bash
     echo "Pruning Dagger cache…"
@@ -81,26 +83,51 @@ dagger-clean:
 
 # Regenerate Dagger files after SDK changes
 dagger-dev:
-    dagger develop --compat=skip
-    rm .dagger/.gitignore
+    dagger develop --compat=skip && rm .dagger/.gitignore || true
 
-[doc('Build Memos binaries for the specified version and platforms.
+[doc('
+Build Memos binaries for the specified version and platforms.
+
     - VERSION: v*.*.*, nightly, or commit hash.
     - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".')]
 build VERSION='nightly' PLATFORMS='':
     #!/usr/bin/env bash
-    if [ -n "{{ PLATFORMS }}" ]; then
-        PLATFORMS="{{ PLATFORMS }}"
-    else
-        PLATFORMS="{{ DEFAULT_BUILD_TARGET }}"
-    fi
+    PLATFORMS=$( [[ -n "{{ PLATFORMS }}" ]] && echo "{{ PLATFORMS }}" || echo "{{ DEFAULT_BUILD_TARGET }}" )
     echo -e "Building {{ BLUE }}{{ VERSION }}{{ NORMAL }} for {{ BLUE }}${PLATFORMS}{{ NORMAL }}…"
     dagger call build --source=. --version="{{ VERSION }}" --platforms="${PLATFORMS}" export --path=./dist
     echo -e "{{ GREEN }}Build complete. Artifacts in ./dist/{{ NORMAL }}"
 
-[doc('Build Memos containers for the specified version and platforms.
+[doc('Format code. Pass "--just" to also run `just --fmt`')]
+fmt ARGS='':
+    #!/usr/bin/env bash
+    golangci-lint fmt
+    if [[ "{{ ARGS }}" == "--just" ]]; then
+        just --unstable --fmt
+    fi
+
+lint:
+    #!/usr/bin/env bash
+    just --unstable --fmt --check
+    golangci-lint run ./.dagger/.
+
+test:
+    go test ./.dagger/.
+
+validate: fmt lint test
+    pre-commit
+
+update:
+    dagger develop && rm .dagger/.gitignore || true
+    cd .dagger && go mod tidy
+    go work sync
+
+[doc('
+Build Memos containers for the specified version and platforms.
     - VERSION: v*.*.*, nightly, or commit hash.
-    - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".')]
+    - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".
+
+** This will also start all containers in demo mode. Intended for debugging multi-platform builds. **
+')]
 build-docker VERSION='nightly' PLATFORMS='':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -127,10 +154,7 @@ build-docker VERSION='nightly' PLATFORMS='':
     fi
 
     # Determine platforms
-    platforms="{{ PLATFORMS }}"
-    if [ -z "$platforms" ]; then
-        platforms="{{ DEFAULT_BUILD_TARGET }}"
-    fi
+    platforms=$( [[ -n "{{ PLATFORMS }}" ]] && echo "{{ PLATFORMS }}" || echo "{{ DEFAULT_BUILD_TARGET }}" )
 
     echo -e "{{ CYAN }}Building containers for version ${original_version} (${version})…{{ NORMAL }}"
 
@@ -305,7 +329,8 @@ pull-nightly:
     echo -e "{{ GREEN }}Container memos-nightly running listening at http://localhost:${port}{{ NORMAL }}"
 
 # Clean built Docker containers and images
-[confirm('This will stop and remove all Docker containers and images starting with memos-. Are you sure?')]
+[confirm('This will stop and remove all Docker containers and images starting with "memos-".
+Are you sure?')]
 clean-docker:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -327,10 +352,15 @@ clean-docker:
     docker image prune -f
     echo "Cleaning complete."
 
-# Clean build artifacts, Docker cache, and optionally Go cache
-[confirm('This will clean build artifacts, Go cache, dangling Docker images and Docker build cache. Are you sure?')]
-[script]
-clean GOCACHE='false':
+[confirm('This will clean:
+    - Build artifacts
+    - Docker build cache
+    - Dangling Docker images
+    - Go cache (if --gocache was passed)
+Are you sure?')]
+[doc('Clean build artifacts, Docker cache, and optionally Go cache (passing "--gocache")')]
+clean ARGS='':
+    #!/usr/bin/env bash
     echo "Cleaning build artifacts…"
     rm -rf dist/
 
@@ -339,7 +369,7 @@ clean GOCACHE='false':
     docker buildx prune -f 2>/dev/null || true
     docker image prune -f
 
-    if [[ "{{ GOCACHE }}" == "true" ]]; then
+    if [[ "{{ ARGS }}" == "--gocache" ]]; then
         echo "Cleaning Go cache…"
         go clean -cache -modcache
     fi
@@ -348,7 +378,6 @@ clean GOCACHE='false':
 
 # Reset main branch to origin/main (destructive)
 [confirm('This will exclude ANY changes and untracked files on the working tree, resetting the local repo to origin/main. Are you sure?')]
-[script]
 git-reset:
     git fetch origin
     git checkout main
@@ -359,8 +388,8 @@ git-reset:
 
 # Remove a git tag and push it again (internal use)
 [private]
-[script]
 git-retag TAG:
+    #!/usr/bin/env bash
     set +e
     TAG="v{{ trim_start_matches(TAG, 'v') }}"
     git push origin :refs/tags/$TAG
@@ -369,16 +398,13 @@ git-retag TAG:
     git push origin $TAG
 
 [doc('Tag and push to GitHub, triggering the release workflow.')]
-[script]
 publish TAG:
+    #!/usr/bin/env bash
     TAG="v{{ trim_start_matches(TAG, 'v') }}"
     just git-retag "$TAG"
     git push origin main
 
-update:
-    cd .dagger && go mod tidy
-    go work sync
-    rm .dagger/.gitignore || true
+
 
 [doc('Update README.md captures. Requires a running Memos instance and bunx.')]
 update-captures PORT='':

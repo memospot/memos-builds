@@ -10,16 +10,16 @@ import (
 	"os"
 	"sort"
 
+	telemetry "github.com/dagger/otel-go"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"dagger/memos-builds/internal/dagger"
 
 	"dagger.io/dagger/querybuilder"
-	"dagger.io/dagger/telemetry"
 )
 
 var dag = dagger.Connect()

@@ -1,12 +1,12 @@
 {
   "editor.formatOnSave": true,
-  "editor.wordBasedSuggestions": "off",
-  "editor.quickSuggestionsDelay": 200,
-  "search.exclude": {
-    "**/memos/**": true
-  },
   "markdownlint.config": {
-    "MD033": false
+    "MD028": false,
+    "MD033": false,
+    "MD041": false
+  },
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "github.vscode-github-actions"
   },
   "[markdown]": {
     "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
@@ -20,13 +20,9 @@
   },
   "go.buildTags": "mage",
   "gopls": {
-    // "directoryFilters": [
-    // Ignore Dagger generated files so gopls doesn't block refactoring.
-    // "-**/dagger.gen.go"
-    // "+.dagger"
-    // ],
     "build.directoryFilters": [
-      "-**/dagger.gen.go"
+      "-**/dagger.gen.go",
+      // "+.dagger"
     ]
   }
 }

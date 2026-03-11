@@ -163,7 +163,6 @@ func (m *MemosBuilds) buildInternal(
 	return out, gitSrc, version, nil
 }
 
-
 // Publish builds release artifacts and optionally publishes containers.
 func (m *MemosBuilds) Publish(
 	ctx context.Context,

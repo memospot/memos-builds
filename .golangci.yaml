@@ -10,3 +10,9 @@ linters:
     errcheck:
       exclude-functions:
         - os.Setenv
+    govet:
+      enable-all: true
+formatters:
+  enable:
+    - gofmt
+    - goimports

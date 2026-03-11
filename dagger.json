@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.dagger.io/reference/dagger.schema.json",
   "name": "memos-builds",
-  "engineVersion": "v0.20.0",
+  "engineVersion": "v0.20.1",
   "sdk": {
     "source": "go"
   },

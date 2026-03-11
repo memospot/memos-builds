@@ -69,7 +69,7 @@ func getLibcVersionForSqlite(ctx context.Context, sqliteVersion string) (string,
 
 	matches := reLibcUpstream.FindStringSubmatch(upstreamContents)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("sqlite %s: could not extract libc version from upstream go.mod. If this persists, something big has changed and this project will need intervention.", sqliteVersion)
+		return "", fmt.Errorf("sqlite %s: could not extract libc version from upstream go.mod. If this persists, something big has changed and this project will need intervention", sqliteVersion)
 	}
 
 	return matches[1], nil
@@ -108,7 +108,7 @@ func patchLibcVersion(goModContents, expectedVersion string) (string, bool) {
 func (m *MemosBuilds) patchModerncSqlite(ctx context.Context, sourceCode *dagger.Directory) (*dagger.Directory, error) {
 	goModContents, err := sourceCode.File("go.mod").Contents(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read go.mod: %w. If this persists, check if the upstream project structure has changed.", err)
+		return nil, fmt.Errorf("failed to read go.mod: %w. If this persists, check if the upstream project structure has changed", err)
 	}
 
 	sqliteVersion, found := getSqliteVersion(goModContents)

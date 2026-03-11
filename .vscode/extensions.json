@@ -3,6 +3,7 @@
     "DavidAnson.vscode-markdownlint",
     "EditorConfig.EditorConfig",
     "golang.Go",
+    "github.vscode-github-actions",
     "nefrob.vscode-just-syntax",
     "oderwat.indent-rainbow",
     "timonwong.shellcheck"
