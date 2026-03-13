@@ -183,13 +183,12 @@ func (m *MemosBuilds) publishContainers(
 		if target.user != "" && target.password != nil {
 			address := strings.Split(target.registry, "/")[0]
 			tags := m.tagsForRegistry(version, target.registry)
-			publisher := dag.Container().
-				WithRegistryAuth(address, target.user, target.password).
-				With(m.addContainerAnnotations)
+			publisher := platformVariants[0].
+				WithRegistryAuth(address, target.user, target.password)
 			for _, tag := range tags {
 				addr := fmt.Sprintf("%s:%s", target.registry, tag)
 				ref, err := publisher.Publish(ctx, addr, dagger.ContainerPublishOpts{
-					PlatformVariants: platformVariants,
+					PlatformVariants: platformVariants[1:],
 					MediaTypes:       target.media,
 				})
 				if err != nil {
