@@ -170,7 +170,7 @@ func (m *MemosBuilds) publishContainers(
 			"docker.io/lincolnthalles/memos",
 			dockerHubUser,
 			dockerHubPassword,
-			dagger.ImageMediaTypesDockerMediaTypes,
+			dagger.ImageMediaTypesOcimediaTypes,
 		},
 		{
 			"ghcr.io/memospot/memos-builds",
