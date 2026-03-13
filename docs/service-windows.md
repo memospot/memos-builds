@@ -23,10 +23,10 @@ This guide makes the following assumptions:
 
 If you want the service to be reachable from the network, you should also configure your firewall to allow inbound connections to the server:
 
-  ```powershell
-  # Allow memos.exe on Windows Firewall
-  New-NetFirewallRule -DisplayName "Memos" -Direction Inbound -Program "$Env:ProgramData\memos\memos.exe" -Action Allow -Protocol TCP
-  ```
+```powershell
+# Allow memos.exe on Windows Firewall
+New-NetFirewallRule -DisplayName "Memos" -Direction Inbound -Program "$Env:ProgramData\memos\memos.exe" -Action Allow -Protocol TCP
+```
 
 ## Windows Service Wrappers
 

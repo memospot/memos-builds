@@ -62,20 +62,20 @@ dagger call publish
 
 ## Parameters
 
-| Function | Parameter | Default | Description |
-|---|---|---|---|
-| `build` | `--source` | `.` | Host source directory |
-| | `--version` | `nightly` | Git ref: tag (`v0.25.3`), branch (`release/0.25`), commit hash, or `nightly` |
-| | `--platforms` | all | `all`, or comma-separated: `linux/amd64,darwin/arm64` |
-| `build-containers` | `--source` | `.` | Host source directory |
-| | `--version` | `nightly` | Same as `build` |
-| | `--platforms` | all | Same as `build`; non-Linux entries are silently ignored |
-| `publish` | `--source` | `.` | Host source directory |
-| | `--version` | required | Git tag for the release |
-| | `--docker-hub-user` | — | Docker Hub username |
-| | `--docker-hub-password` | — | Docker Hub token (use `env:VAR`) |
-| | `--ghcr-user` | — | GHCR username |
-| | `--ghcr-password` | — | GHCR token (use `env:VAR`) |
+| Function           | Parameter               | Default   | Description                                                                  |
+| ------------------ | ----------------------- | --------- | ---------------------------------------------------------------------------- |
+| `build`            | `--source`              | `.`       | Host source directory                                                        |
+|                    | `--version`             | `nightly` | Git ref: tag (`v0.25.3`), branch (`release/0.25`), commit hash, or `nightly` |
+|                    | `--platforms`           | all       | `all`, or comma-separated: `linux/amd64,darwin/arm64`                        |
+| `build-containers` | `--source`              | `.`       | Host source directory                                                        |
+|                    | `--version`             | `nightly` | Same as `build`                                                              |
+|                    | `--platforms`           | all       | Same as `build`; non-Linux entries are silently ignored                      |
+| `publish`          | `--source`              | `.`       | Host source directory                                                        |
+|                    | `--version`             | required  | Git tag for the release                                                      |
+|                    | `--docker-hub-user`     | —         | Docker Hub username                                                          |
+|                    | `--docker-hub-password` | —         | Docker Hub token (use `env:VAR`)                                             |
+|                    | `--ghcr-user`           | —         | GHCR username                                                                |
+|                    | `--ghcr-password`       | —         | GHCR token (use `env:VAR`)                                                   |
 
 ## Build Targets
 

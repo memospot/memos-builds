@@ -101,6 +101,7 @@ build VERSION='nightly' PLATFORMS='':
 fmt ARGS='':
     #!/usr/bin/env bash
     golangci-lint fmt
+    dprint fmt
     if [[ "{{ ARGS }}" == "--just" ]]; then
         just --unstable --fmt
     fi

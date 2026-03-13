@@ -131,7 +131,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -o memos-linux-armv7 ./bin/
 ## Environment Variables Reference
 
 | Variable  | Description                   | Example Values                          |
-|-----------|-------------------------------|-----------------------------------------|
+| --------- | ----------------------------- | --------------------------------------- |
 | `GOOS`    | Target operating system       | `linux`, `windows`, `darwin`, `freebsd` |
 | `GOARCH`  | Target architecture           | `amd64`, `arm64`, `arm`, `386`          |
 | `GOAMD64` | AMD64 microarchitecture level | `v1` (default), `v2`, `v3`, `v4`        |

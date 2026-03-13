@@ -1,11 +1,13 @@
 # Memos Builds
 
-Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight, and privacy-first note-taking service.
+Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight,
+and privacy-first note-taking service.
 
 Some of these builds are used by [Memospot](https://github.com/memospot/memospot),
 a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
-[Nightly](https://github.com/memospot/memos-builds/releases/tag/nightly) and [Stable](https://github.com/memospot/memos-builds/releases/latest) builds are available.
+[Nightly](https://github.com/memospot/memos-builds/releases/tag/nightly) and
+[Stable](https://github.com/memospot/memos-builds/releases/latest) builds are available.
 
 [![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
@@ -121,10 +123,10 @@ docker run --detach --name memos --publish 5230:5230 \
 
 - Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
-| Platform  | Image                 |
-| --------- | --------------------- |
-| arm/v5    | busybox:1.37-glibc    |
-| All other | alpine:3.23           |
+| Platform  | Image              |
+| --------- | ------------------ |
+| arm/v5    | busybox:1.37-glibc |
+| All other | alpine:3.23        |
 
 ## Platform variants
 

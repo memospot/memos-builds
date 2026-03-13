@@ -1,27 +1,32 @@
 {
+  "editor.defaultFormatter": "dprint.dprint",
   "editor.formatOnSave": true,
-  "markdownlint.config": {
-    "MD028": false,
-    "MD033": false,
-    "MD041": false
-  },
   "[github-actions-workflow]": {
-    "editor.defaultFormatter": "github.vscode-github-actions"
-  },
-  "[markdown]": {
-    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
-    "editor.formatOnSave": true,
-    "editor.formatOnPaste": true
+    "editor.defaultFormatter": "dprint.dprint"
   },
   "[go]": {
     "editor.defaultFormatter": "golang.go",
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true
   },
-  "go.buildTags": "mage",
+  "[json]": {
+    "editor.defaultFormatter": "dprint.dprint"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "dprint.dprint"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "dprint.dprint"
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "dprint.dprint"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "dprint.dprint"
+  },
   "gopls": {
     "build.directoryFilters": [
-      "-**/dagger.gen.go",
+      "-**/dagger.gen.go"
       // "+.dagger"
     ]
   }

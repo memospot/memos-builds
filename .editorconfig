@@ -13,15 +13,11 @@ indent_style = space
 [justfile]
 indent_size = 4
 
-[json]
-indent_size = 2
-insert_final_newline = false
-
 [*.go]
 indent_size = 2
 indent_style = tab
 
-[*.{md,sh,toml,yml,yaml}]
+[*.{json,jsonc,md,sh,toml,yml,yaml}]
 indent_size = 2
 
 [.{gitignore,gitattributes}]

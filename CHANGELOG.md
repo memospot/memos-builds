@@ -19,6 +19,7 @@ Security: in case of vulnerabilities.
 -->
 
 <!-- next-header -->
+
 ## [Unreleased] - ReleaseDate
 
 ## [0.26.0] - 2026-02-02
@@ -26,6 +27,7 @@ Security: in case of vulnerabilities.
 ### Added
 
 - (container) Can read an env file from `$MEMOS_DATA/memos.env` to pass environment variables to the container. This file have precedence over environment variables passed to the container.
+
 - (container) `MEMOS_DSN` can be passed as a secret mount. It will be loaded automatically from the default Docker secret mount `/run/secrets/MEMOS_DSN`.
 
 ### Removed
