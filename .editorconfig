@@ -17,7 +17,7 @@ indent_size = 4
 indent_size = 2
 indent_style = tab
 
-[*.{json,jsonc,md,sh,toml,yml,yaml}]
+[*.{json,jsonc,md,sh,yml,yaml}]
 indent_size = 2
 
 [.{gitignore,gitattributes}]

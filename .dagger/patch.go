@@ -29,7 +29,8 @@ var sqliteLibcMap = map[string]string{
 	"v1.44.3": "v1.67.6",
 	"v1.45.0": "v1.67.6",
 	"v1.46.0": "v1.67.6",
-	"v1.46.1": "v1.67.6",
+	"v1.46.1": "v1.67.6", // v0.26.3+
+	"v1.46.2": "v1.70.0",
 }
 
 // Regex patterns for parsing go.mod

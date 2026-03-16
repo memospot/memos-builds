@@ -18,9 +18,6 @@
   "[markdown]": {
     "editor.defaultFormatter": "dprint.dprint"
   },
-  "[toml]": {
-    "editor.defaultFormatter": "dprint.dprint"
-  },
   "[yaml]": {
     "editor.defaultFormatter": "dprint.dprint"
   },
