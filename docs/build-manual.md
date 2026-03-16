@@ -8,18 +8,18 @@ Before building Memos, ensure you have the following tools installed:
 
 - [**Git**](https://git-scm.com/) - Version control system for cloning the repository
 - [**Go 1.25+**](https://go.dev/dl/) - Go programming language compiler
-- [**Node.js 22 LTS**](https://nodejs.org/en/download/) - JavaScript runtime for building the frontend
+- [**Node.js 24 LTS**](https://nodejs.org/en/download/) - JavaScript runtime for building the frontend
 - [**pnpm**](https://pnpm.io/installation) - Fast, disk space efficient package manager
 
 > [!TIP]
 > You can install these tools via [homebrew](https://brew.sh/) or [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/)
 >
 > ```bash
-> brew install git go@1.25 node@22 pnpm@9
+> brew install git go@1.25 node@24 pnpm@9
 > ```
 >
 > ```powershell
-> winget install Git.Git GoLang.Go OpenJS.NodeJS.22 pnpm.pnpm
+> winget install Git.Git GoLang.Go OpenJS.NodeJS.24 pnpm.pnpm
 > ```
 
 ## Quick Start
@@ -37,7 +37,7 @@ To build a specific release version:
 
 ```bash
 # Checkout a specific tag
-git checkout v0.25.2
+git checkout v0.26.2
 
 # Or checkout a specific commit
 git checkout <commit-hash>
@@ -172,7 +172,7 @@ Then open `http://localhost:5230` in your browser.
 - Run `go mod download` to ensure all Go dependencies are downloaded
 - Run `pnpm install` to ensure all frontend dependencies are installed
 - Check your Go version meets the minimum requirement (1.25+)
-- Check your Node.js version is 22 LTS or compatible
+- Check your Node.js version is 24 LTS or compatible
 
 ## Next Steps
 
