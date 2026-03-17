@@ -25,7 +25,7 @@ const NODE_BUILD_IMAGE string = "node:24-alpine"
 const BUF_IMAGE string = "bufbuild/buf:1.66.1"
 
 // Passed to `go mod tidy`.
-const GO_VERSION string = "1.26.1"
+const GO_VERSION string = "1.26.0"
 
 // Where the semantic version is defined in the source code.
 const VERSION_FILE string = "internal/version/version.go"
