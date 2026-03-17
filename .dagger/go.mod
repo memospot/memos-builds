@@ -1,6 +1,6 @@
 module dagger/memos-builds
 
-go 1.26.1
+go 1.26.0
 
 require (
 	github.com/99designs/gqlgen v0.17.81
