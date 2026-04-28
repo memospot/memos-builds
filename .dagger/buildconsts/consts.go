@@ -16,7 +16,7 @@ const PRIMARY_IMAGE string = "alpine:3.23.3"
 const ALTERNATE_IMAGE string = "arm32v5/busybox:1.37.0-glibc"
 
 // Container image to use for the Go build.
-const GOLANG_BUILD_IMAGE string = "golang:1.26.1-alpine3.23"
+const GOLANG_BUILD_IMAGE string = "golang:1.26.2-alpine3.23"
 
 // Container image to use for frontend builds.
 const NODE_BUILD_IMAGE string = "node:24-alpine"
@@ -25,7 +25,7 @@ const NODE_BUILD_IMAGE string = "node:24-alpine"
 const BUF_IMAGE string = "bufbuild/buf:1.66.1"
 
 // Passed to `go mod tidy`.
-const GO_VERSION string = "1.26.0"
+const GO_VERSION string = "1.26.2"
 
 // Where the semantic version is defined in the source code.
 const VERSION_FILE string = "internal/version/version.go"
