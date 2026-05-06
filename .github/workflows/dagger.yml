@@ -51,12 +51,12 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
+          if [[ "${{ inputs.version }}" == v* ]]; then
             VERSION="${{ inputs.version }}"
           elif [[ "${{ github.ref_name }}" == v* ]]; then
             VERSION="${{ github.ref_name }}"
           else
-            VERSION="nightly"
+            VERSION="nightly-$(date +%Y%m%d)"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
@@ -116,21 +116,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Clean up old nightly assets
-        if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, '-pre')"
-        run: |
-          gh release view nightly --json assets --jq '.assets[].name' 2>/dev/null | while read -r asset; do
-            echo "Deleting asset: $asset"
-            gh release delete-asset nightly "$asset" --yes
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create Nightly Release
         if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, '-pre')"
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
         with:
-          tag_name: nightly
+          tag_name: ${{ steps.version.outputs.version }}
           body: |
             Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
 
@@ -147,7 +137,7 @@ jobs:
 
             ---
             ```bash
-            docker pull ghcr.io/memospot/memos-builds:nightly
+            docker pull ghcr.io/memospot/memos-builds:${{ steps.version.outputs.version }}
             ```
           files: ./dist/*
           fail_on_unmatched_files: true

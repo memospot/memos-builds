@@ -1,0 +1,40 @@
+name: Cleanup nightly releases
+
+on:
+  schedule:
+    - cron: "25 6 * * *" # Daily nightly build at 6:25 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+        with:
+          egress-policy: audit
+
+      - name: Prune old ghcr.io nightly images
+        uses: dataaxiom/ghcr-cleanup-action@244b3e8a35c266981a44b7e35da0c0e6a29b48a0
+        with:
+          token: ${{ secrets.GHCR_TOKEN }}
+          delete-tags: nightly-*
+          older-than: 7 days
+          delete-untagged: true
+
+      - name: Prune old nightly releases
+        run: |
+          cutoff_days=7
+          cutoff=$(date -d "-${cutoff_days} days" -Iseconds | sed 's/+.*//')
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq --arg cutoff "$cutoff" '.[] | select(.tagName | startswith("nightly-")) | select(.createdAt < $cutoff) | .tagName' \
+            | while read -r tag; do
+              echo "Deleting release: $tag"
+              gh release delete "$tag" --yes
+            done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
