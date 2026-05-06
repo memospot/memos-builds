@@ -65,8 +65,14 @@ func (m *MemosBuilds) buildBackend(
 	// Memos migrations will fail if we override this field with gibberish.
 	v, err := semver.NewVersion(version)
 	if err == nil {
+		// Version shown in app intentionally excludes build metadata (commit hash).
+		appVersion := fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch())
+		if pre := v.Prerelease(); pre != "" {
+			appVersion += "-" + pre
+		}
+
 		// https://pkg.go.dev/cmd/link
-		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.VERSION_IMPORT_PATH, v.String()))
+		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.VERSION_IMPORT_PATH, appVersion))
 	}
 	if short := shortCommitHash(commit); short != "" {
 		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.COMMIT_IMPORT_PATH, short))
