@@ -63,7 +63,15 @@ jobs:
             fi
             VERSION="nightly-$(date -u +%Y%m%d)-${MEMOS_SHA}"
           fi
+
+          if [[ "$VERSION" == v* ]]; then
+            CONTAINER_TAG="${VERSION#v}"
+          else
+            CONTAINER_TAG="$VERSION"
+          fi
+
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "container_tag=$CONTAINER_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Determine publish args
         id: publish
@@ -108,10 +116,10 @@ jobs:
 
             ---
             ```bash
-            docker pull ghcr.io/memospot/memos-builds:${{ steps.version.outputs.version }}
+            docker pull ghcr.io/memospot/memos-builds:${{ steps.version.outputs.container_tag }}
             ```
             ```bash
-            docker pull docker.io/lincolnthalles/memos:${{ steps.version.outputs.version }}
+            docker pull docker.io/lincolnthalles/memos:${{ steps.version.outputs.container_tag }}
             ```
           files: ./dist/*
           fail_on_unmatched_files: true
@@ -122,7 +130,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Nightly Release
-        if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, '-pre')"
+        if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, 'nightly')"
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
         with:
           tag_name: ${{ steps.version.outputs.version }}
@@ -141,9 +149,23 @@ jobs:
             > - Nightly assets use a date-based semantic version (for example, `v2026.5.6-nightly+bcbcb03`).
 
             ---
+
+            ## Docker
+
+            ### Starting a throwaway instance
+            No data persistence, everything gets deleted when the container is stopped.
+
             ```bash
-            docker pull ghcr.io/memospot/memos-builds:${{ steps.version.outputs.version }}
+            docker run --detach --rm --name memos-${{ steps.version.outputs.container_tag }}-throwaway --publish 5232:5230 \
+              --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:${{ steps.version.outputs.container_tag }}
             ```
+            The container should be accessible at <http://localhost:5232/>.
+
+            ### Stopping the instance
+            ```bash
+            docker stop memos-${{ steps.version.outputs.container_tag }}-throwaway
+            ```
+
           files: ./dist/*
           fail_on_unmatched_files: true
           generate_release_notes: false
