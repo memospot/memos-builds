@@ -107,13 +107,21 @@ func (m *MemosBuilds) ghcrNightlyTags(version string) []string {
 	}
 
 	tag, _ := nightlyReleaseTag("nightly", v.Metadata())
-	return []string{tag}
+	if tag == "nightly" {
+		return []string{"nightly"}
+	}
+
+	return []string{tag, "nightly"}
 }
 
 func (m *MemosBuilds) tagsForRegistry(version string, registry string) []string {
 	if nightlyTag, ok := nightlyReleaseTag(version, ""); ok {
 		if strings.HasPrefix(registry, "ghcr.io") {
-			return []string{nightlyTag}
+			if nightlyTag == "nightly" {
+				return []string{"nightly"}
+			}
+
+			return []string{nightlyTag, "nightly"}
 		}
 
 		return []string{"nightly"}
