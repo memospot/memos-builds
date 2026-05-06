@@ -226,6 +226,20 @@ func (m *MemosBuilds) extractVersionFromSource(ctx context.Context, src *dagger.
 	return versionFromFile
 }
 
+// nightlyBuildVersion returns the semantic version embedded in nightly binaries.
+func nightlyBuildVersion(now time.Time, shortSHA string) *semver.Version {
+	version := fmt.Sprintf("%d.%d.%d-nightly", now.Year(), int(now.Month()), now.Day())
+	if shortSHA != "" {
+		version += "+" + shortSHA
+	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		v, _ = semver.NewVersion("0.0.0-nightly")
+	}
+	return v
+}
+
 // nightlyReleaseTag returns the release/container tag for nightly inputs.
 func nightlyReleaseTag(version string, shortSHA string) (string, bool) {
 	if version == "" || version == "nightly" {
@@ -248,36 +262,42 @@ func nightlyReleaseTag(version string, shortSHA string) (string, bool) {
 func (m *MemosBuilds) resolveVersion(
 	ctx context.Context,
 	version string,
-) (gitSrc *dagger.Directory, buildVersion string, releaseVersion string, err error) {
+) (gitSrc *dagger.Directory, buildVersion string, releaseVersion string, commit string, err error) {
 	git := dag.Git("https://github.com/usememos/memos.git")
 	treeOpts := dagger.GitRefTreeOpts{Depth: 1}
 
 	if v, err := semver.NewVersion(version); err == nil {
-		gitSrc = git.Tag("v" + v.String()).Tree(treeOpts)
-		return gitSrc, "v" + v.String(), "v" + v.String(), nil
+		ref := git.Tag("v" + v.String())
+		commit, _ = ref.Commit(ctx)
+		gitSrc = ref.Tree(treeOpts)
+		return gitSrc, "v" + v.String(), "v" + v.String(), commit, nil
 	}
 
 	if after, ok := strings.CutPrefix(version, "release/"); ok {
 		ver := strings.TrimPrefix(after, "v")
-		gitSrc = git.Ref("heads/release/" + ver).Tree(treeOpts)
-		return gitSrc, "v" + ver, "v" + ver, nil
+		ref := git.Ref("heads/release/" + ver)
+		commit, _ = ref.Commit(ctx)
+		gitSrc = ref.Tree(treeOpts)
+		return gitSrc, "v" + ver, "v" + ver, commit, nil
 	}
 
 	if commitHashPattern.MatchString(version) {
 		gitSrc = git.Commit(version).Tree(treeOpts)
 		srcVersion := m.extractVersionFromSource(ctx, gitSrc)
-		return gitSrc, srcVersion, srcVersion, nil
+		return gitSrc, srcVersion, srcVersion, version, nil
 	}
 
 	// Use nightly as default version.
-	gitSrc = git.Branch("main").Tree(treeOpts)
+	ref := git.Branch("main")
+	commit, _ = ref.Commit(ctx)
+	gitSrc = ref.Tree(treeOpts)
 
-	baseVersion := m.extractVersionFromSource(ctx, gitSrc)
-	nightlyVer := m.generateNightlyVersion(ctx, git, baseVersion)
+	shortSHA := shortCommitHash(commit)
+	nightlyVer := m.generateNightlyVersion(shortSHA)
 	releaseVersion, ok := nightlyReleaseTag(version, nightlyVer.Metadata())
 	if !ok {
 		releaseVersion, _ = nightlyReleaseTag("nightly", nightlyVer.Metadata())
 	}
 
-	return gitSrc, "v" + nightlyVer.String(), releaseVersion, nil
+	return gitSrc, "v" + nightlyVer.String(), releaseVersion, commit, nil
 }

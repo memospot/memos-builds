@@ -138,7 +138,7 @@ jobs:
             > [!NOTE]
             > - Release assets are overwritten by the daily automated builds.
             >
-            > - The version identifier is generated during the build process by bumping the patch version and appending the `-pre` suffix, based on what's on the source code.
+            > - Nightly assets use a date-based semantic version (for example, `v2026.5.6-nightly+bcbcb03`).
 
             ---
             ```bash

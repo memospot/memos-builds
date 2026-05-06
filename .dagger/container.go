@@ -166,6 +166,7 @@ func (m *MemosBuilds) buildContainers(
 	source *dagger.Directory,
 	gitSrc *dagger.Directory,
 	version string,
+	commit string,
 	targets []BuildMatrix,
 ) ([]*dagger.Container, error) {
 	// 1. Generate proto and build frontend (shared across all targets)
@@ -173,7 +174,7 @@ func (m *MemosBuilds) buildContainers(
 	frontendDist := m.buildFrontend(gitSrc)
 
 	// 3. Build backend binaries for all requested targets
-	binaries, err := m.buildBackend(ctx, gitSrc, frontendDist, version, targets)
+	binaries, err := m.buildBackend(ctx, gitSrc, frontendDist, version, commit, targets)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build binaries: %w", err)
 	}

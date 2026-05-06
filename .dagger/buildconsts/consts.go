@@ -30,8 +30,11 @@ const GO_VERSION string = "1.26.2"
 // Where the semantic version is defined in the source code.
 const VERSION_FILE string = "internal/version/version.go"
 
-// The import path of the semantic version variable. Will be used at build time to override nightly versions to the format `v0.26.2-pre+b623162`.
+// The import path of the semantic version variable.
 const VERSION_IMPORT_PATH string = "github.com/usememos/memos/internal/version.Version"
+
+// The import path of the source commit variable.
+const COMMIT_IMPORT_PATH string = "github.com/usememos/memos/internal/version.Commit"
 
 // Passed to `go build` as the entrypoint of the application.
 const APP_ENTRYPOINT string = "./cmd/memos/main.go"

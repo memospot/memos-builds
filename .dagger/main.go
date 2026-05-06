@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"dagger/memos-builds/buildconsts"
 	"dagger/memos-builds/internal/dagger"
@@ -56,31 +57,25 @@ var TARGETS []BuildMatrix = []BuildMatrix{
 }
 
 var commitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
+var shortCommitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
 
 type MemosBuilds struct{}
 
-// generateNightlyVersion bumps patch and adds -pre suffix with commit metadata.
-func (m *MemosBuilds) generateNightlyVersion(
-	ctx context.Context,
-	git *dagger.GitRepository,
-	baseVersion string,
-) *semver.Version {
-	v, err := semver.NewVersion(baseVersion)
-	if err != nil {
-		v, _ = semver.NewVersion("0.0.0")
+func shortCommitHash(commit string) string {
+	if len(commit) < 7 {
+		return ""
 	}
 
-	baseVer, _ := v.SetPrerelease("")
-	nextVer := baseVer.IncPatch()
-
-	if commit, err := git.Branch("main").Commit(ctx); err == nil {
-		if v, err := nextVer.SetMetadata(commit[:7]); err == nil {
-			nextVer = v
-		}
+	short := commit[:7]
+	if !shortCommitHashPattern.MatchString(short) {
+		return ""
 	}
+	return short
+}
 
-	nightlyVer, _ := nextVer.SetPrerelease("pre")
-	return &nightlyVer
+// generateNightlyVersion returns the date-based semantic version for nightly builds.
+func (m *MemosBuilds) generateNightlyVersion(shortSHA string) *semver.Version {
+	return nightlyBuildVersion(time.Now().UTC(), shortSHA)
 }
 
 // prepareSource resolves version and applies all patches.
@@ -88,28 +83,28 @@ func (m *MemosBuilds) prepareSource(
 	ctx context.Context,
 	source *dagger.Directory,
 	version string,
-) (*dagger.Directory, string, string, error) {
+) (*dagger.Directory, string, string, string, error) {
 	if source == nil {
-		return nil, "", "", fmt.Errorf("source directory must be passed explicitly by the user")
+		return nil, "", "", "", fmt.Errorf("source directory must be passed explicitly by the user")
 	}
 
-	gitSrc, buildVersion, releaseVersion, err := m.resolveVersion(ctx, version)
+	gitSrc, buildVersion, releaseVersion, commit, err := m.resolveVersion(ctx, version)
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", "", "", err
 	}
 
 	gitSrc, err = m.patchModerncSqlite(ctx, gitSrc)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to patch go.mod: %w", err)
+		return nil, "", "", "", fmt.Errorf("failed to patch go.mod: %w", err)
 	}
 
 	patchesDir := source.Directory("patches")
 	gitSrc, err = m.applyPatches(ctx, gitSrc, patchesDir)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to apply patches: %w", err)
+		return nil, "", "", "", fmt.Errorf("failed to apply patches: %w", err)
 	}
 
-	return gitSrc, buildVersion, releaseVersion, nil
+	return gitSrc, buildVersion, releaseVersion, commit, nil
 }
 
 // Build compiles Memos binaries, creates release archives, and generates checksums.
@@ -119,7 +114,7 @@ func (m *MemosBuilds) Build(
 	version string,
 	platforms string,
 ) (*dagger.Directory, error) {
-	out, _, _, _, err := m.buildInternal(ctx, source, version, platforms)
+	out, _, _, _, _, err := m.buildInternal(ctx, source, version, platforms)
 	if err != nil {
 		return nil, err
 	}
@@ -127,40 +122,40 @@ func (m *MemosBuilds) Build(
 }
 
 // buildInternal is the core build logic.
-// It returns artifacts, source, build version, release version, and an error.
+// It returns artifacts, source, build version, release version, source commit, and an error.
 func (m *MemosBuilds) buildInternal(
 	ctx context.Context,
 	source *dagger.Directory,
 	version string,
 	platforms string,
-) (*dagger.Directory, *dagger.Directory, string, string, error) {
+) (*dagger.Directory, *dagger.Directory, string, string, string, error) {
 	if version == "" {
 		version = "nightly"
 	}
 
 	targets, err := filterTargets(platforms)
 	if err != nil {
-		return nil, nil, "", "", fmt.Errorf("invalid platforms: %w", err)
+		return nil, nil, "", "", "", fmt.Errorf("invalid platforms: %w", err)
 	}
 
-	gitSrc, buildVersion, releaseVersion, err := m.prepareSource(ctx, source, version)
+	gitSrc, buildVersion, releaseVersion, commit, err := m.prepareSource(ctx, source, version)
 	if err != nil {
-		return nil, nil, "", "", err
+		return nil, nil, "", "", "", err
 	}
 
 	gitSrc = m.generateProto(gitSrc)
 	frontendDist := m.buildFrontend(gitSrc)
 
-	binaries, err := m.buildBackend(ctx, gitSrc, frontendDist, buildVersion, targets)
+	binaries, err := m.buildBackend(ctx, gitSrc, frontendDist, buildVersion, commit, targets)
 	if err != nil {
-		return nil, nil, "", "", err
+		return nil, nil, "", "", "", err
 	}
 
 	archives := m.createReleaseArchives(binaries, buildVersion, targets)
 	checksums := m.generateChecksums(archives, buildVersion)
 	out := archives.WithFile(fmt.Sprintf(buildconsts.CHECKSUM_FILE_FORMAT, buildVersion), checksums)
 
-	return out, gitSrc, buildVersion, releaseVersion, nil
+	return out, gitSrc, buildVersion, releaseVersion, commit, nil
 }
 
 // Publish builds release artifacts and optionally publishes containers.
@@ -173,13 +168,13 @@ func (m *MemosBuilds) Publish(
 	ghcrUser string,
 	ghcrPassword *dagger.Secret,
 ) (*dagger.Directory, error) {
-	out, gitSrc, buildVersion, releaseVersion, err := m.buildInternal(ctx, source, version, "")
+	out, gitSrc, buildVersion, releaseVersion, commit, err := m.buildInternal(ctx, source, version, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to build: %w", err)
 	}
 
 	if (dockerHubUser != "" && dockerHubPassword != nil) || (ghcrUser != "" && ghcrPassword != nil) {
-		_, err := m.publishContainers(ctx, source, gitSrc, buildVersion, releaseVersion, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
+		_, err := m.publishContainers(ctx, source, gitSrc, buildVersion, releaseVersion, commit, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
 		if err != nil {
 			return nil, fmt.Errorf("failed to publish containers: %w", err)
 		}
@@ -209,12 +204,12 @@ func (m *MemosBuilds) BuildContainers(
 		return nil, fmt.Errorf("no Linux platforms in the selected targets")
 	}
 
-	gitSrc, buildVersion, _, err := m.prepareSource(ctx, source, version)
+	gitSrc, buildVersion, _, commit, err := m.prepareSource(ctx, source, version)
 	if err != nil {
 		return nil, err
 	}
 
-	containers, err := m.buildContainers(ctx, source, gitSrc, buildVersion, containerTargets)
+	containers, err := m.buildContainers(ctx, source, gitSrc, buildVersion, commit, containerTargets)
 	if err != nil {
 		return nil, err
 	}

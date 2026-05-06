@@ -48,6 +48,7 @@ func (m *MemosBuilds) buildBackend(
 	source *dagger.Directory,
 	frontendDist *dagger.Directory,
 	version string,
+	commit string,
 	targets []BuildMatrix,
 ) (*dagger.Directory, error) {
 	maxConcurrent := max(runtime.NumCPU()-1, 1)
@@ -66,6 +67,9 @@ func (m *MemosBuilds) buildBackend(
 	if err == nil {
 		// https://pkg.go.dev/cmd/link
 		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.VERSION_IMPORT_PATH, v.String()))
+	}
+	if short := shortCommitHash(commit); short != "" {
+		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.COMMIT_IMPORT_PATH, short))
 	}
 
 	buildOne := func(c *dagger.Container, t BuildMatrix) *dagger.File {
