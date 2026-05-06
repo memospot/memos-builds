@@ -8,11 +8,15 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 )
 
-var versionVarPattern = regexp.MustCompile(`var Version = "([^"]+)"`)
+var (
+	versionVarPattern     = regexp.MustCompile(`var Version = "([^"]+)"`)
+	nightlyVersionPattern = regexp.MustCompile(`^nightly-\d{8}-[0-9a-fA-F]{7}$`)
+)
 
 type BuildMatrix struct {
 	OS        string
@@ -222,31 +226,47 @@ func (m *MemosBuilds) extractVersionFromSource(ctx context.Context, src *dagger.
 	return versionFromFile
 }
 
-// resolveVersion determines the git source and version string from user input.
+// nightlyReleaseTag returns the release/container tag for nightly inputs.
+func nightlyReleaseTag(version string, shortSHA string) (string, bool) {
+	if version == "" || version == "nightly" {
+		if shortSHA == "" {
+			shortSHA = "unknown"
+		}
+		return fmt.Sprintf("nightly-%s-%s", time.Now().UTC().Format("20060102"), shortSHA), true
+	}
+
+	if nightlyVersionPattern.MatchString(version) {
+		return version, true
+	}
+
+	return "", false
+}
+
+// resolveVersion determines the git source and build/release versions from user input.
 //
 // Handles semver tags, release branches, commit hashes, or defaults to nightly.
 func (m *MemosBuilds) resolveVersion(
 	ctx context.Context,
 	version string,
-) (gitSrc *dagger.Directory, resolvedVersion string, err error) {
+) (gitSrc *dagger.Directory, buildVersion string, releaseVersion string, err error) {
 	git := dag.Git("https://github.com/usememos/memos.git")
 	treeOpts := dagger.GitRefTreeOpts{Depth: 1}
 
 	if v, err := semver.NewVersion(version); err == nil {
 		gitSrc = git.Tag("v" + v.String()).Tree(treeOpts)
-		return gitSrc, "v" + v.String(), nil
+		return gitSrc, "v" + v.String(), "v" + v.String(), nil
 	}
 
 	if after, ok := strings.CutPrefix(version, "release/"); ok {
 		ver := strings.TrimPrefix(after, "v")
 		gitSrc = git.Ref("heads/release/" + ver).Tree(treeOpts)
-		return gitSrc, "v" + ver, nil
+		return gitSrc, "v" + ver, "v" + ver, nil
 	}
 
 	if commitHashPattern.MatchString(version) {
 		gitSrc = git.Commit(version).Tree(treeOpts)
 		srcVersion := m.extractVersionFromSource(ctx, gitSrc)
-		return gitSrc, srcVersion, nil
+		return gitSrc, srcVersion, srcVersion, nil
 	}
 
 	// Use nightly as default version.
@@ -254,6 +274,10 @@ func (m *MemosBuilds) resolveVersion(
 
 	baseVersion := m.extractVersionFromSource(ctx, gitSrc)
 	nightlyVer := m.generateNightlyVersion(ctx, git, baseVersion)
+	releaseVersion, ok := nightlyReleaseTag(version, nightlyVer.Metadata())
+	if !ok {
+		releaseVersion, _ = nightlyReleaseTag("nightly", nightlyVer.Metadata())
+	}
 
-	return gitSrc, "v" + nightlyVer.String(), nil
+	return gitSrc, "v" + nightlyVer.String(), releaseVersion, nil
 }

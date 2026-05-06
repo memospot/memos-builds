@@ -51,14 +51,19 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${{ inputs.version }}" == v* ]]; then
+          if [[ "${{ inputs.version }}" == v* || "${{ inputs.version }}" =~ ^nightly-[0-9]{8}-[0-9a-fA-F]{7}$ ]]; then
             VERSION="${{ inputs.version }}"
           elif [[ "${{ github.ref_name }}" == v* ]]; then
             VERSION="${{ github.ref_name }}"
           else
-            VERSION="nightly-$(date +%Y%m%d)"
+            MEMOS_SHA="$(git ls-remote https://github.com/usememos/memos.git refs/heads/main | cut -c1-7)"
+            if [[ -z "$MEMOS_SHA" ]]; then
+              echo "Failed to resolve usememos/memos main branch SHA" >&2
+              exit 1
+            fi
+            VERSION="nightly-$(date -u +%Y%m%d)-${MEMOS_SHA}"
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Determine publish args
         id: publish

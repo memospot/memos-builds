@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"dagger/memos-builds/buildconsts"
 	"dagger/memos-builds/internal/dagger"
@@ -107,17 +106,19 @@ func (m *MemosBuilds) ghcrNightlyTags(version string) []string {
 		return []string{"nightly"}
 	}
 
-	shortSHA := v.Metadata()
-	if shortSHA == "" {
-		shortSHA = "unknown"
-	}
-
-	date := time.Now().UTC().Format("20060102")
-	nightlyWithDate := fmt.Sprintf("nightly-%s-%s", date, shortSHA)
-	return []string{nightlyWithDate, "nightly"}
+	tag, _ := nightlyReleaseTag("nightly", v.Metadata())
+	return []string{tag}
 }
 
 func (m *MemosBuilds) tagsForRegistry(version string, registry string) []string {
+	if nightlyTag, ok := nightlyReleaseTag(version, ""); ok {
+		if strings.HasPrefix(registry, "ghcr.io") {
+			return []string{nightlyTag}
+		}
+
+		return []string{"nightly"}
+	}
+
 	v, err := semver.NewVersion(version)
 	if err != nil {
 		return []string{"latest"}
@@ -141,7 +142,8 @@ func (m *MemosBuilds) publishContainers(
 	ctx context.Context,
 	source *dagger.Directory,
 	gitSrc *dagger.Directory,
-	version string,
+	buildVersion string,
+	releaseVersion string,
 	dockerHubUser string,
 	dockerHubPassword *dagger.Secret,
 	ghcrUser string,
@@ -153,7 +155,7 @@ func (m *MemosBuilds) publishContainers(
 		return "No Linux targets configured, skipping container publish", nil
 	}
 
-	platformVariants, err := m.buildContainers(ctx, source, gitSrc, version, linuxTargets)
+	platformVariants, err := m.buildContainers(ctx, source, gitSrc, buildVersion, linuxTargets)
 	if err != nil {
 		return "", fmt.Errorf("failed to build containers: %w", err)
 	}
@@ -182,7 +184,7 @@ func (m *MemosBuilds) publishContainers(
 	for _, target := range publishTargets {
 		if target.user != "" && target.password != nil {
 			address := strings.Split(target.registry, "/")[0]
-			tags := m.tagsForRegistry(version, target.registry)
+			tags := m.tagsForRegistry(releaseVersion, target.registry)
 			publisher := platformVariants[0].
 				WithRegistryAuth(address, target.user, target.password)
 			for _, tag := range tags {
