@@ -26,6 +26,9 @@ jobs:
           older-than: 7 days
           delete-untagged: true
 
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - name: Prune old nightly releases
         run: |
           cutoff_days=7
@@ -54,6 +57,7 @@ jobs:
           duration=$((end_time - start_time))
 
           {
+            echo "---"
             echo "<h1>🧹 Nightly Release Cleanup Summary</h1>"
             echo "<h2>Overview</h2>"
             echo "<table><tr><th>Metric</th><th>Value</th></tr>"
@@ -78,6 +82,7 @@ jobs:
               done
               echo "</table>"
             fi
+            echo "---"
           } >> "$GITHUB_STEP_SUMMARY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
