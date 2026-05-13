@@ -30,11 +30,54 @@ jobs:
         run: |
           cutoff_days=7
           cutoff=$(date -d "-${cutoff_days} days" -Iseconds | sed 's/+.*//')
-          gh release list --limit 100 --json tagName,createdAt \
-            --jq --arg cutoff "$cutoff" '.[] | select(.tagName | startswith("nightly-")) | select(.createdAt < $cutoff) | .tagName' \
-            | while read -r tag; do
-              echo "Deleting release: $tag"
-              gh release delete "$tag" --yes
-            done
+
+          start_time=$(date +%s)
+
+          readarray -t tags < <(gh release list --limit 100 --json tagName,createdAt \
+            --jq '.[] | select(.tagName | startswith("nightly-")) | select(.createdAt < "'"$cutoff"'") | .tagName')
+
+          total=${#tags[@]}
+          deleted=0
+          declare -A tag_status
+
+          for tag in "${tags[@]}"; do
+            echo "Deleting release: $tag"
+            if gh release delete "$tag" --yes; then
+              deleted=$((deleted + 1))
+              tag_status["$tag"]="✅ Deleted"
+            else
+              tag_status["$tag"]="❌ Failed"
+            fi
+          done
+
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+
+          {
+            echo "<h1>🧹 Nightly Release Cleanup Summary</h1>"
+            echo "<h2>Overview</h2>"
+            echo "<table><tr><th>Metric</th><th>Value</th></tr>"
+            echo "<tr><td>Releases aged &gt;= ${cutoff_days} days</td><td>${total}</td></tr>"
+            echo "<tr><td>Releases deleted</td><td>${deleted}</td></tr>"
+            echo "<tr><td>Duration</td><td>${duration}s</td></tr>"
+            echo "</table>"
+            echo "<details><summary>Configuration</summary>"
+            echo "<table><tr><th>Key</th><th>Value</th></tr>"
+            echo "<tr><td>cutoff-days</td><td>${cutoff_days}</td></tr>"
+            echo "<tr><td>cutoff</td><td>${cutoff}</td></tr>"
+            echo "<tr><td>limit</td><td>100</td></tr>"
+            echo "<tr><td>tag-pattern</td><td>nightly-*</td></tr>"
+            echo "</table></details>"
+            echo "<h2>Results</h2>"
+            if [ "${total}" -eq 0 ]; then
+              echo "<p>No old nightly releases found.</p>"
+            else
+              echo "<table><tr><th>Tag</th><th>Status</th></tr>"
+              for tag in "${tags[@]}"; do
+                echo "<tr><td>${tag}</td><td>${tag_status[$tag]}</td></tr>"
+              done
+              echo "</table>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
