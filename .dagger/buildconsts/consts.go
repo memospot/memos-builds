@@ -37,7 +37,7 @@ const VERSION_IMPORT_PATH string = "github.com/usememos/memos/internal/version.V
 const COMMIT_IMPORT_PATH string = "github.com/usememos/memos/internal/version.Commit"
 
 // Passed to `go build` as the entrypoint of the application.
-const APP_ENTRYPOINT string = "./cmd/memos/main.go"
+const APP_ENTRYPOINT string = "./cmd/memos"
 
 // String format for the checksum file.
 const CHECKSUM_FILE_FORMAT string = "memos-%s_SHA256SUMS.txt"
