@@ -45,7 +45,7 @@ jobs:
 
           for tag in "${tags[@]}"; do
             echo "Deleting release: $tag"
-            if gh release delete "$tag" --yes; then
+            if gh release delete "$tag" --yes --cleanup-tag; then
               deleted=$((deleted + 1))
               tag_status["$tag"]="✅ Deleted"
             else
