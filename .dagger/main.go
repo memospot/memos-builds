@@ -57,16 +57,16 @@ var TARGETS []BuildMatrix = []BuildMatrix{
 }
 
 var commitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
-var shortCommitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
+var shortCommitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{9}$`)
 
 type MemosBuilds struct{}
 
 func shortCommitHash(commit string) string {
-	if len(commit) < 7 {
+	if len(commit) < 9 {
 		return ""
 	}
 
-	short := commit[:7]
+	short := commit[:9]
 	if !shortCommitHashPattern.MatchString(short) {
 		return ""
 	}

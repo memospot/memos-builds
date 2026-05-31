@@ -15,7 +15,7 @@ import (
 
 var (
 	versionVarPattern     = regexp.MustCompile(`var Version = "([^"]+)"`)
-	nightlyVersionPattern = regexp.MustCompile(`^nightly-\d{8}-[0-9a-fA-F]{7}$`)
+	nightlyVersionPattern = regexp.MustCompile(`^nightly-\d{8}-[0-9a-fA-F]{9}$`)
 )
 
 type BuildMatrix struct {
