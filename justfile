@@ -63,26 +63,49 @@ dagger-rm: dagger-stop
         echo "No Dagger engine containers to remove."
     fi
 
-# Clean Dagger cache and Docker build cache
-[confirm('This will aggressively prune ALL Docker resources (not just Dagger).
-This may delete data from other projects.
+# Clean Dagger engine containers, images, volumes, and build cache
+[confirm('This will stop and remove Dagger engine containers, images, volumes, and build cache.
 Are you sure?')]
 dagger-clean:
     #!/usr/bin/env bash
     echo "Pruning Dagger cache…"
     dagger core engine local-cache prune || true
-    echo "Pruning Docker build cache…"
-    docker builder prune -a -f || true
-    echo "Pruning Docker images…"
-    docker image prune -a -f || true
-    echo "Pruning Docker volumes…"
-    docker volume prune -a -f || true
-    echo "Pruning Docker system…"
-    docker system prune -a -f || true
-    echo "Dagger and Docker cleanup complete."
 
-# Regenerate Dagger files after SDK changes
-dagger-dev:
+    echo "Stopping Dagger engine containers…"
+    containers=$(docker ps -a --filter "name=dagger" --format '{{ DOCKER_NAMES_FMT }}' 2>/dev/null || true)
+    if [ -n "$containers" ]; then
+        echo "$containers" | while read -r ct; do
+            echo "  Stopping ${ct}…"
+            docker stop "$ct" >/dev/null 2>&1 || true
+            docker rm "$ct" >/dev/null 2>&1 || true
+        done
+    fi
+
+    echo "Removing Dagger/memos images…"
+    images=$(docker images --filter "reference=*dagger*" --filter "reference=*memos*" --format '{{ "{{.Repository}}:{{.Tag}}" }}' 2>/dev/null || true)
+    if [ -n "$images" ]; then
+        echo "$images" | while read -r img; do
+            echo "  Removing ${img}…"
+            docker rmi "$img" >/dev/null 2>&1 || true
+        done
+    fi
+
+    echo "Removing Dagger/memos volumes…"
+    volumes=$(docker volume ls -q --filter "name=dagger" 2>/dev/null || true)
+    if [ -n "$volumes" ]; then
+        echo "$volumes" | while read -r vol; do
+            echo "  Removing volume ${vol}…"
+            docker volume rm "$vol" >/dev/null 2>&1 || true
+        done
+    fi
+
+    echo "Pruning Docker build cache…"
+    docker builder prune -f || true
+
+    echo "Dagger cleanup complete."
+
+# Regenerate Dagger SDK bindings after public function signature changes
+dagger-codegen:
     dagger develop --compat=skip && rm .dagger/.gitignore || true
 
 [doc('
@@ -115,58 +138,36 @@ lint:
 test:
     go test -v ./.dagger/.
 
-validate: fmt lint test
+validate: lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version) && git diff --exit-code go.mod
     go work sync && git diff --exit-code go.work
 
-update:
+# Update Dagger SDK and Go dependencies
+update-deps:
     dagger develop && rm .dagger/.gitignore || true
     cd .dagger && go mod tidy
     go work sync
 
 tidy GO_VERSION:
     [[ -n "{{ GO_VERSION }}" ]] || { echo "{{ RED }}ERROR:{{ NORMAL }} Please provide a GO_VERSION."; exit 1; }
-    echo "{{ GO_VERSION }}" > .go-version
     cd .dagger && go mod tidy -go={{ GO_VERSION }}
     go work edit -go={{ GO_VERSION }}
     go work sync
+    echo "{{ GO_VERSION }}" > .go-version
 
 [doc('
-Build Memos containers for the specified version and platforms.
+Build Memos containers, load them into Docker, and tag them.
     - VERSION: v*.*.*, nightly, or commit hash.
     - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".
-
-** This will also start all containers in demo mode. Intended for debugging multi-platform builds. **
 ')]
 build-docker VERSION='nightly' PLATFORMS='':
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    # Version to commit mapping for known versions
-    declare -A known_versions=(
-        ["0.25.2"]="bfad0708e2c8062664e852f6f18223fd943ad5f5"
-        ["0.25.3"]="07a030ddfdbe5ac8a22c235be7b5771cc01f8498"
-        ["0.26.0"]="43b5a51ec73214d3c56aa48c82783ccfeec1a127"
-        ["0.26.1"]="b623162d37f87f9f174d8f6cd8e54c7034cfc789"
-    )
-
     version="{{ VERSION }}"
-    original_version="$version"
-
-    # Resolve version to commit if it's a known version
-    if [[ "$version" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-        ver="${BASH_REMATCH[1]}"
-        if [[ -n "${known_versions[$ver]:-}" ]]; then
-            commit="${known_versions[$ver]}"
-            echo -e "{{ YELLOW }}Using known commit hash ${commit} for version ${ver}{{ NORMAL }}"
-            version="$commit"
-        fi
-    fi
 
     # Determine platforms
     platforms=$( [[ -n "{{ PLATFORMS }}" ]] && echo "{{ PLATFORMS }}" || echo "{{ DEFAULT_BUILD_TARGET }}" )
 
-    echo -e "{{ CYAN }}Building containers for version ${original_version} (${version})…{{ NORMAL }}"
+    echo -e "{{ CYAN }}Building containers for version ${version}…{{ NORMAL }}"
 
     # Clean old build directory
     rm -rf ./dist/container
@@ -192,11 +193,6 @@ build-docker VERSION='nightly' PLATFORMS='':
     fi
 
     echo -e "{{ GREEN }}Found ${#tarballs[@]} container tarball(s){{ NORMAL }}"
-
-    # Arrays to track containers
-    declare -a container_names=()
-    declare -a container_ports=()
-    declare -a container_platforms=()
 
     for tarball in "${tarballs[@]}"; do
         filename=$(basename "$tarball")
@@ -226,8 +222,8 @@ build-docker VERSION='nightly' PLATFORMS='':
 
         echo -e "{{ GREEN }}Loaded image: ${image_id}{{ NORMAL }}"
 
-        # Create tag and container name
-        container_name="memos-${original_version}-${platform_dashed}"
+        # Create tag
+        container_name="memos-${version}-${platform_dashed}"
         image_tag="${container_name}:local"
 
         # Tag the image
@@ -235,14 +231,45 @@ build-docker VERSION='nightly' PLATFORMS='':
             echo -e "{{ YELLOW }}Warning: Failed to tag image (may already be tagged){{ NORMAL }}"
         fi
 
+        echo -e "{{ GREEN }}Tagged: ${image_tag}{{ NORMAL }}"
+    done
+
+    echo -e "\n{{ GREEN }}✓ Build and load complete!{{ NORMAL }}"
+    echo -e "{{ YELLOW }}Run 'just run-demos ${version}' to start containers in demo mode.{{ NORMAL }}"
+
+[doc('
+Start loaded Memos container images in demo mode.
+    - VERSION: must match the version used in build-docker (default: nightly).
+')]
+run-demos VERSION='nightly':
+    #!/usr/bin/env bash
+    version="{{ VERSION }}"
+
+    # Find images matching the version
+    mapfile -t image_list < <(docker images --format '{{ "{{.Repository}}:{{.Tag}}" }}' | grep "^memos-${version}-" | grep ":local$" || true)
+
+    if [ ${#image_list[@]} -eq 0 ]; then
+        echo -e "{{ RED }}ERROR: No images found matching memos-${version}-*:local{{ NORMAL }}"
+        echo -e "{{ YELLOW }}Run 'just build-docker ${version}' first.{{ NORMAL }}"
+        exit 1
+    fi
+
+    declare -a container_names=()
+    declare -a container_ports=()
+    declare -a container_platforms=()
+
+    for image_tag in "${image_list[@]}"; do
+        container_name="${image_tag%:local}"
+        platform_dashed="${container_name#memos-${version}-}"
+
+        echo -e "\n{{ CYAN }}Starting ${container_name}…{{ NORMAL }}"
+
         # Cleanup old container with same name
-        echo -e "{{ BLUE }}Cleaning up old container ${container_name}…{{ NORMAL }}"
         docker stop "$container_name" 2>/dev/null || true
         docker rm -f "$container_name" 2>/dev/null || true
 
         # Get platform info from image
-        echo -e "{{ BLUE }}Inspecting image platform…{{ NORMAL }}"
-        inspect_output=$(docker inspect "$image_tag" 2>&1) || inspect_output=$(docker inspect "$image_id" 2>&1)
+        inspect_output=$(docker inspect "$image_tag" 2>&1)
 
         img_os=$(echo "$inspect_output" | grep -o '"Os": "[^"]*"' | head -1 | cut -d'"' -f4) || img_os=""
         img_arch=$(echo "$inspect_output" | grep -o '"Architecture": "[^"]*"' | head -1 | cut -d'"' -f4) || img_arch=""
@@ -256,7 +283,6 @@ build-docker VERSION='nightly' PLATFORMS='':
         echo -e "{{ CYAN }}Platform: ${docker_platform}{{ NORMAL }}"
 
         # Run the container
-        echo -e "{{ BLUE }}Starting container ${container_name}…{{ NORMAL }}"
         if ! docker run \
             --rm \
             --detach \
@@ -285,11 +311,10 @@ build-docker VERSION='nightly' PLATFORMS='':
         # Get the mapped port
         port_output=$(docker port "$container_name" 5230 2>/dev/null || true)
         if [ -z "$port_output" ]; then
-            echo -e "{{ YELLOW }}Warning: No public port found for ${container_name} (init might be slow){{ NORMAL }}"
+            echo -e "{{ YELLOW }}Warning: No public port for ${container_name}{{ NORMAL }}"
             continue
         fi
 
-        # Extract port number (format: 0.0.0.0:PORT or :::PORT)
         port=$(echo "$port_output" | grep -oE '[0-9]+$' | head -1)
 
         if [ -z "$port" ]; then
@@ -309,7 +334,7 @@ build-docker VERSION='nightly' PLATFORMS='':
     docker ps --filter "name=memos-"
 
     # Final report
-    echo -e "\n{{ BOLD }}Build Results:{{ NORMAL }}"
+    echo -e "\n{{ BOLD }}Demo Results:{{ NORMAL }}"
     if [ ${#container_names[@]} -eq 0 ]; then
         echo -e "{{ RED }}No containers are running.{{ NORMAL }}"
         exit 1
@@ -319,13 +344,13 @@ build-docker VERSION='nightly' PLATFORMS='':
         echo -e "  {{ GREEN }}${container_names[$i]} {{ CYAN }}→ http://localhost:${container_ports[$i]}{{ NORMAL }}"
     done
 
-    echo -e "\n{{ GREEN }}✓ Build and load complete!{{ NORMAL }}"
+    echo -e "\n{{ GREEN }}✓ All demos started!{{ NORMAL }}"
 
 pull-nightly:
     #!/usr/bin/env bash
     docker stop memos-nightly 2>/dev/null || true
     docker rm memos-nightly 2>/dev/null || true
-    docker run \
+    if ! docker run \
         --rm \
         --detach \
         --init \
@@ -334,9 +359,12 @@ pull-nightly:
         --env "MEMOS_DEMO=true" \
         --env "TZ=America/Sao_Paulo" \
         --platform "{{ DEFAULT_BUILD_TARGET }}" \
-        "ghcr.io/memospot/memos-builds:nightly"
+        "ghcr.io/memospot/memos-builds:nightly"; then
+        echo -e "{{ RED }}ERROR: Failed to start memos-nightly container{{ NORMAL }}"
+        exit 1
+    fi
     port=$(docker port memos-nightly 5230 | cut -d: -f2)
-    echo -e "{{ GREEN }}Container memos-nightly running listening at http://localhost:${port}{{ NORMAL }}"
+    echo -e "{{ GREEN }}Container memos-nightly running, listening at http://localhost:${port}{{ NORMAL }}"
 
 # Clean built Docker containers and images
 [confirm('This will stop and remove all Docker containers and images starting with "memos-".
@@ -393,7 +421,6 @@ git-reset:
     git checkout main
     git reset --hard origin/main
     git clean -fdx
-    git checkout -- .
     git checkout -
 
 # Remove a git tag and push it again (internal use)
@@ -408,7 +435,7 @@ git-retag TAG:
     git push origin $TAG
 
 [doc('Tag and push to GitHub, triggering the release workflow.')]
-publish TAG: validate
+publish TAG: fmt validate
     #!/usr/bin/env bash
     TAG="v{{ trim_start_matches(TAG, 'v') }}"
     just git-retag "$TAG"
@@ -446,4 +473,6 @@ update-captures PORT='':
         ${ARGS[@]} \
         --local-storage="memos-theme=paper" \
         --output=assets/capture_light.webp \
-        http://localhost:${port}/
+        http://localhost:${port}/ &
+
+    wait

@@ -16,6 +16,15 @@ import (
 var (
 	versionVarPattern     = regexp.MustCompile(`var Version = "([^"]+)"`)
 	nightlyVersionPattern = regexp.MustCompile(`^nightly-\d{8}-[0-9a-fA-F]{9}$`)
+
+	// knownVersionCommits maps versions to specific commit hashes.
+	// Used to address upstream inconsistencies in tagged releases.
+	knownVersionCommits = map[string]string{
+		"0.25.2": "bfad0708e2c8062664e852f6f18223fd943ad5f5",
+		"0.25.3": "07a030ddfdbe5ac8a22c235be7b5771cc01f8498",
+		"0.26.0": "43b5a51ec73214d3c56aa48c82783ccfeec1a127",
+		"0.26.1": "b623162d37f87f9f174d8f6cd8e54c7034cfc789",
+	}
 )
 
 type BuildMatrix struct {
@@ -267,10 +276,17 @@ func (m *MemosBuilds) resolveVersion(
 	treeOpts := dagger.GitRefTreeOpts{Depth: 1}
 
 	if v, err := semver.NewVersion(version); err == nil {
-		ref := git.Tag("v" + v.String())
+		verStr := v.String()
+		// Check if this version has a known commit hash to use instead of the tag
+		if commitHash, ok := knownVersionCommits[verStr]; ok {
+			gitSrc = git.Commit(commitHash).Tree(treeOpts)
+			srcVersion := m.extractVersionFromSource(ctx, gitSrc)
+			return gitSrc, srcVersion, "v" + verStr, commitHash, nil
+		}
+		ref := git.Tag("v" + verStr)
 		commit, _ = ref.Commit(ctx)
 		gitSrc = ref.Tree(treeOpts)
-		return gitSrc, "v" + v.String(), "v" + v.String(), commit, nil
+		return gitSrc, "v" + verStr, "v" + verStr, commit, nil
 	}
 
 	if after, ok := strings.CutPrefix(version, "release/"); ok {
