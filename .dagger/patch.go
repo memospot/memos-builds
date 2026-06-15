@@ -17,20 +17,11 @@ var sqliteLibcMap = map[string]string{
 	"v1.37.0": "v1.62.1", // Memos v0.24.3
 	"v1.37.1": "v1.65.8", // v0.24.4-v0.25.0
 	"v1.38.2": "v1.66.3", // v0.25.1-v0.26.2
-	"v1.39.0": "v1.66.3",
-	"v1.39.1": "v1.66.10",
-	"v1.40.0": "v1.66.10",
-	"v1.40.1": "v1.66.10",
-	"v1.42.2": "v1.66.10",
-	"v1.43.0": "v1.66.10",
-	"v1.44.0": "v1.67.4",
-	"v1.44.1": "v1.67.6",
-	"v1.44.2": "v1.67.6",
-	"v1.44.3": "v1.67.6",
-	"v1.45.0": "v1.67.6",
-	"v1.46.0": "v1.67.6",
 	"v1.46.1": "v1.67.6", // v0.26.3+
-	"v1.46.2": "v1.70.0",
+	"v1.50.0": "v1.72.0", // v0.29.0+
+	"v1.50.1": "v1.72.3",
+	"v1.51.0": "v1.72.3",
+	"v1.52.0": "v1.72.3",
 }
 
 // Regex patterns for parsing go.mod
@@ -70,7 +61,7 @@ func getLibcVersionForSqlite(ctx context.Context, sqliteVersion string) (string,
 
 	matches := reLibcUpstream.FindStringSubmatch(upstreamContents)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("sqlite %s: could not extract libc version from upstream go.mod. If this persists, something big has changed and this project will need intervention", sqliteVersion)
+		return "", fmt.Errorf("sqlite %s: could not extract libc version from upstream go.mod. If this persists, something big has changed, and developer intervention is required", sqliteVersion)
 	}
 
 	return matches[1], nil
