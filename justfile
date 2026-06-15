@@ -110,6 +110,7 @@ lint:
     #!/usr/bin/env bash
     just --unstable --fmt --check
     golangci-lint run ./.dagger/.
+    shellcheck -s ash container/entrypoint.sh
 
 test:
     go test -v ./.dagger/.
@@ -117,7 +118,6 @@ test:
 validate: fmt lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version) && git diff --exit-code go.mod
     go work sync && git diff --exit-code go.work
-    pre-commit
 
 update:
     dagger develop && rm .dagger/.gitignore || true
