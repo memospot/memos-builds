@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## ⚠️ Important: Is this the right place?
+        ## ⚠ Important: Is this the right place?
 
         This repository provides **alternate builds** for [usememos/memos](https://github.com/usememos/memos).
 
@@ -27,6 +27,12 @@ body:
         ---
 
         Before submitting, please search [existing issues](https://github.com/memospot/memos-builds/issues) to avoid duplicates.
+
+        > [!IMPORTANT]
+        > Do not dump AI-generated walls of text here. They are noisy, often not
+        > nearly as helpful as they seem, and are extra time-consuming to review.
+        >
+        > If you're using an AI assistant, be kind enough to summarize the issue in your own words.
 
   - type: dropdown
     attributes:
@@ -53,14 +59,15 @@ body:
       description: What platform are you running on?
       options:
         - linux/amd64
+        - linux/386
         - linux/arm64
         - linux/arm/v7
         - linux/arm/v6
         - linux/arm/v5
-        - linux/386
         - darwin/amd64 (macOS Intel)
         - darwin/arm64 (macOS Apple Silicon)
         - windows/amd64
+        - windows/386
         - windows/arm64
         - Android (Termux)
         - Other (specify in description)
@@ -83,7 +90,7 @@ body:
         2. Run with '...'
         3. See error
     validations:
-      required: true
+      required: false
 
   - type: textarea
     attributes:
