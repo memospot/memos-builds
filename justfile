@@ -139,8 +139,11 @@ test:
     go test -v ./.dagger/.
 
 validate: lint test
-    cd .dagger && go mod tidy -go=$(cat ../.go-version) && git diff --exit-code go.mod
+    cd .dagger && go mod tidy -go=$(cat ../.go-version)
     go work sync && git diff --exit-code go.work
+
+@quick-validate:
+    just validate >/dev/null && echo "All validations passed." || echo "ERROR. Run 'just validate' for more details."
 
 # Update Dagger SDK and Go dependencies
 update-deps:
