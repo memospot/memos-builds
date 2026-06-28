@@ -1,15 +1,19 @@
 # Memos Builds
 
+[![CodeQL](https://github.com/memospot/memos-builds/actions/workflows/audit-codeql.yml/badge.svg)](https://github.com/memospot/memos-builds/actions/workflows/audit-codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/memospot/memos-builds/badge)](https://scorecard.dev/viewer/?uri=github.com/memospot/memos-builds)
+[![CI](https://github.com/memospot/memos-builds/actions/workflows/ci.yml/badge.svg)](https://github.com/memospot/memos-builds/actions/workflows/ci.yml)
+[![Build](https://github.com/memospot/memos-builds/actions/workflows/dagger.yml/badge.svg)](https://github.com/memospot/memos-builds/actions/workflows/dagger.yml)
+[![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
+
 Multiplatform builds for [Memos](https://github.com/usememos/memos), a beautiful, lightweight,
 and privacy-first note-taking service.
 
 Some of these builds are used by [Memospot](https://github.com/memospot/memospot),
 a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
-[Nightly](https://github.com/memospot/memos-builds/releases/tag/nightly) and
+[Nightly](https://github.com/memospot/memos-builds/releases?q=nightly) and
 [Stable](https://github.com/memospot/memos-builds/releases/latest) builds are available.
-
-[![Downloads](https://img.shields.io/github/downloads/memospot/memos-builds/total?logo=github)](https://github.com/memospot/memos-builds/releases) [![GitHub Stars](https://img.shields.io/github/stars/memospot/memos-builds?logo=github)](https://github.com/memospot/memos-builds)
 
 <div align="center">
 
@@ -25,7 +29,7 @@ a self-contained desktop app for Memos, available on macOS, Linux and Windows.
       />
       <img
         alt="demo"
-        src="https://www.usememos.com/demo.png"
+        src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/demo.png"
       />
     </picture>
   </a>
@@ -34,9 +38,7 @@ a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
 </div>
 
-## Docker
-
-This project provides optimized Memos images for the following platforms:
+## Docker platforms
 
 | amd64          | arm32        | other         |
 | -------------- | ------------ | ------------- |
@@ -46,16 +48,6 @@ This project provides optimized Memos images for the following platforms:
 |                | linux/arm64  | linux/s390x   |
 
 To use an image for a specific CPU architecture, add `--platform=<platform>` to the `docker` command line, before the image specifier. Read more at [Platform variants](#platform-variants).
-
-> [!TIP]
-> The optimizations include build flags and smaller images.
->
-> (v0.26.0+) You can inject an env file as `$MEMOS_DATA/memos.env`.
-> This file has precedence over environment variables passed to the container.
-
-> [!NOTE]
-> In advanced setups, you can mount the database DSN with [Docker Secrets](https://docs.docker.com/build/building/secrets/#secret-mounts).
-> E.g., Pass in the secret id `MEMOS_DSN` to the container, and it will be loaded automatically from the default Docker secret mount `/run/secrets/MEMOS_DSN`.
 
 ### Quick start
 
@@ -79,9 +71,6 @@ docker run --detach --name memos-nightly --publish 5231:5230 \
 docker run --detach --rm --name memos-throwaway --publish 5232:5230 \
   --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:nightly
 ```
-
-> [!IMPORTANT]
-> Starting from v0.26.0, `MEMOS_MODE` is now retired. Database is always in `prod` mode unless `MEMOS_DEMO=true` is set.
 
 #### Keeping containers up to date
 
@@ -119,14 +108,25 @@ docker run --detach --name memos --publish 5230:5230 \
 
 - Image packages are auto-upgraded at build time.
 
-- Nightly images are built daily at 05:25 UTC.
+- Nightly images are built daily at 07:25 UTC.
 
-- Images are published at the same time to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
+- Images are published to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
 | Platform  | Image              |
 | --------- | ------------------ |
-| arm/v5    | busybox:1.37-glibc |
-| All other | alpine:3.23        |
+| arm/v5    | busybox:1.38-glibc |
+| All other | alpine:3.24        |
+
+> [!TIP]
+>
+> Starting from v0.26.0+, you can inject an env file as `$MEMOS_DATA/memos.env`.
+>
+> This file has precedence over environment variables passed to the container.
+
+> [!NOTE]
+> In advanced setups, you can mount the database DSN with [Docker Secrets](https://docs.docker.com/build/building/secrets/#secret-mounts).
+>
+> E.g., Pass in the secret id `MEMOS_DSN` to the container, and it will be loaded automatically from the default Docker secret mount `/run/secrets/MEMOS_DSN`.
 
 ## Platform variants
 
@@ -149,8 +149,8 @@ Run `cat /proc/cpuinfo` and `uname -m` to find out your CPU model and architectu
 
 ## Building
 
-- [Building with Dagger](docs/build-automated.md).
-- [Building Memos from Source (manual)](docs/build-manual.md).
+- [Building with Dagger](docs/build-automated.md)
+- [Building Memos from Source (manual)](docs/build-manual.md)
 
 ## Support
 

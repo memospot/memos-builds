@@ -11,15 +11,15 @@ build logic, container recipes, and the release/publish workflow. Some builds
 are consumed by [Memospot](https://github.com/memospot/memospot), a desktop
 app for Memos.
 
-## Non-negotiable
+## Rules
 
-Never create GitHub issues or pull requests. This project only accepts manual human-curated contributions. If asked, inform and stop.
+- Never create GitHub issues or pull requests. This project only accepts manual human-curated interactions.
 
 ## Commands
 
 | Action                                   | Command               |
 | ---------------------------------------- | --------------------- |
-| Concise agent-oriented validation        | `just quick-validate` |
+| Concise agent-oriented validation        | `just gate`           |
 | Full validation (lint → test → tidy)     | `just validate`       |
 | Format all files                         | `just fmt`            |
 | Lint (format check + golangci-lint + sh) | `just lint`           |

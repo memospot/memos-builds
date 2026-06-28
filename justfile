@@ -121,17 +121,11 @@ build VERSION='nightly' PLATFORMS='':
     echo -e "{{ GREEN }}Build complete. Artifacts in ./dist/{{ NORMAL }}"
 
 [doc('Format code. Pass "--just" to also run `just --fmt`')]
-fmt ARGS='':
-    #!/usr/bin/env bash
+fmt:
     golangci-lint fmt
     dprint fmt
-    if [[ "{{ ARGS }}" == "--just" ]]; then
-        just --unstable --fmt
-    fi
 
 lint:
-    #!/usr/bin/env bash
-    just --unstable --fmt --check
     golangci-lint run ./.dagger/.
     shellcheck -s ash container/entrypoint.sh
 
@@ -142,8 +136,8 @@ validate: lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version)
     go work sync && git diff --exit-code go.work
 
-@quick-validate:
-    just validate >/dev/null && echo "All validations passed." || echo "ERROR. Run 'just validate' for more details."
+@gate:
+    just validate >/dev/null 2>&1 && echo "[OK] All validations passed." || echo "[ERROR] Run 'just validate' for more details."
 
 # Update Dagger SDK and Go dependencies
 update-deps:

@@ -13,9 +13,6 @@ engine.bin
 # Agent tooling
 !AGENTS.md
 !.agents/**
-openspec/*
-!openspec/specs/
-!openspec/config.yaml
 
 # Logs
 logs/
