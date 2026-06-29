@@ -2,9 +2,9 @@
 
 Canonical instructions for AI assistants working on this codebase.
 
-## What this repo is
+## Overview
 
-A Dagger build pipeline that produces multi-architecture binaries and OCI
+Dagger build pipeline that produces multi-architecture binaries and OCI
 container images for [Memos](https://github.com/usememos/memos). Source is
 fetched from upstream `usememos/memos` at build time; this repo owns the
 build logic, container recipes, and the release/publish workflow. Some builds
@@ -17,18 +17,18 @@ app for Memos.
 
 ## Commands
 
-| Action                                   | Command               |
-| ---------------------------------------- | --------------------- |
-| Concise agent-oriented validation        | `just gate`           |
-| Full validation (lint → test → tidy)     | `just validate`       |
-| Format all files                         | `just fmt`            |
-| Lint (format check + golangci-lint + sh) | `just lint`           |
-| Build binaries (current platform)        | `just build`          |
-| Build containers and load locally        | `just build-docker`   |
-| Start loaded containers in demo mode     | `just run-demos`      |
-| Publish (fmt → validate → tag → push)    | `just publish TAG`    |
-| Regenerate Dagger SDK bindings           | `just dagger-codegen` |
-| Update Dagger SDK + Go deps              | `just update-deps`    |
+| Action                                | Command               |
+| ------------------------------------- | --------------------- |
+| Concise agent-oriented validation     | `just gate`           |
+| Full validation (lint → test → tidy)  | `just validate`       |
+| Format all files                      | `just fmt`            |
+| Lint (golangci-lint + shellcheck)     | `just lint`           |
+| Build binaries (current platform)     | `just build`          |
+| Build containers and load locally     | `just build-docker`   |
+| Start loaded containers in demo mode  | `just run-demos`      |
+| Publish (fmt → validate → tag → push) | `just publish TAG`    |
+| Regenerate Dagger SDK bindings        | `just dagger-codegen` |
+| Update Dagger SDK + Go deps           | `just update-deps`    |
 
 Run `just --list` for all recipes. Most operations require Docker.
 `just test` is a noop (no `*_test.go` under `.dagger/`).
@@ -51,9 +51,8 @@ Run `just --list` for all recipes. Most operations require Docker.
   `just validate` enforce it. Change with `just tidy <version>`.
 - **Go workspace** includes only `.dagger/`. Run `go work sync` after
   editing dependencies.
-- **Formatter** is dprint (`.dprint.jsonc`): Go via `gofmt`, shell via
-  `shfmt`, JSON/Markdown/YAML. `just fmt` runs golangci-lint fmt + dprint.
-  `just lint` checks format via `just --unstable --fmt --check`.
+- **Formatter**: dprint (`.dprint.jsonc`) with gofmt, shfmt, JSON/Markdown/YAML.
+  `just fmt` runs golangci-lint fmt + dprint. No recipe or CI checks formatting.
 - **Linter scope**: `.golangci.yaml` excludes `.dagger/internal` and
   `.dagger/dagger.gen.go`. `golangci-lint` targets only `./.dagger/.`.
   Adding other `*.go` trees requires updating config and CI.
@@ -61,7 +60,7 @@ Run `just --list` for all recipes. Most operations require Docker.
 - **Dagger SDK export rule**: PascalCase in `.dagger/main.go` → exported via
   `dagger functions`; camelCase → Dagger-internal.
 - **Dagger codegen**: run `just dagger-codegen` after public signature changes
-  (`dagger develop --compat=skip`). `just update-deps` runs it without
+  (`dagger develop --compat=skip`). `just update-deps` runs codegen without
   `--compat=skip`. Both remove the generated `.dagger/.gitignore`.
 - **All `dagger call` invocations MUST pass `--source=.`**. Artifacts land in
   `./dist/`.
