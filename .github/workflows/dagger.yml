@@ -142,6 +142,11 @@ jobs:
       - name: Create GitHub Release
         if: startsWith(steps.version.outputs.version, 'v')
         run: |
+          # Remove existing release if present (workflow re-runs).
+          if gh release view "${VERSION}" --json tagName >/dev/null 2>&1; then
+            gh release delete "${VERSION}" --yes --cleanup-tag
+          fi
+
           cat <<'NOTES' > /tmp/release-notes.md
           Built from [usememos/memos@${VERSION}](https://github.com/usememos/memos/releases/tag/${VERSION})
 
@@ -165,6 +170,11 @@ jobs:
       - name: Create Nightly Release
         if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, 'nightly')"
         run: |
+          # Remove existing release if present (workflow re-runs, same-day rebuilds).
+          if gh release view "${VERSION}" --json tagName >/dev/null 2>&1; then
+            gh release delete "${VERSION}" --yes --cleanup-tag
+          fi
+
           cat <<'NOTES' > /tmp/release-notes.md
           Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
 
