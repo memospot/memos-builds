@@ -1,0 +1,51 @@
+# https://prek.j178.dev/configuration/
+# Run all hooks: prek run --all-files
+# Install Git shims: prek install --prepare-hooks
+
+# --- Builtin hooks (fast, Rust-native, no network) ---
+
+[[repos]]
+repo = "builtin"
+hooks = [
+    { id = "trailing-whitespace" },
+    { id = "end-of-file-fixer" },
+    { id = "check-case-conflict" },
+    { id = "check-illegal-windows-names" },
+    { id = "fix-byte-order-marker" },
+    { id = "check-yaml" },
+    { id = "check-json", exclude = { glob = [".vscode/**", ".zed/**"] } },
+    { id = "check-toml" },
+    { id = "check-merge-conflict" },
+    { id = "detect-private-key" },
+    { id = "mixed-line-ending", args = ["--fix=lf"] },
+    { id = "check-added-large-files", args = ["--maxkb=250"] },
+]
+
+# --- GitHub Actions security ---
+
+[[repos]]
+repo = "https://github.com/zizmorcore/zizmor-pre-commit"
+rev = "v1.26.1"
+hooks = [{ id = "zizmor" }]
+
+# --- Dprint ---
+[[repos]]
+repo = "local"
+hooks = [
+    { id = "dprint", name = "dprint", language = "system", entry = "dprint check", pass_filenames = false },
+]
+
+# --- Shell scripts (ash/busybox) ---
+
+[[repos]]
+repo = "local"
+hooks = [
+    { id = "shellcheck", name = "shellcheck", language = "system", entry = "shellcheck -s ash", files = "\\.sh$" },
+]
+
+# --- Code validation ---
+[[repos]]
+repo = "local"
+hooks = [
+    { id = "gate", name = "code gate", language = "system", entry = "just gate", pass_filenames = false },
+]

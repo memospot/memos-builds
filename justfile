@@ -120,6 +120,21 @@ build VERSION='nightly' PLATFORMS='':
     dagger call build --source=. --version="{{ VERSION }}" --platforms="${PLATFORMS}" export --path=./dist
     echo -e "{{ GREEN }}Build complete. Artifacts in ./dist/{{ NORMAL }}"
 
+# Install prek Git hooks (run once after clone)
+hooks:
+    #!/usr/bin/env bash
+    if ! command -v prek &> /dev/null; then
+        echo -e "{{ RED }}ERROR:{{ NORMAL }} prek is not installed."
+        echo -e "Install it with: {{ MAGENTA }}brew install prek{{ NORMAL }}"
+        exit 1
+    fi
+    prek install --prepare-hooks
+    echo -e "{{ GREEN }}Git hooks installed.{{ NORMAL }}"
+
+# Run prek hooks on all files
+hooks-run:
+    prek run --all-files
+
 [doc('Format code. Pass "--just" to also run `just --fmt`')]
 fmt:
     golangci-lint fmt
