@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -10,6 +11,14 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 )
+
+// PublishedImage describes a container image published to a registry.
+type PublishedImage struct {
+	Registry string `json:"registry"`         // e.g. "ghcr.io/memospot/memos-builds"
+	Tag      string `json:"tag"`              // e.g. "nightly"
+	Digest   string `json:"digest,omitempty"` // e.g. "sha256:abc123..."
+	Ref      string `json:"ref"`              // full ref with digest
+}
 
 // createArchive creates a tar.gz or zip archive from a binary file.
 func (m *MemosBuilds) createArchive(
@@ -143,6 +152,16 @@ func (m *MemosBuilds) tagsForRegistry(version string, registry string) []string 
 	return []string{"nightly"}
 }
 
+// parsePublishedRef extracts the digest from a fully-qualified image reference.
+// Input: "ghcr.io/memospot/memos-builds:nightly@sha256:abc123..."
+// Output: "sha256:abc123..."
+func parsePublishedRef(ref string) string {
+	if idx := strings.LastIndex(ref, "@"); idx != -1 {
+		return ref[idx+1:]
+	}
+	return ""
+}
+
 // publishContainers builds and publishes multi-arch Docker images to registries.
 // Called internally by Publish — not exposed as a standalone Dagger function
 // to avoid redundant Build calls.
@@ -157,19 +176,19 @@ func (m *MemosBuilds) publishContainers(
 	dockerHubPassword *dagger.Secret,
 	ghcrUser string,
 	ghcrPassword *dagger.Secret,
-) (string, error) {
+) ([]PublishedImage, error) {
 	// Build binaries for Linux targets only (containers are Linux-only).
 	linuxTargets := filterLinuxTargets(TARGETS)
 	if len(linuxTargets) == 0 {
-		return "No Linux targets configured, skipping container publish", nil
+		return nil, nil
 	}
 
 	platformVariants, err := m.buildContainers(ctx, source, gitSrc, buildVersion, commit, linuxTargets)
 	if err != nil {
-		return "", fmt.Errorf("failed to build containers: %w", err)
+		return nil, fmt.Errorf("failed to build containers: %w", err)
 	}
 
-	var allPublished []string
+	var allPublished []PublishedImage
 
 	publishTargets := []struct {
 		registry string
@@ -203,16 +222,27 @@ func (m *MemosBuilds) publishContainers(
 					MediaTypes:       target.media,
 				})
 				if err != nil {
-					return "", fmt.Errorf("failed to publish to %s: %w", target.registry, err)
+					return nil, fmt.Errorf("failed to publish to %s: %w", target.registry, err)
 				}
-				allPublished = append(allPublished, ref)
+				allPublished = append(allPublished, PublishedImage{
+					Registry: target.registry,
+					Tag:      tag,
+					Digest:   parsePublishedRef(ref),
+					Ref:      ref,
+				})
 			}
 		}
 	}
 
-	if len(allPublished) == 0 {
-		return "No registry credentials provided, skipping container publish", nil
-	}
+	return allPublished, nil
+}
 
-	return fmt.Sprintf("Published %d images: %s", len(allPublished), strings.Join(allPublished, ", ")), nil
+// PublishedImagesJSON returns a JSON-serialised []PublishedImage suitable for
+// writing to a file in the dist directory.
+func PublishedImagesJSON(images []PublishedImage) (string, error) {
+	b, err := json.MarshalIndent(images, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

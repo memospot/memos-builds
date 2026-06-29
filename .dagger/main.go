@@ -174,9 +174,17 @@ func (m *MemosBuilds) Publish(
 	}
 
 	if (dockerHubUser != "" && dockerHubPassword != nil) || (ghcrUser != "" && ghcrPassword != nil) {
-		_, err := m.publishContainers(ctx, source, gitSrc, buildVersion, releaseVersion, commit, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
+		images, err := m.publishContainers(ctx, source, gitSrc, buildVersion, releaseVersion, commit, dockerHubUser, dockerHubPassword, ghcrUser, ghcrPassword)
 		if err != nil {
 			return nil, fmt.Errorf("failed to publish containers: %w", err)
+		}
+
+		if len(images) > 0 {
+			jsonData, err := PublishedImagesJSON(images)
+			if err != nil {
+				return nil, fmt.Errorf("failed to serialise published image metadata: %w", err)
+			}
+			out = out.WithNewFile("container-digests.json", jsonData)
 		}
 	}
 

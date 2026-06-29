@@ -36,6 +36,8 @@ jobs:
       contents: write
       packages: write
       actions: write
+      id-token: write
+      attestations: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
@@ -107,6 +109,26 @@ jobs:
 
       - name: List build artifacts
         run: ls -la ./dist
+
+      - name: Attest binary artifacts
+        uses: actions/attest@v4
+        with:
+          subject-path: "./dist/*"
+
+      - name: Get GHCR image digest
+        id: container-digest
+        if: steps.publish.outputs.args != ''
+        run: |
+          DIGEST=$(jq -r '.[] | select(.registry | startswith("ghcr.io")) | .digest' ./dist/container-digests.json | head -1)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest container image
+        if: steps.container-digest.outputs.digest != ''
+        uses: actions/attest@v4
+        with:
+          subject-name: ghcr.io/memospot/memos-builds
+          subject-digest: ${{ steps.container-digest.outputs.digest }}
+          push-to-registry: true
 
       - name: Create GitHub Release
         if: startsWith(steps.version.outputs.version, 'v')
