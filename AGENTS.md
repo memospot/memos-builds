@@ -14,6 +14,7 @@ app for Memos.
 ## Rules
 
 - Never create GitHub issues or pull requests. This project only accepts manual human-curated interactions.
+- Never push directly to `main` through the agent. Use `just publish TAG` for releases.
 
 ## Commands
 
@@ -29,9 +30,12 @@ app for Memos.
 | Publish (fmt → validate → tag → push) | `just publish TAG`    |
 | Regenerate Dagger SDK bindings        | `just dagger-codegen` |
 | Update Dagger SDK + Go deps           | `just update-deps`    |
+| Install Git hooks (run once)          | `just hooks`          |
+| Run prek hooks on all files           | `just hooks-run`      |
+| Clean Dagger cache and containers     | `just dagger-clean`   |
 
 Run `just --list` for all recipes. Most operations require Docker.
-`just test` is a noop (no `*_test.go` under `.dagger/`).
+`just test` runs `go test` — passes with zero output (no `*_test.go` under `.dagger/`).
 
 ## Structure
 
@@ -57,8 +61,12 @@ Run `just --list` for all recipes. Most operations require Docker.
   `.dagger/dagger.gen.go`. `golangci-lint` targets only `./.dagger/.`.
   Adding other `*.go` trees requires updating config and CI.
 - **Shellcheck** runs with `-s ash` on `container/entrypoint.sh`.
+- **prek hooks** configured in `prek.toml`: trailing-whitespace, end-of-file-fixer,
+  YAML/JSON/TOML checks, large-file guard, zizmor (GitHub Actions security),
+  and shellcheck.
 - **Dagger SDK export rule**: PascalCase in `.dagger/main.go` → exported via
   `dagger functions`; camelCase → Dagger-internal.
+- **Dagger engine** version pinned in `dagger.json` (currently `v0.21.7`).
 - **Dagger codegen**: run `just dagger-codegen` after public signature changes
   (`dagger develop --compat=skip`). `just update-deps` runs codegen without
   `--compat=skip`. Both remove the generated `.dagger/.gitignore`.

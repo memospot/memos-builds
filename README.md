@@ -103,13 +103,9 @@ docker run --detach --name memos --publish 5230:5230 \
 ### About images
 
 - Versioned images are checked out to the matching Memos upstream tag.
-
 - Nightly images use whatever is available at Memos `main` branch at build time.
-
 - Image packages are auto-upgraded at build time.
-
 - Nightly images are built daily at 07:25 UTC.
-
 - Images are published to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
 | Platform  | Image              |
