@@ -111,7 +111,7 @@ jobs:
         run: ls -la ./dist
 
       - name: Attest binary artifacts
-        uses: actions/attest@v4
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-path: "./dist/*"
 
@@ -122,9 +122,17 @@ jobs:
           DIGEST=$(jq -r '.[] | select(.registry | startswith("ghcr.io")) | .digest' ./dist/container-digests.json | head -1)
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
+      - name: Login to GHCR
+        if: steps.container-digest.outputs.digest != ''
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
       - name: Attest container image
         if: steps.container-digest.outputs.digest != ''
-        uses: actions/attest@v4
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-name: ghcr.io/memospot/memos-builds
           subject-digest: ${{ steps.container-digest.outputs.digest }}
