@@ -51,10 +51,10 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${{ inputs.version }}" == v* || "${{ inputs.version }}" =~ ^nightly-[0-9]{8}-[0-9a-fA-F]{7}$ ]]; then
-            VERSION="${{ inputs.version }}"
-          elif [[ "${{ github.ref_name }}" == v* ]]; then
-            VERSION="${{ github.ref_name }}"
+          if [[ "${INPUTS_VERSION}" == v* || "${INPUTS_VERSION}" =~ ^nightly-[0-9]{8}-[0-9a-fA-F]{7}$ ]]; then
+            VERSION="${INPUTS_VERSION}"
+          elif [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME}"
           else
             MEMOS_SHA="$(git ls-remote https://github.com/usememos/memos.git refs/heads/main | cut -c1-7)"
             if [[ -z "$MEMOS_SHA" ]]; then
@@ -72,6 +72,8 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "container_tag=$CONTAINER_TAG" >> "$GITHUB_OUTPUT"
+        env:
+          INPUTS_VERSION: ${{ inputs.version }}
 
       - name: Determine publish args
         id: publish
@@ -82,7 +84,7 @@ jobs:
           if ([ "${{ inputs.publish-containers }}" = "true" ] && [ "$HAS_DOCKER" = "true" ] && [ "$HAS_GHCR" = "true" ]) || \
               [ "${{ github.event_name }}" = "push" ] || \
               [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "args=--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user ${{ github.actor }} --ghcr-password env:GHCR_TOKEN" >> $GITHUB_OUTPUT
+            echo "args=--docker-hub-user lincolnthalles --docker-hub-password env:DOCKER_TOKEN --ghcr-user ${GITHUB_ACTOR} --ghcr-password env:GHCR_TOKEN" >> $GITHUB_OUTPUT
           else
             echo "args=" >> $GITHUB_OUTPUT
           fi
@@ -108,65 +110,65 @@ jobs:
 
       - name: Create GitHub Release
         if: startsWith(steps.version.outputs.version, 'v')
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          body: |
-            Built from [usememos/memos@${{ steps.version.outputs.version }}](https://github.com/usememos/memos/releases/tag/${{ steps.version.outputs.version }})
+        run: |
+          cat <<'NOTES' > /tmp/release-notes.md
+          Built from [usememos/memos@${VERSION}](https://github.com/usememos/memos/releases/tag/${VERSION})
 
-            ---
-            ```bash
-            docker pull ghcr.io/memospot/memos-builds:${{ steps.version.outputs.container_tag }}
-            ```
-            ```bash
-            docker pull docker.io/lincolnthalles/memos:${{ steps.version.outputs.container_tag }}
-            ```
-          files: ./dist/*
-          fail_on_unmatched_files: true
-          generate_release_notes: false
-          prerelease: false
-          make_latest: true
+          ---
+          ```bash
+          docker pull ghcr.io/memospot/memos-builds:${CONTAINER_TAG}
+          ```
+          ```bash
+          docker pull docker.io/lincolnthalles/memos:${CONTAINER_TAG}
+          ```
+          NOTES
+          gh release create "${VERSION}" ./dist/* \
+            --title "${VERSION}" \
+            --latest \
+            --notes-file /tmp/release-notes.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          CONTAINER_TAG: ${{ steps.version.outputs.container_tag }}
 
       - name: Create Nightly Release
         if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, 'nightly')"
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          body: |
-            Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
+        run: |
+          cat <<'NOTES' > /tmp/release-notes.md
+          Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
 
-            > [!WARNING]
-            > **This is an automated development build and may be unstable, or may not even run at all.**
+          > [!WARNING]
+          > **This is an automated development build and may be unstable, or may not even run at all.**
 
-            > [!CAUTION]
-            > Ensure that you use a different database from the one you use for stable releases.
+          > [!CAUTION]
+          > Ensure that you use a different database from the one you use for stable releases.
 
-            > [!NOTE]
-            > - Nightly assets use an out-of-tree date-based semantic version (for example, `v2026.5.6-nightly+bcbcb03`).
+          > [!NOTE]
+          > Nightly assets use an out-of-tree date-based semantic version (for example, `v2026.5.6-nightly+bcbcb03`).
 
-            ---
+          ---
 
-            ## Docker
+          ## Docker
 
-            ### Starting a throwaway instance
-            No data persistence, everything gets deleted when the container is stopped.
+          ### Starting a throwaway instance
+          No data persistence, everything gets deleted when the container is stopped.
 
-            ```bash
-            docker run --detach --rm --name memos-${{ steps.version.outputs.container_tag }}-throwaway --publish 5232:5230 \
-              --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:${{ steps.version.outputs.container_tag }}
-            ```
-            The container should be accessible at <http://localhost:5232/>.
+          ```bash
+          docker run --detach --rm --name memos-${CONTAINER_TAG}-throwaway --publish 5232:5230 \
+            --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:${CONTAINER_TAG}
+          ```
+          The container should be accessible at <http://localhost:5232/>.
 
-            ### Stopping the instance
-            ```bash
-            docker stop memos-${{ steps.version.outputs.container_tag }}-throwaway
-            ```
-
-          files: ./dist/*
-          fail_on_unmatched_files: true
-          generate_release_notes: false
-          prerelease: true
+          ### Stopping the instance
+          ```bash
+          docker stop memos-${CONTAINER_TAG}-throwaway
+          ```
+          NOTES
+          gh release create "${VERSION}" ./dist/* \
+            --title "${VERSION}" \
+            --prerelease \
+            --notes-file /tmp/release-notes.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONTAINER_TAG: ${{ steps.version.outputs.container_tag }}
+          VERSION: ${{ steps.version.outputs.version }}
