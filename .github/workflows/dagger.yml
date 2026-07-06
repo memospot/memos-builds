@@ -93,7 +93,7 @@ jobs:
           fi
 
       - name: Build release artifacts
-        uses: memospot/action-dagger@ce84470b762a5673acd1099d5cde40bf4ac7a4a4 # v1.0.1
+        uses: memospot/action-dagger@373c5782d0daec4437049d9b1c87f4c37b534324 # v1.0.2
         with:
           version: latest
           verb: call
