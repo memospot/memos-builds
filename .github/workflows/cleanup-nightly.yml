@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  attestations: write
 
 jobs:
   cleanup:
@@ -95,67 +94,5 @@ jobs:
             fi
             echo "---"
           } >> "$GITHUB_STEP_SUMMARY"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Prune old attestation records
-        run: |
-          cutoff_days=7
-          cutoff_date=$(date -d "-${cutoff_days} days" +%Y-%m-%d)
-          deleted=0
-          max_pages=50  # Safety limit to prevent infinite loops
-
-          page=1
-          while [ $page -le $max_pages ]; do
-            response=$(gh api \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${{ github.repository }}/attestations?per_page=100&page=${page}" 2>/dev/null || echo '{}')
-
-            # Safely extract count, default to 0 if null or missing
-            count=$(echo "$response" | jq '.attestations // [] | length' 2>/dev/null || echo "0")
-
-            # Ensure count is a valid integer
-            if ! [[ "$count" =~ ^[0-9]+$ ]]; then
-              echo "Invalid API response on page ${page}, stopping pagination"
-              break
-            fi
-
-            if [ "$count" -eq 0 ]; then
-              break
-            fi
-
-            # Extract attestation IDs older than cutoff
-            mapfile -t old_attestations < <(echo "$response" | jq -r --arg cutoff "$cutoff_date" \
-              '(.attestations // [])[] | select(.created_at < $cutoff) | .id' 2>/dev/null)
-
-            # If no old attestations found on this page, check if we should continue
-            if [ ${#old_attestations[@]} -eq 0 ]; then
-              # All attestations on this page are newer than cutoff
-              # Continue to next page to find older ones
-              page=$((page + 1))
-              continue
-            fi
-
-            for att_id in "${old_attestations[@]}"; do
-              echo "Deleting attestation: ${att_id}"
-              if gh api --method DELETE \
-                -H "Accept: application/vnd.github+json" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "/repos/${{ github.repository }}/attestations/${att_id}" 2>/dev/null; then
-                deleted=$((deleted + 1))
-              fi
-            done
-
-            # Don't increment page — deletions shift remaining items into this page.
-            # Re-fetch the same page to catch shifted records.
-          done
-
-          if [ $page -gt $max_pages ]; then
-            echo "Warning: Reached maximum page limit (${max_pages})"
-          fi
-
-          echo "### Attestation Cleanup" >> "$GITHUB_STEP_SUMMARY"
-          echo "Deleted ${deleted} attestation records older than ${cutoff_days} days." >> "$GITHUB_STEP_SUMMARY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
