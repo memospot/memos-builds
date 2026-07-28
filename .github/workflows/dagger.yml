@@ -147,7 +147,7 @@ jobs:
             gh release delete "${VERSION}" --yes --cleanup-tag
           fi
 
-          cat <<'NOTES' > /tmp/release-notes.md
+          cat <<'NOTES' | envsubst > /tmp/release-notes.md
           Built from [usememos/memos@${VERSION}](https://github.com/usememos/memos/releases/tag/${VERSION})
 
           ---
@@ -175,7 +175,7 @@ jobs:
             gh release delete "${VERSION}" --yes --cleanup-tag
           fi
 
-          cat <<'NOTES' > /tmp/release-notes.md
+          cat <<'NOTES' | envsubst > /tmp/release-notes.md
           Built from [usememos/memos@main](https://github.com/usememos/memos/commits/main/).
 
           > [!WARNING]
