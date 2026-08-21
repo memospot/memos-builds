@@ -8,7 +8,7 @@ package buildconsts
 // Container base image to use for the project.
 //
 // Note: An Alpine image is expected at several build steps.
-const PRIMARY_IMAGE string = "alpine:3.24.0"
+const PRIMARY_IMAGE string = "alpine:3.24.1"
 
 // Container base image to use for the ARMv5 build.
 //
@@ -16,16 +16,16 @@ const PRIMARY_IMAGE string = "alpine:3.24.0"
 const ALTERNATE_IMAGE string = "arm32v5/busybox:1.38.0-glibc"
 
 // Container image to use for the Go build.
-const GOLANG_BUILD_IMAGE string = "golang:1.26.2-alpine"
+const GOLANG_BUILD_IMAGE string = "golang:1.27.0-alpine"
 
 // Container image to use for frontend builds.
 const NODE_BUILD_IMAGE string = "node:24-alpine"
 
 // Container image to use for proto builds.
-const BUF_IMAGE string = "bufbuild/buf:1.70.0"
+const BUF_IMAGE string = "bufbuild/buf:1.72.0"
 
 // Passed to `go mod tidy`.
-const GO_VERSION string = "1.26.2"
+const GO_VERSION string = "1.27.0"
 
 // Where the semantic version is defined in the source code.
 const VERSION_FILE string = "internal/version/version.go"
