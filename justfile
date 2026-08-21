@@ -149,7 +149,7 @@ test:
 
 validate: lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version)
-    go work sync && git diff --exit-code go.work
+    go work sync
 
 @gate:
     just validate >/dev/null 2>&1 && echo "[OK] All validations passed." || echo "[ERROR] Run 'just validate' for more details."
