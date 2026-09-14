@@ -4,11 +4,11 @@ Canonical instructions for AI assistants working on this codebase.
 
 ## Overview
 
-Dagger build pipeline that produces multi-architecture binaries and OCI
-container images for [Memos](https://github.com/usememos/memos). Source is
-fetched from upstream `usememos/memos` at build time; this repo owns the
-build logic, container recipes, and the release/publish workflow. Some builds
-are consumed by [Memospot](https://github.com/memospot/memospot), a desktop
+Dagger build pipeline that produces multi-architecture binaries and OCI container images for [Memos](https://github.com/usememos/memos).
+
+Source is fetched from upstream `usememos/memos` at build time; this repo owns the build logic, container recipes, and the release/publish workflow.
+
+Some builds are consumed by [Memospot](https://github.com/memospot/memospot), a desktop
 app for Memos.
 
 ## Rules

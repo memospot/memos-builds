@@ -37,7 +37,7 @@ func (m *MemosBuilds) buildFrontend(source *dagger.Directory) *dagger.Directory 
 		WithExec([]string{"pnpm", "install"}).
 		WithWorkdir("/app/web").
 		WithExec([]string{"pnpm", "run", "release"}).
-		Directory("/app/server/router/frontend/dist")
+		Directory("/app/server/frontend/dist")
 }
 
 // Build the backend binaries for the given targets.
@@ -122,7 +122,7 @@ func (m *MemosBuilds) buildBackend(
 		WithMountedCache("/root/.cache/go-build", dag.CacheVolume("go-build")).
 		WithWorkdir("/src").
 		WithDirectory("/src", source).
-		WithDirectory("/src/server/router/frontend/dist", frontendDist).
+		WithDirectory("/src/server/frontend/dist", frontendDist).
 		// Tidy is required as go.mod may have been patched at earlier steps.
 		WithExec([]string{"go", "mod", "tidy", "-go=" + buildconsts.GO_VERSION}).
 		WithDirectory("/out", dag.Directory())
