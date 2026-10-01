@@ -112,7 +112,7 @@ jobs:
         run: ls -la ./dist
 
       - name: Attest binary artifacts
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: "./dist/*"
 
@@ -133,7 +133,7 @@ jobs:
 
       - name: Attest container image
         if: steps.container-digest.outputs.digest != ''
-        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ghcr.io/memospot/memos-builds
           subject-digest: ${{ steps.container-digest.outputs.digest }}
