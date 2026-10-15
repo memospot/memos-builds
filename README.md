@@ -19,20 +19,20 @@ a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
 <a href="https://www.usememos.com/">
     <picture>
-      <source
-        media="(prefers-color-scheme: dark)"
-        srcset="https://raw.githubusercontent.com/memospot/memos-builds/main/assets/capture_dark.webp"
-      />
-      <source
-        media="(prefers-color-scheme: light)"
-        srcset="https://raw.githubusercontent.com/memospot/memos-builds/main/assets/capture_light.webp"
-      />
-      <img
-        alt="demo"
-        src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/demo.png"
-      />
+        <source
+            media="(prefers-color-scheme: dark)"
+            srcset="https://raw.githubusercontent.com/memospot/memos-builds/main/assets/capture_dark.webp"
+        />
+        <source
+            media="(prefers-color-scheme: light)"
+            srcset="https://raw.githubusercontent.com/memospot/memos-builds/main/assets/capture_light.webp"
+        />
+        <img
+            alt="demo"
+            src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/demo.png"
+        />
     </picture>
-  </a>
+</a>
 
 [![Homepage](https://img.shields.io/badge/Home-blue)](https://www.usememos.com) [![Blog](https://img.shields.io/badge/Blog-gray)](https://www.usememos.com/blog) [![Docs](https://img.shields.io/badge/Docs-blue)](https://www.usememos.com/docs) [![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://demo.usememos.com/) [![Memos Discord](https://img.shields.io/badge/Discord-chat-5865f2?logo=discord&logoColor=f5f5f5)](https://discord.gg/tfPJa4UmAv) [![GitHub Stars](https://img.shields.io/github/stars/usememos/memos?logo=github)](https://github.com/usememos/memos)
 
