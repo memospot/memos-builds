@@ -150,6 +150,7 @@ test:
 validate: lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version)
     go work sync
+    @echo "Dagger module Go: $(cat .go-version); Memos build Go: $(grep MEMOS_GO_VERSION .dagger/buildconsts/consts.go)"
 
 @gate:
     just validate >/dev/null 2>&1 && echo "[OK] All validations passed." || echo "[ERROR] Run 'just validate' for more details."
@@ -160,12 +161,13 @@ update-deps:
     cd .dagger && go mod tidy
     go work sync
 
-tidy GO_VERSION:
-    [[ -n "{{ GO_VERSION }}" ]] || { echo "{{ RED }}ERROR:{{ NORMAL }} Please provide a GO_VERSION."; exit 1; }
-    cd .dagger && go mod tidy -go={{ GO_VERSION }}
-    go work edit -go={{ GO_VERSION }}
+[doc('Retidy the Dagger module only (.dagger/go.mod, go.work, .go-version). Must match the Dagger engine go.mod; never touches the Memos build Go in buildconsts.')]
+tidy MODULE_GO_VERSION:
+    [[ -n "{{ MODULE_GO_VERSION }}" ]] || { echo "{{ RED }}ERROR:{{ NORMAL }} Please provide a MODULE_GO_VERSION."; exit 1; }
+    cd .dagger && go mod tidy -go={{ MODULE_GO_VERSION }}
+    go work edit -go={{ MODULE_GO_VERSION }}
     go work sync
-    echo "{{ GO_VERSION }}" > .go-version
+    echo "{{ MODULE_GO_VERSION }}" > .go-version
 
 [doc('
 Build Memos containers, load them into Docker, and tag them.

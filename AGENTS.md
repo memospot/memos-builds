@@ -51,8 +51,14 @@ Run `just --list` for all recipes. Most operations require Docker.
 
 ## Quirks and constraints
 
-- **Go version** pinned in `.go-version` (currently `1.26.2`). CI and
-  `just validate` enforce it. Change with `just tidy <version>`.
+- **Dagger module Go** pinned in `.go-version` (currently `1.26.1`). Must match
+  the Dagger engine's `go.mod` (`cat dagger.json | jq -r .engineVersion`, then
+  fetch that tag's `go.mod`). CI and `just validate` enforce it. Change with
+  `just tidy <version>`. Never set this to the Memos Go version.
+- **Memos build Go** pinned as `MEMOS_GO_VERSION` + `GOLANG_BUILD_IMAGE` in
+  `.dagger/buildconsts/consts.go` (currently `1.27.2`). Tracks upstream Memos,
+  independently of the module Go. Applied inside the build container
+  (`build.go` runs `go mod tidy -go=<MEMOS_GO_VERSION>`).
 - **Go workspace** includes only `.dagger/`. Run `go work sync` after
   editing dependencies.
 - **Formatter**: dprint (`.dprint.jsonc`) with gofmt, shfmt, JSON/Markdown/YAML.
@@ -66,7 +72,7 @@ Run `just --list` for all recipes. Most operations require Docker.
   and shellcheck.
 - **Dagger SDK export rule**: PascalCase in `.dagger/main.go` → exported via
   `dagger functions`; camelCase → Dagger-internal.
-- **Dagger engine** version pinned in `dagger.json` (currently `v0.21.7`).
+- **Dagger engine** version pinned in `dagger.json` (currently `v0.21.10`).
 - **Dagger codegen**: run `just dagger-codegen` after public signature changes
   (`dagger develop --compat=skip`). `just update-deps` runs codegen without
   `--compat=skip`. Both remove the generated `.dagger/.gitignore`.

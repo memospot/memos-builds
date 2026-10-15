@@ -124,7 +124,7 @@ func (m *MemosBuilds) buildBackend(
 		WithDirectory("/src", source).
 		WithDirectory("/src/server/frontend/dist", frontendDist).
 		// Tidy is required as go.mod may have been patched at earlier steps.
-		WithExec([]string{"go", "mod", "tidy", "-go=" + buildconsts.GO_VERSION}).
+		WithExec([]string{"go", "mod", "tidy", "-go=" + buildconsts.MEMOS_GO_VERSION}).
 		WithDirectory("/out", dag.Directory())
 
 	out := dag.Directory()

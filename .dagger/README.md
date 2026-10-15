@@ -106,11 +106,12 @@ memos-linux-arm-v7.tar
 
 ### Updating for upstream changes
 
-1. **Go version**: Update `GO_VERSION` and `GOLANG_BUILD_IMAGE` in `buildconsts/consts.go`.
-2. **Node version**: Update `NODE_BUILD_IMAGE` in `buildconsts/consts.go`.
-3. **Protobuf tooling**: Update `BUF_IMAGE` in `buildconsts/consts.go`.
-4. **Base container image**: Update `PRIMARY_IMAGE` in `buildconsts/consts.go`.
-5. **Version path**: If the upstream project moves the version variable, update `VERSION_FILE` and `VERSION_IMPORT_PATH` in `buildconsts/consts.go`.
+1. **Dagger module Go**: must match the Dagger engine's `go.mod` (`cat dagger.json | jq -r .engineVersion`, then fetch that tag's `go.mod`). Apply with `just tidy X.Y.Z` — updates `.dagger/go.mod`, `go.work`, `.go-version` only.
+2. **Memos build Go**: tracks upstream Memos. Update `MEMOS_GO_VERSION` and `GOLANG_BUILD_IMAGE` in `buildconsts/consts.go`. Do NOT run `just tidy` with this version.
+3. **Node version**: Update `NODE_BUILD_IMAGE` in `buildconsts/consts.go`.
+4. **Protobuf tooling**: Update `BUF_IMAGE` in `buildconsts/consts.go`.
+5. **Base container image**: Update `PRIMARY_IMAGE` in `buildconsts/consts.go`.
+6. **Version path**: If the upstream project moves the version variable, update `VERSION_FILE` and `VERSION_IMPORT_PATH` in `buildconsts/consts.go`.
 
 ### Adding/removing platforms
 
