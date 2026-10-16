@@ -57,17 +57,17 @@ app for Memos.
 - Isolation: mock only at the system boundary (subprocess, filesystem, network), never domain logic.
 - Inline BDD-style comments `// GIVEN` / `// WHEN` / `// THEN` (`// AND` as needed) + high-signal description, splitting each test into logical blocks whenever it doesn't get redundant and improves readability.
 - **Test split: `go test` vs Dagger test module**:
-  - `go test -v ./.dagger/. ./.dagger/buildplan/.` covers ONLY pure Go helpers
+  - `go test -v ./.dagger/. ./.dagger/buildplan/. ./.dagger/gomod/.` covers ONLY pure Go helpers
     that take/return stdlib values: no `dag.*`, no `*dagger.Directory|Container|File|Secret`,
-    no `.Sync/.Contents/.Entries/.Publish`, no `ctx`-to-engine calls. Both package
-    patterns are kept: `.dagger/buildplan` holds the pure logic, and `.dagger`
+    no `.Sync/.Contents/.Entries/.Publish`, no `ctx`-to-engine calls. All package
+    patterns are kept: `.dagger/buildplan` and `.dagger/gomod` hold the pure logic, and `.dagger`
     stays in the list so an accidental test there fails loudly instead of never running.
   - Anything engine-bound is tested ONLY via a dedicated Dagger `tests` module with an
     `All(ctx) error` aggregator, run as `dagger call -m tests all --source=.`. Do not add engine-dependent tests to `*_test.go` — package `main` init panics without `DAGGER_SESSION_PORT`. See <https://docs.dagger.io/0.21/reference/best-practices/modules>.
   - Design rule: extract decisions into pure helpers, keep SDK wrappers thin.
-    E.g. platform/name/tag/version logic lives in `.dagger/buildplan` and gets
-    table-driven `*_test.go`; `build*.go`, `container.go`, `publishContainers`,
-    `resolveVersion`, `prepareSource`, `applyPatches` stay thin orchestrators.
+    E.g. platform/name/tag/version logic lives in `.dagger/buildplan`, go.mod text rules in
+    `.dagger/gomod`, and both get table-driven `*_test.go`; `build*.go`, `container.go`,
+    `publishContainers`, `resolveVersion`, `prepareSource`, `applyPatches` stay thin orchestrators.
   - No `tests/` module exists yet. Do not create one for pure logic. If one is added
     later, also update `go.work`, `.golangci.yaml` lint scope, `justfile` (`test-dagger`),
     and CI so `just test` stays engine-free.
@@ -97,7 +97,8 @@ Run `just --list` for all recipes. Most operations require Docker.
 - `.dagger/main.go` — Dagger function exports (Build, BuildContainers, Publish)
 - `.dagger/build.go` — compile, archive, proto gen, frontend build
 - `.dagger/container.go` — OCI images (Alpine or BusyBox ARMv5)
-- `.dagger/patch.go` — sqlite/libc pinning + patch application
+- `.dagger/patch.go` — sqlite/libc pinning wrapper + patch application
+- `.dagger/gomod/gomod.go` — go.mod parsing and libc pinning rules
 - `.dagger/publish.go` — multi-arch registry push (Docker Hub + GHCR)
 - `.dagger/resolve.go` — version resolution and git source preparation
 - `.dagger/buildplan/version.go` — version, tag, and release-identity rules
@@ -122,9 +123,9 @@ Run `just --list` for all recipes. Most operations require Docker.
 - **Formatter**: dprint (`.dprint.jsonc`) with gofmt, shfmt, JSON/Markdown/YAML.
   `just fmt` runs golangci-lint fmt + dprint. No recipe or CI checks formatting.
 - **Linter scope**: `.golangci.yaml` excludes `.dagger/internal` and
-  `.dagger/dagger.gen.go`. `golangci-lint` targets `./.dagger/.` and
-  `./.dagger/buildplan/.`. Adding other `*.go` trees requires updating config
-  and CI.
+  `.dagger/dagger.gen.go`. `golangci-lint` targets `./.dagger/.`,
+  `./.dagger/buildplan/.`, and `./.dagger/gomod/.`. Adding other `*.go` trees
+  requires updating config and CI.
 - **Shellcheck** runs with `-s ash` on `container/entrypoint.sh`.
 - **prek hooks** configured in `prek.toml`: trailing-whitespace, end-of-file-fixer,
   YAML/JSON/TOML checks, large-file guard, zizmor (GitHub Actions security),
@@ -161,7 +162,8 @@ Run `just --list` for all recipes. Most operations require Docker.
   (`buildplan.Targets`; Linux/Darwin/Windows/FreeBSD × arch/variant combos).
   Container builds target Linux only.
 - **modernc.org/sqlite ↔ libc pinning** is handled programmatically in
-  `.dagger/patch.go`. The hardcoded `sqliteLibcMap` must be kept current
+  `.dagger/patch.go`; the map and go.mod text rules live in `.dagger/gomod`.
+  The hardcoded `sqliteLibcMap` must be kept current
   for new upstream versions; missing entries fall back to an upstream fetch.
   Drop-in `patches/*.patch` files are applied via `git apply` with `patch`
   fallback.

@@ -6,81 +6,33 @@ package main
 import (
 	"context"
 	"dagger/memos-builds/buildconsts"
+	"dagger/memos-builds/gomod"
 	"dagger/memos-builds/internal/dagger"
 	"fmt"
-	"regexp"
 )
-
-// sqlite-libc map: known versions from
-// https://gitlab.com/cznic/sqlite/-/blob/master/go.mod
-var sqliteLibcMap = map[string]string{
-	"v1.37.0": "v1.62.1", // Memos v0.24.3
-	"v1.37.1": "v1.65.8", // v0.24.4-v0.25.0
-	"v1.38.2": "v1.66.3", // v0.25.1-v0.26.2
-	"v1.46.1": "v1.67.6", // v0.26.3+
-	"v1.50.0": "v1.72.0", // v0.29.0-v0.30.0
-	"v1.56.0": "v1.74.4", // v0.30.0+
-	"v1.57.0": "v1.74.4",
-}
-
-// Regex patterns for parsing go.mod
-var (
-	reSqlite       = regexp.MustCompile(`modernc\.org/sqlite\s+(v[\d.]+)`)
-	reLibc         = regexp.MustCompile(`(modernc\.org/libc\s+)(v[\d.]+)(\s+//\s+indirect)`)
-	reLibcUpstream = regexp.MustCompile(`modernc\.org/libc\s+(v[\d.]+)`)
-)
-
-// getSqliteVersion extracts the modernc.org/sqlite version from go.mod contents.
-// Returns the version string and true if found, empty string and false otherwise.
-func getSqliteVersion(goModContents string) (string, bool) {
-	matches := reSqlite.FindStringSubmatch(goModContents)
-	if len(matches) < 2 {
-		return "", false
-	}
-	return matches[1], true
-}
 
 // getLibcVersionForSqlite returns the expected modernc.org/libc version for a given SQLite version.
 //
-// First checks the hardcoded map, then falls back to fetching from upstream.
+// First checks the hardcoded pins, then falls back to fetching from upstream.
 // Returns an error if the version cannot be determined.
 func getLibcVersionForSqlite(ctx context.Context, sqliteVersion string) (string, error) {
-	// Try hardcoded map first.
-	if libcVersion, ok := sqliteLibcMap[sqliteVersion]; ok {
+	if libcVersion, ok := gomod.PinnedLibc(sqliteVersion); ok {
 		return libcVersion, nil
 	}
 
 	// Fallback: fetch from upstream.
-	upstreamURL := fmt.Sprintf("https://gitlab.com/cznic/sqlite/-/raw/%s/go.mod", sqliteVersion)
-	upstreamGoMod := dag.HTTP(upstreamURL)
+	upstreamGoMod := dag.HTTP(gomod.UpstreamGoModURL(sqliteVersion))
 	upstreamContents, err := upstreamGoMod.Contents(ctx)
 	if err != nil {
-		return "", fmt.Errorf("sqlite %s not in hardcoded map and upstream fetch failed (%w); please update sqliteLibcMap in patch.go", sqliteVersion, err)
+		return "", fmt.Errorf("sqlite %s not in hardcoded map and upstream fetch failed (%w); please update sqliteLibcMap in .dagger/gomod", sqliteVersion, err)
 	}
 
-	matches := reLibcUpstream.FindStringSubmatch(upstreamContents)
-	if len(matches) < 2 {
+	libcVersion, found := gomod.LibcFromUpstreamGoMod(upstreamContents)
+	if !found {
 		return "", fmt.Errorf("sqlite %s: could not extract libc version from upstream go.mod. If this persists, something big has changed, and developer intervention is required", sqliteVersion)
 	}
 
-	return matches[1], nil
-}
-
-// patchLibcVersion replaces the modernc.org/libc version in go.mod contents.
-// Returns the modified contents and true if a change was made, original contents and false otherwise.
-func patchLibcVersion(goModContents, expectedVersion string) (string, bool) {
-	matches := reLibc.FindStringSubmatch(goModContents)
-	if len(matches) < 4 {
-		return goModContents, false
-	}
-
-	currentVersion := matches[2]
-	if currentVersion == expectedVersion {
-		return goModContents, false
-	}
-
-	replacement := "${1}" + expectedVersion + "${3}"
-	return reLibc.ReplaceAllString(goModContents, replacement), true
+	return libcVersion, nil
 }
 
 // Patch modernc.org/sqlite.
@@ -102,7 +54,7 @@ func (m *MemosBuilds) patchModerncSqlite(ctx context.Context, sourceCode *dagger
 		return nil, fmt.Errorf("failed to read go.mod: %w. If this persists, check if the upstream project structure has changed", err)
 	}
 
-	sqliteVersion, found := getSqliteVersion(goModContents)
+	sqliteVersion, found := gomod.SqliteVersion(goModContents)
 	if !found {
 		return sourceCode, nil
 	}
@@ -112,7 +64,7 @@ func (m *MemosBuilds) patchModerncSqlite(ctx context.Context, sourceCode *dagger
 		return nil, err
 	}
 
-	newContents, modified := patchLibcVersion(goModContents, expectedLibcVersion)
+	newContents, modified := gomod.PatchLibc(goModContents, expectedLibcVersion)
 	if !modified {
 		return sourceCode, nil
 	}

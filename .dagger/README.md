@@ -123,7 +123,7 @@ Edit the `Targets` slice in `.dagger/buildplan/targets.go`. Each entry maps to:
 
 ### SQLite/libc patching
 
-The `sqliteLibcMap` in `patch.go` pins known-good `modernc.org/libc` versions for each `modernc.org/sqlite` release. When the upstream project bumps SQLite:
+The `sqliteLibcMap` in `.dagger/gomod/gomod.go` pins known-good `modernc.org/libc` versions for each `modernc.org/sqlite` release. When the upstream project bumps SQLite:
 
 1. Check if the new version is already in the map.
 2. If not, the build will attempt to fetch the correct libc version from upstream automatically.
@@ -149,12 +149,14 @@ dagger develop --compat=0.19.10
 ├── build.go         # generateProto, buildFrontend, buildBackend
 ├── container.go     # buildContainer, buildAlpineContainer, buildBusyBoxARMv5Container
 ├── publish.go       # Archives, checksums, container publishing
-├── patch.go         # SQLite/libc patching, custom patch application
+├── patch.go         # SQLite/libc pinning wrapper, custom patch application
 ├── resolve.go       # Version resolution and git source preparation
 ├── buildplan/       # Pure build plan: version/tag rules, platform matrix, artifact names
 │   ├── version.go   # Version, tag, and release-identity rules
 │   ├── plan.go      # Version plan: ref selection and version policy
 │   └── targets.go   # Platform matrix and artifact naming
+├── gomod/           # Pure go.mod text rules: libc pinning, upstream go.mod parsing
+│   └── gomod.go
 └── buildconsts/
     └── consts.go    # All configurable build constants
 ```
