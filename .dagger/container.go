@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"dagger/memos-builds/buildconsts"
+	"dagger/memos-builds/buildplan"
 	"dagger/memos-builds/internal/dagger"
 	"fmt"
 	"strings"
@@ -167,7 +168,7 @@ func (m *MemosBuilds) buildContainers(
 	gitSrc *dagger.Directory,
 	version string,
 	commit string,
-	targets []BuildMatrix,
+	targets []buildplan.BuildMatrix,
 ) ([]*dagger.Container, error) {
 	// 1. Generate proto and build frontend (shared across all targets)
 	gitSrc = m.generateProto(gitSrc)

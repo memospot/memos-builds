@@ -16,59 +16,13 @@ import (
 	"strings"
 
 	"dagger/memos-builds/buildconsts"
+	"dagger/memos-builds/buildplan"
 	"dagger/memos-builds/internal/dagger"
 )
 
-var TARGETS []BuildMatrix = []BuildMatrix{
-	// Linux
-	{"linux", "amd64", "v1"},
-	{"linux", "amd64", "v2"},
-	{"linux", "amd64", "v3"},
-	{"linux", "arm", "v5"},
-	{"linux", "arm", "v6"},
-	{"linux", "arm", "v7"},
-	{"linux", "arm64", ""},
-	{"linux", "386", "sse2"},
-	{"linux", "ppc64le", "power8"},
-	{"linux", "riscv64", "rva20u64"},
-	{"linux", "s390x", ""},
-
-	// Darwin
-	{"darwin", "amd64", "v1"},
-	{"darwin", "amd64", "v2"},
-	{"darwin", "amd64", "v3"},
-	{"darwin", "arm64", ""},
-
-	// Windows
-	{"windows", "amd64", "v1"},
-	{"windows", "amd64", "v2"},
-	{"windows", "amd64", "v3"},
-	{"windows", "arm64", ""},
-	{"windows", "386", "sse2"},
-
-	// FreeBSD
-	{"freebsd", "amd64", "v1"},
-	{"freebsd", "amd64", "v2"},
-	{"freebsd", "amd64", "v3"},
-	{"freebsd", "arm64", ""},
-}
-
 var commitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
-var shortCommitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
 
 type MemosBuilds struct{}
-
-func shortCommitHash(commit string) string {
-	if len(commit) < 7 {
-		return ""
-	}
-
-	short := commit[:7]
-	if !shortCommitHashPattern.MatchString(short) {
-		return ""
-	}
-	return short
-}
 
 // prepareSource resolves version and applies all patches.
 func (m *MemosBuilds) prepareSource(
@@ -125,7 +79,7 @@ func (m *MemosBuilds) buildInternal(
 		version = "dev"
 	}
 
-	targets, err := filterTargets(platforms)
+	targets, err := buildplan.FilterTargets(platforms)
 	if err != nil {
 		return nil, nil, "", "", "", fmt.Errorf("invalid platforms: %w", err)
 	}
@@ -194,12 +148,12 @@ func (m *MemosBuilds) BuildContainers(
 		version = "dev"
 	}
 
-	targets, err := filterTargets(platforms)
+	targets, err := buildplan.FilterTargets(platforms)
 	if err != nil {
 		return nil, fmt.Errorf("invalid platforms: %w", err)
 	}
 
-	containerTargets := filterLinuxTargets(targets)
+	containerTargets := buildplan.FilterLinuxTargets(targets)
 	if len(containerTargets) == 0 {
 		return nil, fmt.Errorf("no Linux platforms in the selected targets")
 	}

@@ -141,11 +141,11 @@ fmt:
     dprint fmt
 
 lint:
-    golangci-lint run ./.dagger/.
+    golangci-lint run ./.dagger/. ./.dagger/buildplan/.
     shellcheck -s ash container/entrypoint.sh
 
 test:
-    DAGGER_SESSION_PORT=1 DAGGER_SESSION_TOKEN=x go test -v ./.dagger/.
+    go test -v ./.dagger/. ./.dagger/buildplan/.
 
 validate: lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version)

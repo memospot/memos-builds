@@ -13,6 +13,7 @@ engine.bin
 # Agent tooling
 !AGENTS.md
 !.agents/**
+tmp/
 
 # Logs
 logs/

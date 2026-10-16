@@ -7,9 +7,8 @@ import (
 	"strings"
 
 	"dagger/memos-builds/buildconsts"
+	"dagger/memos-builds/buildplan"
 	"dagger/memos-builds/internal/dagger"
-
-	"github.com/Masterminds/semver/v3"
 )
 
 // PublishedImage describes a container image published to a registry.
@@ -54,7 +53,7 @@ func (m *MemosBuilds) createArchive(
 func (m *MemosBuilds) createReleaseArchives(
 	binaries *dagger.Directory,
 	version string,
-	targets []BuildMatrix,
+	targets []buildplan.BuildMatrix,
 ) *dagger.Directory {
 	out := dag.Directory()
 
@@ -88,69 +87,6 @@ func (m *MemosBuilds) generateChecksums(
 	return ctr.File("/work/" + checksumFile)
 }
 
-// containerTags returns tags for release images.
-// CalVer releases (26.10.0): ["latest", "26.10", "26.10.0"]
-// Legacy releases (v0.25.3): ["latest", "0.25", "0.25.3"]
-// Release candidates (26.10.0-rc.1, 26.10-rc.1): the bare version itself.
-// Dev builds (26.10.15-dev.1511fd1): ["26.10.15-dev.1511fd1", "dev"]
-func (m *MemosBuilds) containerTags(version string) []string {
-	bare := strings.TrimPrefix(version, "v")
-	switch {
-	case legacyVersionPattern.MatchString(version):
-		v, err := semver.NewVersion(strings.TrimPrefix(version, "v"))
-		if err != nil {
-			return []string{"latest"}
-		}
-		return []string{
-			"latest",
-			fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
-			fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
-		}
-	case isStableRelease(bare) || calVerStablePattern.MatchString(bare):
-		parts := strings.Split(bare, ".")
-		if len(parts) == 2 {
-			return []string{"latest", bare}
-		}
-		v, err := semver.NewVersion(bare)
-		if err != nil {
-			return []string{"latest"}
-		}
-		return []string{
-			"latest",
-			fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
-			fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
-		}
-	case isReleaseCandidate(bare):
-		return []string{bare}
-	case devVersionPattern.MatchString(bare):
-		return []string{bare, "dev"}
-	default:
-		return []string{"dev"}
-	}
-}
-
-func (m *MemosBuilds) tagsForRegistry(version string, registry string) []string {
-	bare := strings.TrimPrefix(version, "v")
-
-	// Dev builds: dated dev tag on GHCR plus a floating alias on both registries.
-	if devVersionPattern.MatchString(bare) {
-		if strings.HasPrefix(registry, "ghcr.io") {
-			return []string{bare, "dev"}
-		}
-		return []string{"dev"}
-	}
-
-	if isStableRelease(version) || legacyVersionPattern.MatchString(version) {
-		return m.containerTags(version)
-	}
-
-	if isReleaseCandidate(version) {
-		return []string{bare}
-	}
-
-	return []string{"dev"}
-}
-
 // parsePublishedRef extracts the digest from a fully-qualified image reference.
 // Input: "ghcr.io/memospot/memos-builds:dev@sha256:abc123..."
 // Output: "sha256:abc123..."
@@ -178,7 +114,7 @@ func (m *MemosBuilds) publishContainers(
 	ghcrPassword *dagger.Secret,
 ) ([]PublishedImage, error) {
 	// Build binaries for Linux targets only (containers are Linux-only).
-	linuxTargets := filterLinuxTargets(TARGETS)
+	linuxTargets := buildplan.FilterLinuxTargets(buildplan.Targets)
 	if len(linuxTargets) == 0 {
 		return nil, nil
 	}
@@ -212,7 +148,7 @@ func (m *MemosBuilds) publishContainers(
 	for _, target := range publishTargets {
 		if target.user != "" && target.password != nil {
 			address := strings.Split(target.registry, "/")[0]
-			tags := m.tagsForRegistry(releaseVersion, target.registry)
+			tags := buildplan.TagsForRegistry(releaseVersion, target.registry)
 			publisher := platformVariants[0].
 				WithRegistryAuth(address, target.user, target.password)
 			for _, tag := range tags {

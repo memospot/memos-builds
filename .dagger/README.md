@@ -79,7 +79,7 @@ dagger call publish
 
 ## Build Targets
 
-Targets are defined in `TARGETS` (`main.go`). Each entry is a `{OS, Arch, ArchLevel}` tuple.
+Targets are defined in `buildplan.Targets` (`.dagger/buildplan/targets.go`). Each entry is a `{OS, Arch, ArchLevel}` tuple.
 
 Uncomment entries to enable additional platforms. The full matrix includes Linux, Darwin, Windows, and FreeBSD across amd64, arm64, arm, 386, ppc64le, riscv64, and s390x.
 
@@ -115,7 +115,7 @@ memos-linux-arm-v7.tar
 
 ### Adding/removing platforms
 
-Edit the `TARGETS` slice in `main.go`. Each entry maps to:
+Edit the `Targets` slice in `.dagger/buildplan/targets.go`. Each entry maps to:
 
 - A cross-compiled binary (via `buildBackend`)
 - A release archive (via `createReleaseArchives`)
@@ -148,9 +148,12 @@ dagger develop --compat=0.19.10
 ├── main.go          # Entrypoints: Build, BuildContainers, Publish
 ├── build.go         # generateProto, buildFrontend, buildBackend
 ├── container.go     # buildContainer, buildAlpineContainer, buildBusyBoxARMv5Container
-├── publish.go       # Archives, checksums, container tagging/publishing
+├── publish.go       # Archives, checksums, container publishing
 ├── patch.go         # SQLite/libc patching, custom patch application
-├── lib.go           # BuildMatrix type, platform helpers, filterTargets
+├── lib.go           # Version resolution and git source preparation
+├── buildplan/       # Pure build plan: version/tag rules, platform matrix, artifact names
+│   ├── version.go
+│   └── targets.go
 └── buildconsts/
     └── consts.go    # All configurable build constants
 ```

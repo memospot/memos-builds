@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"dagger/memos-builds/buildconsts"
+	"dagger/memos-builds/buildplan"
 	"dagger/memos-builds/internal/dagger"
 	"fmt"
 	"os"
@@ -49,7 +50,7 @@ func (m *MemosBuilds) buildBackend(
 	frontendDist *dagger.Directory,
 	version string,
 	commit string,
-	targets []BuildMatrix,
+	targets []buildplan.BuildMatrix,
 ) (*dagger.Directory, error) {
 	maxConcurrent := max(runtime.NumCPU()-1, 1)
 	if os.Getenv("CI") == "true" {
@@ -75,11 +76,11 @@ func (m *MemosBuilds) buildBackend(
 		// https://pkg.go.dev/cmd/link
 		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.VERSION_IMPORT_PATH, appVersion))
 	}
-	if short := shortCommitHash(commit); short != "" {
+	if short := buildplan.ShortCommitHash(commit); short != "" {
 		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.COMMIT_IMPORT_PATH, short))
 	}
 
-	buildOne := func(c *dagger.Container, t BuildMatrix) *dagger.File {
+	buildOne := func(c *dagger.Container, t buildplan.BuildMatrix) *dagger.File {
 		name := t.BinaryName()
 
 		// Set architecture-specific environment variables.

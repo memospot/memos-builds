@@ -1,4 +1,4 @@
-package main
+package buildplan
 
 import (
 	"slices"
@@ -23,16 +23,16 @@ func TestDevBuildVersion(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// WHEN
-			got, err := devBuildVersion(tc.when, tc.sha)
+			got, err := DevBuildVersion(tc.when, tc.sha)
 
 			// THEN
 			if err != nil {
-				t.Fatalf("devBuildVersion returned error: %v", err)
+				t.Fatalf("DevBuildVersion returned error: %v", err)
 			}
 			if got != tc.want {
-				t.Fatalf("devBuildVersion = %q, want %q", got, tc.want)
+				t.Fatalf("DevBuildVersion = %q, want %q", got, tc.want)
 			}
-			if !devVersionPattern.MatchString(got) {
+			if !DevVersionPattern.MatchString(got) {
 				t.Fatalf("version %q fails the dev pattern", got)
 			}
 		})
@@ -46,11 +46,11 @@ func TestDevBuildVersionRejectsBadSHA(t *testing.T) {
 	for _, sha := range []string{"", "unknown", "abc", "1511fd125", "ZZZZZZZ"} {
 		t.Run("sha="+sha, func(t *testing.T) {
 			// WHEN
-			got, err := devBuildVersion(now, sha)
+			got, err := DevBuildVersion(now, sha)
 
 			// THEN
 			if err == nil {
-				t.Fatalf("devBuildVersion(%q) = %q, want error", sha, got)
+				t.Fatalf("DevBuildVersion(%q) = %q, want error", sha, got)
 			}
 		})
 	}
@@ -58,7 +58,6 @@ func TestDevBuildVersionRejectsBadSHA(t *testing.T) {
 
 func TestContainerTags(t *testing.T) {
 	// GIVEN
-	m := &MemosBuilds{}
 	cases := []struct {
 		name    string
 		version string
@@ -76,11 +75,11 @@ func TestContainerTags(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// WHEN
-			got := m.containerTags(tc.version)
+			got := ContainerTags(tc.version)
 
 			// THEN
 			if !slices.Equal(got, tc.want) {
-				t.Fatalf("containerTags(%q) = %v, want %v", tc.version, got, tc.want)
+				t.Fatalf("ContainerTags(%q) = %v, want %v", tc.version, got, tc.want)
 			}
 		})
 	}
@@ -88,7 +87,6 @@ func TestContainerTags(t *testing.T) {
 
 func TestTagsForRegistry(t *testing.T) {
 	// GIVEN
-	m := &MemosBuilds{}
 	ghcr := "ghcr.io/memospot/memos-builds"
 	hub := "docker.io/lincolnthalles/memos"
 
@@ -109,40 +107,11 @@ func TestTagsForRegistry(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			// WHEN
-			got := m.tagsForRegistry(tc.version, tc.registry)
+			got := TagsForRegistry(tc.version, tc.registry)
 
 			// THEN
 			if !slices.Equal(got, tc.want) {
-				t.Fatalf("tagsForRegistry(%q, %q) = %v, want %v", tc.version, tc.registry, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestIsReleaseVersion(t *testing.T) {
-	// GIVEN
-	cases := []struct {
-		version string
-		want    bool
-	}{
-		{"26.10.0", true},
-		{"26.10", false},
-		{"26.10.0-rc.1", true},
-		{"26.10-rc.1", true},
-		{"v0.25.3", true},
-		{"26.10.15-dev.1511fd1", false},
-		{"1511fd125f1a2b3c4d5e6f70819293a4b5c6d7e8", false},
-		{"", false},
-	}
-
-	for _, tc := range cases {
-		t.Run("version="+tc.version, func(t *testing.T) {
-			// WHEN
-			got := isReleaseVersion(tc.version)
-
-			// THEN
-			if got != tc.want {
-				t.Fatalf("isReleaseVersion(%q) = %v, want %v", tc.version, got, tc.want)
+				t.Fatalf("TagsForRegistry(%q, %q) = %v, want %v", tc.version, tc.registry, got, tc.want)
 			}
 		})
 	}
@@ -152,16 +121,16 @@ func TestShortCommitHash(t *testing.T) {
 	// GIVEN full and short hashes
 	// WHEN shortened
 	// THEN exactly 7 hex chars are returned, else empty
-	if got := shortCommitHash("1511fd125f1a2b3c4d5e6f70819293a4b5c6d7e8"); got != "1511fd1" {
-		t.Fatalf("shortCommitHash = %q, want 1511fd1", got)
+	if got := ShortCommitHash("1511fd125f1a2b3c4d5e6f70819293a4b5c6d7e8"); got != "1511fd1" {
+		t.Fatalf("ShortCommitHash = %q, want 1511fd1", got)
 	}
-	if got := shortCommitHash("ABC1234"); got != "ABC1234" {
-		t.Fatalf("shortCommitHash = %q, want ABC1234", got)
+	if got := ShortCommitHash("ABC1234"); got != "ABC1234" {
+		t.Fatalf("ShortCommitHash = %q, want ABC1234", got)
 	}
 
 	for _, bad := range []string{"", "abc", "zzzzzzz"} {
-		if got := shortCommitHash(bad); got != "" {
-			t.Fatalf("shortCommitHash(%q) = %q, want empty", bad, got)
+		if got := ShortCommitHash(bad); got != "" {
+			t.Fatalf("ShortCommitHash(%q) = %q, want empty", bad, got)
 		}
 	}
 }
