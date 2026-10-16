@@ -12,7 +12,7 @@ on:
         description: "Version tag for testing"
         required: false
         type: string
-        default: "nightly"
+        default: "dev"
 
 env:
   DAGGER_NO_NAG: "1"

@@ -1,8 +1,8 @@
-name: Cleanup nightly releases
+name: Cleanup dev releases
 
 on:
   schedule:
-    - cron: "25 6 * * *" # Daily nightly build at 6:25 AM UTC
+    - cron: "25 6 * * *" # Daily dev-image cleanup at 6:25 AM UTC
   workflow_dispatch:
 
 permissions:
@@ -18,11 +18,11 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Prune old ghcr.io nightly images
+      - name: Prune old ghcr.io dev images
         uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f
         with:
           token: ${{ secrets.GHCR_TOKEN }}
-          delete-tags: nightly-*
+          delete-tags: "*-dev.*"
           older-than: 7 days
           delete-untagged: true
 
@@ -39,15 +39,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prune old nightly releases
+      - name: Prune old dev releases
         run: |
           cutoff_days=7
-          cutoff_date=$(date -d "-${cutoff_days} days" +%Y%m%d)
+          cutoff_date=$(date -u -d "-${cutoff_days} days" +%F)
 
           start_time=$(date +%s)
 
-          readarray -t tags < <(gh release list --limit 100 --json tagName \
-            --jq '.[] | select(.tagName | startswith("nightly-")) | select(.tagName[8:16] < "'"$cutoff_date"'") | .tagName')
+          # Dev releases carry the build date in the tag (YY.MM.D-dev.<sha7>),
+          # but the GitHub release timestamp is authoritative: the tag date is
+          # the build date, the release may be re-created later by re-runs.
+          readarray -t tags < <(gh release list --limit 100 --json tagName,publishedAt \
+            --jq --arg cutoff "$cutoff_date" '.[] | select(.tagName | test("^[1-9][0-9]\\.[0-9]+\\.[0-9]+-dev\\.[0-9a-f]{7}$")) | select(.publishedAt < $cutoff) | .tagName')
 
           total=${#tags[@]}
           deleted=0
@@ -68,7 +71,7 @@ jobs:
 
           {
             echo "---"
-            echo "<h1>🧹 Nightly Release Cleanup Summary</h1>"
+            echo "<h1>🧹 Dev Release Cleanup Summary</h1>"
             echo "<h2>Overview</h2>"
             echo "<table><tr><th>Metric</th><th>Value</th></tr>"
             echo "<tr><td>Releases with tag age &gt;= ${cutoff_days} days</td><td>${total}</td></tr>"
@@ -80,11 +83,11 @@ jobs:
             echo "<tr><td>cutoff-days</td><td>${cutoff_days}</td></tr>"
             echo "<tr><td>cutoff-date</td><td>${cutoff_date}</td></tr>"
             echo "<tr><td>limit</td><td>100</td></tr>"
-            echo "<tr><td>tag-pattern</td><td>nightly-*</td></tr>"
+            echo "<tr><td>tag-pattern</td><td>YY.MM.D-dev.sha7</td></tr>"
             echo "</table></details>"
             echo "<h2>Results</h2>"
             if [ "${total}" -eq 0 ]; then
-              echo "<p>No old nightly releases found.</p>"
+              echo "<p>No old dev releases found.</p>"
             else
               echo "<table><tr><th>Tag</th><th>Status</th></tr>"
               for tag in "${tags[@]}"; do

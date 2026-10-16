@@ -14,17 +14,17 @@ Reproducible, containerized build pipeline for [memospot/memos-builds](https://g
 git clone https://github.com/memospot/memos-builds.git
 cd memos-builds
 
-# Build release artifacts for all targets (nightly)
-dagger call build --source=. --version=nightly export --path=./dist
+# Build release artifacts for all targets (dev)
+dagger call build --source=. --version=dev export --path=./dist
 
 # Build for specific platforms only
-dagger call build --source=. --version=v0.25.3 --platforms=linux/amd64 export --path=./dist
+dagger call build --source=. --version=26.10.0 --platforms=linux/amd64 export --path=./dist
 
 # Build containers (Linux only) and export as tarballs
 dagger call build-containers --source=. export --path=./containers
 
 # Full publish (archives + container push)
-dagger call publish --source=. --version=v0.25.3 \
+dagger call publish --source=. --version=26.10.0 \
   --docker-hub-user=USER --docker-hub-password=env:DOCKER_TOKEN \
   --ghcr-user=USER --ghcr-password=env:GITHUB_TOKEN \
   export --path=./dist
@@ -34,7 +34,7 @@ dagger call publish --source=. --version=v0.25.3 \
 
 ```text
 dagger call build
-  ├── resolveVersion         # Determine git ref, resolve nightly version
+  ├── resolveVersion         # Determine git ref, resolve dev version
   │   ├── patchModerncSqlite # Fix libc/sqlite version mismatch
   │   └── applyPatches       # Apply local .patch files
   ├── generateProto          # buf generate (protobuf)
@@ -62,20 +62,20 @@ dagger call publish
 
 ## Parameters
 
-| Function           | Parameter               | Default   | Description                                                                  |
-| ------------------ | ----------------------- | --------- | ---------------------------------------------------------------------------- |
-| `build`            | `--source`              | `.`       | Host source directory                                                        |
-|                    | `--version`             | `nightly` | Git ref: tag (`v0.25.3`), branch (`release/0.25`), commit hash, or `nightly` |
-|                    | `--platforms`           | all       | `all`, or comma-separated: `linux/amd64,darwin/arm64`                        |
-| `build-containers` | `--source`              | `.`       | Host source directory                                                        |
-|                    | `--version`             | `nightly` | Same as `build`                                                              |
-|                    | `--platforms`           | all       | Same as `build`; non-Linux entries are silently ignored                      |
-| `publish`          | `--source`              | `.`       | Host source directory                                                        |
-|                    | `--version`             | required  | Git tag for the release                                                      |
-|                    | `--docker-hub-user`     | —         | Docker Hub username                                                          |
-|                    | `--docker-hub-password` | —         | Docker Hub token (use `env:VAR`)                                             |
-|                    | `--ghcr-user`           | —         | GHCR username                                                                |
-|                    | `--ghcr-password`       | —         | GHCR token (use `env:VAR`)                                                   |
+| Function           | Parameter               | Default  | Description                                                |
+| ------------------ | ----------------------- | -------- | ---------------------------------------------------------- |
+| `build`            | `--source`              | `.`      | Host source directory                                      |
+|                    | `--version`             | `dev`    | Git ref: tag (`26.10.0`, `v0.25.3`), commit hash, or `dev` |
+|                    | `--platforms`           | all      | `all`, or comma-separated: `linux/amd64,darwin/arm64`      |
+| `build-containers` | `--source`              | `.`      | Host source directory                                      |
+|                    | `--version`             | `dev`    | Same as `build`                                            |
+|                    | `--platforms`           | all      | Same as `build`; non-Linux entries are silently ignored    |
+| `publish`          | `--source`              | `.`      | Host source directory                                      |
+|                    | `--version`             | required | Git tag for the release                                    |
+|                    | `--docker-hub-user`     | —        | Docker Hub username                                        |
+|                    | `--docker-hub-password` | —        | Docker Hub token (use `env:VAR`)                           |
+|                    | `--ghcr-user`           | —        | GHCR username                                              |
+|                    | `--ghcr-password`       | —        | GHCR token (use `env:VAR`)                                 |
 
 ## Build Targets
 
@@ -88,10 +88,10 @@ Uncomment entries to enable additional platforms. The full matrix includes Linux
 `dagger call build` produces:
 
 ```bash
-memos-v0.25.3-linux-x86_64.tar.gz
-memos-v0.25.3-darwin-arm64.tar.gz
-memos-v0.25.3-windows-x86_64.zip
-memos-v0.25.3_SHA256SUMS.txt
+memos-26.10.0-linux-x86_64.tar.gz
+memos-26.10.0-darwin-arm64.tar.gz
+memos-26.10.0-windows-x86_64.zip
+memos-26.10.0_SHA256SUMS.txt
 ```
 
 `dagger call build-containers` produces:

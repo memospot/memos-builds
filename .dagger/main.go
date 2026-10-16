@@ -14,12 +14,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	"dagger/memos-builds/buildconsts"
 	"dagger/memos-builds/internal/dagger"
-
-	"github.com/Masterminds/semver/v3"
 )
 
 var TARGETS []BuildMatrix = []BuildMatrix{
@@ -57,25 +54,20 @@ var TARGETS []BuildMatrix = []BuildMatrix{
 }
 
 var commitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
-var shortCommitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{9}$`)
+var shortCommitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
 
 type MemosBuilds struct{}
 
 func shortCommitHash(commit string) string {
-	if len(commit) < 9 {
+	if len(commit) < 7 {
 		return ""
 	}
 
-	short := commit[:9]
+	short := commit[:7]
 	if !shortCommitHashPattern.MatchString(short) {
 		return ""
 	}
 	return short
-}
-
-// generateNightlyVersion returns the date-based semantic version for nightly builds.
-func (m *MemosBuilds) generateNightlyVersion(shortSHA string) *semver.Version {
-	return nightlyBuildVersion(time.Now().UTC(), shortSHA)
 }
 
 // prepareSource resolves version and applies all patches.
@@ -130,7 +122,7 @@ func (m *MemosBuilds) buildInternal(
 	platforms string,
 ) (*dagger.Directory, *dagger.Directory, string, string, string, error) {
 	if version == "" {
-		version = "nightly"
+		version = "dev"
 	}
 
 	targets, err := filterTargets(platforms)
@@ -199,7 +191,7 @@ func (m *MemosBuilds) BuildContainers(
 	platforms string,
 ) (*dagger.Directory, error) {
 	if version == "" {
-		version = "nightly"
+		version = "dev"
 	}
 
 	targets, err := filterTargets(platforms)

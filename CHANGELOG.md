@@ -22,6 +22,26 @@ Security: in case of vulnerabilities.
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- Daily development builds now follow upstream calendar versioning (`YY.MM.D-dev.<sha7>`), so they start without extra patching.
+- Release candidate builds (for example, `26.10-rc.1`) get their own prerelease with matching container tags.
+
+### Changed
+
+- **Breaking:** daily development releases and container tags moved from `nightly-YYYYMMDD-<sha>` to upstream-style `YY.MM.D-dev.<sha7>` versions, with a floating `dev` container tag instead of `nightly`.
+- **Breaking:** future stable and candidate tags drop the `v` prefix to match upstream (for example, `26.10.0` instead of `v26.10.0`); legacy `v0.x` tags are unchanged.
+- Old daily development releases are now pruned by release date instead of by tag name.
+
+### Removed
+
+- Dropped the `release/` branch build path; upstream no longer uses it.
+
+### Fixed
+
+- Fixed daily builds failing to start with `invalid build version` after upstream moved to calendar versioning.
+- Fixed release names disagreeing with the published container tags when a dated development build was requested.
+
 ## [0.26.0] - 2026-02-02
 
 ### Added

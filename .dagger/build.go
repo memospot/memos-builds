@@ -62,7 +62,8 @@ func (m *MemosBuilds) buildBackend(
 		"-extldflags '-static'",
 	}
 
-	// Memos migrations will fail if we override this field with gibberish.
+	// Build version must satisfy upstream validation (YY.MM.N, -rc.K or
+	// -dev.<sha7>); anything else fails startup, so skip unknown sources.
 	v, err := semver.NewVersion(version)
 	if err == nil {
 		// Version shown in app intentionally excludes build metadata (commit hash).

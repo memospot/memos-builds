@@ -2,17 +2,17 @@ name: Build and Release (Dagger)
 
 on:
   schedule:
-    - cron: "25 7 * * *" # Daily nightly build at 7:25 AM UTC
+    - cron: "25 7 * * *" # Daily dev build at 7:25 AM UTC
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v0.[0-9]+.[0-9]+*"
+      - "[1-9][0-9].*"
   workflow_dispatch:
     inputs:
       version:
         description: |
-          Version tag to build (e.g., v0.25.3)
-          Leave empty for nightly build from main branch.
+          Version tag to build (e.g., 26.10.0, 26.10.15-dev.1511fd1, v0.25.3).
+          Leave empty for a dev build from main branch.
         required: false
         type: string
       publish-containers:
@@ -54,17 +54,32 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${INPUTS_VERSION}" == v* || "${INPUTS_VERSION}" =~ ^nightly-[0-9]{8}-[0-9a-fA-F]{7}$ ]]; then
-            VERSION="${INPUTS_VERSION}"
-          elif [[ "${GITHUB_REF_NAME}" == v* ]]; then
-            VERSION="${GITHUB_REF_NAME}"
-          else
-            MEMOS_SHA="$(git ls-remote https://github.com/usememos/memos.git refs/heads/main | cut -c1-7)"
-            if [[ -z "$MEMOS_SHA" ]]; then
-              echo "Failed to resolve usememos/memos main branch SHA" >&2
-              exit 1
+          if [[ -z "${INPUTS_VERSION}" ]]; then
+            if [[ "${GITHUB_REF_NAME}" == v* || "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              VERSION="${GITHUB_REF_NAME}"
+            else
+              read -r MEMOS_SHA _ <<<"$(git ls-remote https://github.com/usememos/memos.git refs/heads/main)"
+              MEMOS_SHA="${MEMOS_SHA:0:7}"
+              if [[ -z "$MEMOS_SHA" ]]; then
+                echo "Failed to resolve usememos/memos main branch SHA" >&2
+                exit 1
+              fi
+              # Dev version mirrors upstream: YY.MM.D-dev.<sha7>, matching
+              # internal/version and scripts/release_version.sh. The date is the
+              # build date in UTC; the embedded binary carries the same scheme.
+              VERSION="$(TZ=UTC date +%y.%m.%-d)-dev.${MEMOS_SHA,,}"
             fi
-            VERSION="nightly-$(date -u +%Y%m%d)-${MEMOS_SHA}"
+          elif [[ "${INPUTS_VERSION}" =~ ^(v?0\.[0-9]+\.[0-9]+|v?[1-9][0-9]\.(0[1-9]|1[0-2])(\.[0-9]+)?(-rc\.[1-9][0-9]*)?|v?[1-9][0-9]\.(0[1-9]|1[0-2])\.[0-9]+-dev\.[0-9a-f]{7}|[0-9a-fA-F]{40})$ ]]; then
+            VERSION="${INPUTS_VERSION}"
+          else
+            echo "Invalid version ${INPUTS_VERSION}: expected a release tag, dev version, or commit hash" >&2
+            exit 1
+          fi
+
+          # Normalise calendar tags to upstream's bare form (26.10.0);
+          # legacy v0.x tags keep the "v" prefix.
+          if [[ "$VERSION" =~ ^v[1-9][0-9]+\.(0[1-9]|1[0-2])(\.[0-9]+)?(-rc\.[1-9][0-9]*)?$ || "$VERSION" =~ ^v[1-9][0-9]+\.(0[1-9]|1[0-2])\.[0-9]+-dev\.[0-9a-f]{7}$ ]]; then
+            VERSION="${VERSION#v}"
           fi
 
           if [[ "$VERSION" == v* ]]; then
@@ -140,7 +155,7 @@ jobs:
           push-to-registry: true
 
       - name: Create GitHub Release
-        if: startsWith(steps.version.outputs.version, 'v')
+        if: startsWith(steps.version.outputs.version, 'v0.') || (!startsWith(steps.version.outputs.version, 'v') && !contains(steps.version.outputs.version, '-rc.') && !contains(steps.version.outputs.version, '-dev.') && contains(steps.version.outputs.version, '.'))
         run: |
           # Remove existing release if present (workflow re-runs).
           if gh release view "${VERSION}" --json tagName >/dev/null 2>&1; then
@@ -167,8 +182,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           CONTAINER_TAG: ${{ steps.version.outputs.container_tag }}
 
-      - name: Create Nightly Release
-        if: "!startsWith(steps.version.outputs.version, 'v') || contains(steps.version.outputs.version, 'nightly')"
+      - name: Create Dev Release
+        if: contains(steps.version.outputs.version, '-dev.')
         run: |
           # Remove existing release if present (workflow re-runs, same-day rebuilds).
           if gh release view "${VERSION}" --json tagName >/dev/null 2>&1; then
@@ -185,7 +200,8 @@ jobs:
           > Ensure that you use a different database from the one you use for stable releases.
 
           > [!NOTE]
-          > Nightly assets use an out-of-tree date-based semantic version (for example, `v2026.5.6-nightly+bcbcb03`).
+          > Dev binaries embed an upstream-style development version
+          > (for example, `26.10.15-dev.1511fd1`).
 
           ---
 
@@ -203,6 +219,34 @@ jobs:
           ### Stopping the instance
           ```bash
           docker stop memos-${CONTAINER_TAG}-throwaway
+          ```
+          NOTES
+          gh release create "${VERSION}" ./dist/* \
+            --title "${VERSION}" \
+            --prerelease \
+            --notes-file /tmp/release-notes.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONTAINER_TAG: ${{ steps.version.outputs.container_tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Create Release Candidate Release
+        if: contains(steps.version.outputs.version, '-rc.')
+        run: |
+          # Remove existing release if present (workflow re-runs).
+          if gh release view "${VERSION}" --json tagName >/dev/null 2>&1; then
+            gh release delete "${VERSION}" --yes --cleanup-tag
+          fi
+
+          cat <<'NOTES' | envsubst > /tmp/release-notes.md
+          Built from [usememos/memos@${VERSION}](https://github.com/usememos/memos/releases/tag/${VERSION})
+
+          ---
+          ```bash
+          docker pull ghcr.io/memospot/memos-builds:${CONTAINER_TAG}
+          ```
+          ```bash
+          docker pull docker.io/lincolnthalles/memos:${CONTAINER_TAG}
           ```
           NOTES
           gh release create "${VERSION}" ./dist/* \

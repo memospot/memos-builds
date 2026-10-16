@@ -13,8 +13,60 @@ app for Memos.
 
 ## Rules
 
-- Never create GitHub issues or pull requests. This project only accepts manual human-curated interactions.
 - Never push directly to `main` through the agent. Use `just publish TAG` for releases.
+- Deliver code changes only after `just gate` succeeds.
+
+## Code Style
+
+- Abbreviations only for short-lived variables in <=5-line scopes (single-letter preferred). Exported names stay descriptive.
+- Qualifiers carry meaning: big-endian for non-booleans (`latencyMsMax`), little-endian for booleans (`isEnabled`). Prefer `api *Fetcher` over `fetcher *Fetcher`.
+- Readability: state invariants positively. Functional for small iterator logic, imperative on hot paths. Early returns over reassignment, `else` blocks, or nested `if`s. Pass critical options explicitly at call sites.
+- Do not create single-use helpers under ~10 LoC simply to shorten a function.
+- Treat `index`, `count`, and `size` as distinct types.
+
+## Architecture & Modules
+
+- One clear responsibility per module. Entry points handle wiring and startup flow only.
+- Do not create or expand catch-all `utils`/`helpers` modules; place logic in its domain module.
+- Separate pure domain logic from I/O and platform integration. Make dependencies explicit through signatures.
+- Split on diverging responsibilities. Extract a helper only if reused or independently meaningful through a public contract.
+
+## API & Error Handling
+
+- Add context when propagating errors. No silent failures.
+- Catch at architectural boundaries, not randomly. Fail fast.
+- Warnings for recoverable errors; descriptive errors for fatal failures.
+
+## Concurrency & State
+
+- Prefer immutable data; scope mutability narrowly.
+
+## Comments
+
+- Leave surrounding comments unchanged unless directly related to the task.
+- Omit new comments by default.
+- Never add redundant docstrings (i.e `Build the frontend` for a `buildFrontend()` function).
+- Explain intent, not steps. Inline comments only for non-obvious logic. Never address the user in code comments.
+- When editing code, remove or rewrite related comments that violate the above rules or are no longer accurate.
+
+## Tests
+
+- Only high-value regression tests covering success, failure, and realistic edge cases. No tests for statically defined values, no negative tests for removed logic.
+- Test public contracts and behavior only, with deep equality over whole objects. Do not duplicate implementation logic in the test.
+- Deterministic: no wall-clock, network, or environment coupling unless the behavior under test requires it.
+- Isolation: mock only at the system boundary (subprocess, filesystem, network), never domain logic.
+- Inline BDD-style comments `// GIVEN` / `// WHEN` / `// THEN` (`// AND` as needed) + high-signal description, splitting each test into logical blocks whenever it doesn't get redundant and improves readability.
+- **Test split: `go test` vs Dagger test module**:
+  - `go test -v ./.dagger/.` covers ONLY pure Go helpers that take/return stdlib values: no `dag.*`, no `*dagger.Directory|Container|File|Secret`, no `.Sync/.Contents/.Entries/.Publish`, no `ctx`-to-engine calls.
+  - Anything engine-bound is tested ONLY via a dedicated Dagger `tests` module with an
+    `All(ctx) error` aggregator, run as `dagger call -m tests all --source=.`. Do not add engine-dependent tests to `*_test.go` — package `main` init panics without `DAGGER_SESSION_PORT`. See <https://docs.dagger.io/0.21/reference/best-practices/modules>.
+  - Design rule: extract decisions into pure helpers, keep SDK wrappers thin.
+    E.g. platform/name/tag/version/sqlite-regex/JSON logic stays pure and gets
+    table-driven `*_test.go`; `build*.go`, `container.go`, `publishContainers`,
+    `resolveVersion`, `prepareSource`, `applyPatches` stay thin orchestrators.
+  - No `tests/` module exists yet. Do not create one for pure logic. If one is added
+    later, also update `go.work`, `.golangci.yaml` lint scope, `justfile` (`test-dagger`),
+    and CI so `just test` stays engine-free.
 
 ## Commands
 
@@ -35,7 +87,6 @@ app for Memos.
 | Clean Dagger cache and containers     | `just dagger-clean`   |
 
 Run `just --list` for all recipes. Most operations require Docker.
-`just test` runs `go test` — passes with zero output (no `*_test.go` under `.dagger/`).
 
 ## Structure
 
@@ -78,12 +129,18 @@ Run `just --list` for all recipes. Most operations require Docker.
   `--compat=skip`. Both remove the generated `.dagger/.gitignore`.
 - **All `dagger call` invocations MUST pass `--source=.`**. Artifacts land in
   `./dist/`.
-- **`--version` accepts**: `vX.Y.Z` tag, `release/X.Y` branch, 40-char commit
-  hash, or `nightly` (default — builds upstream `main`). Certain historical
-  versions use hardcoded commit hashes (`knownVersionCommits` in `lib.go`).
+- **`--version` accepts**: legacy `v0.x` tags, bare or `v`-prefixed calendar
+  tags (`26.10.0`, `26.10.0-rc.1`), bare dev versions (`26.10.15-dev.1511fd1`),
+  40-char commit hashes, or `dev` (default — builds upstream `main`).
+  Certain historical versions use hardcoded commit hashes
+  (`knownVersionCommits` in `lib.go`). Dev builds embed an upstream-style
+  `YY.MM.D-dev.<sha7>` version so they pass upstream validation.
 - **Container registries**: `docker.io/lincolnthalles/memos` and
-  `ghcr.io/memospot/memos-builds`. Tags follow semver; nightly releases use
-  `nightly-YYYYMMDD-<shortSHA>`.
+  `ghcr.io/memospot/memos-builds`. CalVer releases tag `latest`, `YY.MM` and
+  `YY.MM.N` (bare, no `v` prefix); legacy `v0.x` releases tag `latest`,
+  `0.YY` and `0.YY.N` (bare patch — the `v` lives only on the git tag);
+  dev releases use their `YY.MM.D-dev.<sha7>` tag on
+  GHCR plus a floating `dev` alias on both registries.
 - **Container entrypoint** is BusyBox `ash`, not bash. Keep
   `container/entrypoint.sh` POSIX/ash-compatible.
 - **OCI only**: Dagger supports standard OCI fields — no `HEALTHCHECK` or
@@ -100,3 +157,14 @@ Run `just --list` for all recipes. Most operations require Docker.
   inside `justfile` recipes.
 - **Go/container image bumps** follow a detailed checklist in
   `.agents/skills/bump/SKILL.md`.
+
+## Contributing
+
+Agent-driven GitHub contributions on the user's behalf. No `CONTRIBUTING.md` or `.github/` templates.
+
+- Style (contributions only): plain high-signal English, no emojis. Complete sentences; headings, lists, or tables when clearer. Keep responses concise; completeness wins over brevity.
+- Never create an issue or PR unless the user directly requests that specific issue/PR in this session. Inferred intent is not permission. Covers `gh issue/pr create`, API, and UI paths.
+- Issues: problem simply, then suggested solution briefly. Omit implementation detail unless material. Upload evidence to GitHub.
+- PRs: subject `type(scope): imperative summary`, ≤72 chars, short lowercase scope. Body states the problem in a sentence or two, then the fix. State why over how.
+- PR scope: one problem per PR. Adjacent cleanup needs its own PR unless required for the fix. Bump only deps the fix requires.
+- PR evidence: upload to GitHub, never commit screenshots. UI changes need before/after images. Report material outcomes, risks, caveats, and blockers; omit inventories the diff already shows.

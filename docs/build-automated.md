@@ -6,10 +6,10 @@ For automated, reproducible builds using Dagger, see the [Dagger Pipeline Docume
 
 ```bash
 # Build binaries for current platform
-dagger call build --source=. --version=nightly export --path=./dist
+dagger call build --source=. --version=dev export --path=./dist
 
 # Build for specific platforms
-dagger call build --source=. --version=v0.26.1 --platforms=linux/amd64 export --path=./dist
+dagger call build --source=. --version=26.10.0 --platforms=linux/amd64 export --path=./dist
 
 # Build containers
 dagger call build-containers --source=. export --path=./containers

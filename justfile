@@ -111,9 +111,9 @@ dagger-codegen:
 [doc('
 Build Memos binaries for the specified version and platforms.
 
-    - VERSION: v*.*.*, nightly, or commit hash.
+    - VERSION: 26.10.0, v0.25.3, dev, or commit hash.
     - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".')]
-build VERSION='nightly' PLATFORMS='':
+build VERSION='dev' PLATFORMS='':
     #!/usr/bin/env bash
     PLATFORMS=$( [[ -n "{{ PLATFORMS }}" ]] && echo "{{ PLATFORMS }}" || echo "{{ DEFAULT_BUILD_TARGET }}" )
     echo -e "Building {{ BLUE }}{{ VERSION }}{{ NORMAL }} for {{ BLUE }}${PLATFORMS}{{ NORMAL }}…"
@@ -145,7 +145,7 @@ lint:
     shellcheck -s ash container/entrypoint.sh
 
 test:
-    go test -v ./.dagger/.
+    DAGGER_SESSION_PORT=1 DAGGER_SESSION_TOKEN=x go test -v ./.dagger/.
 
 validate: lint test
     cd .dagger && go mod tidy -go=$(cat ../.go-version)
@@ -171,10 +171,10 @@ tidy MODULE_GO_VERSION:
 
 [doc('
 Build Memos containers, load them into Docker, and tag them.
-    - VERSION: v*.*.*, nightly, or commit hash.
+    - VERSION: 26.10.0, v0.25.3, dev, or commit hash.
     - PLATFORMS: Comma-separated list (e.g., "linux/amd64,darwin/arm64") or "all".
 ')]
-build-docker VERSION='nightly' PLATFORMS='':
+build-docker VERSION='dev' PLATFORMS='':
     #!/usr/bin/env bash
     version="{{ VERSION }}"
 
@@ -253,9 +253,9 @@ build-docker VERSION='nightly' PLATFORMS='':
 
 [doc('
 Start loaded Memos container images in demo mode.
-    - VERSION: must match the version used in build-docker (default: nightly).
+    - VERSION: must match the version used in build-docker (default: dev).
 ')]
-run-demos VERSION='nightly':
+run-demos VERSION='dev':
     #!/usr/bin/env bash
     version="{{ VERSION }}"
 
@@ -360,25 +360,25 @@ run-demos VERSION='nightly':
 
     echo -e "\n{{ GREEN }}✓ All demos started!{{ NORMAL }}"
 
-pull-nightly:
+pull-dev:
     #!/usr/bin/env bash
-    docker stop memos-nightly 2>/dev/null || true
-    docker rm memos-nightly 2>/dev/null || true
+    docker stop memos-dev 2>/dev/null || true
+    docker rm memos-dev 2>/dev/null || true
     if ! docker run \
         --rm \
         --detach \
         --init \
-        --name memos-nightly \
+        --name memos-dev \
         --publish "0:5230" \
         --env "MEMOS_DEMO=true" \
         --env "TZ=America/Sao_Paulo" \
         --platform "{{ DEFAULT_BUILD_TARGET }}" \
-        "ghcr.io/memospot/memos-builds:nightly"; then
-        echo -e "{{ RED }}ERROR: Failed to start memos-nightly container{{ NORMAL }}"
+        "ghcr.io/memospot/memos-builds:dev"; then
+        echo -e "{{ RED }}ERROR: Failed to start memos-dev container{{ NORMAL }}"
         exit 1
     fi
-    port=$(docker port memos-nightly 5230 | cut -d: -f2)
-    echo -e "{{ GREEN }}Container memos-nightly running, listening at http://localhost:${port}{{ NORMAL }}"
+    port=$(docker port memos-dev 5230 | cut -d: -f2)
+    echo -e "{{ GREEN }}Container memos-dev running, listening at http://localhost:${port}{{ NORMAL }}"
 
 # Clean built Docker containers and images
 [confirm('This will stop and remove all Docker containers and images starting with "memos-".
@@ -437,21 +437,30 @@ git-reset:
     git clean -fdx
     git checkout -
 
-# Remove a git tag and push it again (internal use)
+# Remove a git tag and push it again (internal use).
+# Legacy v0.x tags keep the "v" prefix; calendar tags stay bare like upstream.
 [private]
 git-retag TAG:
     #!/usr/bin/env bash
     set +e
-    TAG="v{{ trim_start_matches(TAG, 'v') }}"
+    if [[ "{{ TAG }}" =~ ^v?0\.[0-9]+\.[0-9]+$ ]]; then
+        TAG="v{{ trim_start_matches(TAG, 'v') }}"
+    else
+        TAG="{{ trim_start_matches(TAG, 'v') }}"
+    fi
     git push origin :refs/tags/$TAG
     git tag -d $TAG
     git tag -a $TAG -m "Tag $TAG"
     git push origin $TAG
 
-[doc('Tag and push to GitHub, triggering the release workflow.')]
+[doc('Tag and push to GitHub, triggering the release workflow. Calendar tags stay bare (26.10.0); legacy v0.x tags keep the "v" prefix.')]
 publish TAG: fmt validate
     #!/usr/bin/env bash
-    TAG="v{{ trim_start_matches(TAG, 'v') }}"
+    if [[ "{{ TAG }}" =~ ^v?0\.[0-9]+\.[0-9]+$ ]]; then
+        TAG="v{{ trim_start_matches(TAG, 'v') }}"
+    else
+        TAG="{{ trim_start_matches(TAG, 'v') }}"
+    fi
     just git-retag "$TAG"
     git push origin main
 

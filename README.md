@@ -12,7 +12,7 @@ and privacy-first note-taking service.
 Some of these builds are used by [Memospot](https://github.com/memospot/memospot),
 a self-contained desktop app for Memos, available on macOS, Linux and Windows.
 
-[Nightly](https://github.com/memospot/memos-builds/releases?q=nightly) and
+[Dev](https://github.com/memospot/memos-builds/releases?q=dev) and
 [Stable](https://github.com/memospot/memos-builds/releases/latest) builds are available.
 
 <div align="center">
@@ -58,18 +58,18 @@ docker run --detach --name memos --publish 5230:5230 \
   --volume ~/.memos/:/var/opt/memos ghcr.io/memospot/memos-builds:latest
 ```
 
-#### Docker run (nightly)
+#### Docker run (dev)
 
 ```sh
-docker run --detach --name memos-nightly --publish 5231:5230 \
-  --volume ~/.memos-nightly/:/var/opt/memos ghcr.io/memospot/memos-builds:nightly
+docker run --detach --name memos-dev --publish 5231:5230 \
+  --volume ~/.memos-dev/:/var/opt/memos ghcr.io/memospot/memos-builds:dev
 ```
 
-#### Docker run (throwaway nightly in demo mode)
+#### Docker run (throwaway dev in demo mode)
 
 ```sh
 docker run --detach --rm --name memos-throwaway --publish 5232:5230 \
-  --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:nightly
+  --env MEMOS_DEMO=true ghcr.io/memospot/memos-builds:dev
 ```
 
 #### Keeping containers up to date
@@ -103,9 +103,9 @@ docker run --detach --name memos --publish 5230:5230 \
 ### About images
 
 - Versioned images are checked out to the matching Memos upstream tag.
-- Nightly images use whatever is available at Memos `main` branch at build time.
+- Dev images use whatever is available at Memos `main` branch at build time.
 - Image packages are auto-upgraded at build time.
-- Nightly images are built daily at 07:25 UTC.
+- Dev images are built daily at 07:25 UTC.
 - Images are published to [Docker Hub](https://hub.docker.com/r/lincolnthalles/memos) and [GitHub Container Registry](https://github.com/memospot/memos-builds/pkgs/container/memos-builds).
 
 | Platform  | Image              |

@@ -15,7 +15,7 @@ import (
 // PublishedImage describes a container image published to a registry.
 type PublishedImage struct {
 	Registry string `json:"registry"`         // e.g. "ghcr.io/memospot/memos-builds"
-	Tag      string `json:"tag"`              // e.g. "nightly"
+	Tag      string `json:"tag"`              // e.g. "dev"
 	Digest   string `json:"digest,omitempty"` // e.g. "sha256:abc123..."
 	Ref      string `json:"ref"`              // full ref with digest
 }
@@ -89,71 +89,71 @@ func (m *MemosBuilds) generateChecksums(
 }
 
 // containerTags returns tags for release images.
-// Releases (v0.25.3): ["latest", "0.25", "0.25.3"]
+// CalVer releases (26.10.0): ["latest", "26.10", "26.10.0"]
+// Legacy releases (v0.25.3): ["latest", "0.25", "0.25.3"]
+// Release candidates (26.10.0-rc.1, 26.10-rc.1): the bare version itself.
+// Dev builds (26.10.15-dev.1511fd1): ["26.10.15-dev.1511fd1", "dev"]
 func (m *MemosBuilds) containerTags(version string) []string {
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		// Fallback for unparseable versions
-		return []string{"latest"}
+	bare := strings.TrimPrefix(version, "v")
+	switch {
+	case legacyVersionPattern.MatchString(version):
+		v, err := semver.NewVersion(strings.TrimPrefix(version, "v"))
+		if err != nil {
+			return []string{"latest"}
+		}
+		return []string{
+			"latest",
+			fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
+			fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
+		}
+	case isStableRelease(bare) || calVerStablePattern.MatchString(bare):
+		parts := strings.Split(bare, ".")
+		if len(parts) == 2 {
+			return []string{"latest", bare}
+		}
+		v, err := semver.NewVersion(bare)
+		if err != nil {
+			return []string{"latest"}
+		}
+		return []string{
+			"latest",
+			fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
+			fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
+		}
+	case isReleaseCandidate(bare):
+		return []string{bare}
+	case devVersionPattern.MatchString(bare):
+		return []string{bare, "dev"}
+	default:
+		return []string{"dev"}
 	}
-
-	if v.Prerelease() != "" {
-		return []string{"nightly"}
-	}
-
-	// Release tags: latest, major.minor, major.minor.patch
-	return []string{
-		"latest",
-		fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
-		fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
-	}
-}
-
-func (m *MemosBuilds) ghcrNightlyTags(version string) []string {
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		return []string{"nightly"}
-	}
-
-	tag, _ := nightlyReleaseTag("nightly", v.Metadata())
-	if tag == "nightly" {
-		return []string{"nightly"}
-	}
-
-	return []string{tag, "nightly"}
 }
 
 func (m *MemosBuilds) tagsForRegistry(version string, registry string) []string {
-	if nightlyTag, ok := nightlyReleaseTag(version, ""); ok {
+	bare := strings.TrimPrefix(version, "v")
+
+	// Dev builds: dated dev tag on GHCR plus a floating alias on both registries.
+	if devVersionPattern.MatchString(bare) {
 		if strings.HasPrefix(registry, "ghcr.io") {
-			if nightlyTag == "nightly" {
-				return []string{"nightly"}
-			}
-
-			return []string{nightlyTag, "nightly"}
+			return []string{bare, "dev"}
 		}
-
-		return []string{"nightly"}
+		return []string{"dev"}
 	}
 
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		return []string{"latest"}
-	}
-
-	if v.Prerelease() == "" {
+	if isStableRelease(version) || legacyVersionPattern.MatchString(version) {
 		return m.containerTags(version)
 	}
 
-	if strings.HasPrefix(registry, "ghcr.io") {
-		return m.ghcrNightlyTags(version)
+	if isReleaseCandidate(version) {
+		return []string{bare}
 	}
 
-	return []string{"nightly"}
+	return []string{"dev"}
 }
 
 // parsePublishedRef extracts the digest from a fully-qualified image reference.
-// Input: "ghcr.io/memospot/memos-builds:nightly@sha256:abc123..."
+// Input: "ghcr.io/memospot/memos-builds:dev@sha256:abc123..."
+// Output: "sha256:abc123..."
 // Output: "sha256:abc123..."
 func parsePublishedRef(ref string) string {
 	if idx := strings.LastIndex(ref, "@"); idx != -1 {

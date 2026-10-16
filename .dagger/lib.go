@@ -14,8 +14,24 @@ import (
 )
 
 var (
-	versionVarPattern     = regexp.MustCompile(`var Version = "([^"]+)"`)
-	nightlyVersionPattern = regexp.MustCompile(`^nightly-\d{8}-[0-9a-fA-F]{9}$`)
+	versionVarPattern = regexp.MustCompile(`var Version = "([^"]+)"`)
+	shortSHA7Pattern  = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
+
+	// devVersionPattern mirrors the upstream Go validator for development
+	// builds: YY.MM.D-dev.<sha7> (day without leading zero, lowercase hex).
+	devVersionPattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])\.([1-9][0-9]*)-dev\.([0-9a-f]{7})$`)
+
+	// legacyVersionPattern matches legacy `v0.x` git tags.
+	legacyVersionPattern = regexp.MustCompile(`^v0\.[0-9]+\.[0-9]+$`)
+
+	// calVerStablePattern matches calendar releases with an optional patch
+	// component: YY.MM[.N]. Upstream never tags bare YY.MM, but the old
+	// validator accepts it, so it stays accepted here.
+	calVerStablePattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])(\.(0|[1-9][0-9]*))?$`)
+
+	// calVerRCPattern matches release candidates YY.MM[.N]-rc.K, including
+	// the live 26.10-rc.1 form. Upstream tags candidates bare.
+	calVerRCPattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])(\.(0|[1-9][0-9]*))?-rc\.[1-9][0-9]*$`)
 
 	// knownVersionCommits maps versions to specific commit hashes.
 	// Used to address upstream inconsistencies in tagged releases.
@@ -215,59 +231,79 @@ func filterLinuxTargets(targets []BuildMatrix) []BuildMatrix {
 	return linux
 }
 
-// extractVersionFromSource reads version from upstream source code.
-func (m *MemosBuilds) extractVersionFromSource(ctx context.Context, src *dagger.Directory) string {
+// extractVersionFromSource reads the injected version from upstream source code.
+// Returns "" when the source predates version injection (legacy 0.x with
+// `var Version = "…"`) or carries no injected default.
+func (m *MemosBuilds) extractVersionFromSource(ctx context.Context, src *dagger.Directory) (string, bool) {
 	contents, err := src.File(buildconsts.VERSION_FILE).Contents(ctx)
 	if err != nil {
-		return "0.0.0"
+		return "", false
 	}
 
 	match := versionVarPattern.FindStringSubmatch(contents)
 	if len(match) < 2 {
-		return "0.0.0"
+		return "", false
 	}
 
 	versionFromFile := match[1]
 	if _, err := semver.NewVersion(versionFromFile); err != nil {
-		return "0.0.0"
+		return "", false
 	}
 
-	return versionFromFile
+	return versionFromFile, true
 }
 
-// nightlyBuildVersion returns the semantic version embedded in nightly binaries.
-func nightlyBuildVersion(now time.Time, shortSHA string) *semver.Version {
-	version := fmt.Sprintf("%d.%d.%d-nightly", now.Year(), int(now.Month()), now.Day())
-	if shortSHA != "" {
-		version += "+" + shortSHA
+// devBuildVersion returns the upstream-style development version string for
+// the given UTC date and short SHA: YY.MM.D-dev.<sha7> (e.g.
+// 26.10.15-dev.1511fd1). The returned string is validated against the upstream
+// Go validator, never against Masterminds semver: Masterminds coerces numeric
+// segments to uint64 and re-renders them, so 26.01.15-dev.… becomes the
+// invalid 26.1.15-dev.…. The SHA must already be exactly 7 hex chars;
+// anything else returns an error instead of an invalid version.
+func devBuildVersion(now time.Time, shortSHA string) (string, error) {
+	sha := strings.ToLower(shortSHA)
+	if !shortSHA7Pattern.MatchString(sha) {
+		return "", fmt.Errorf("invalid short SHA %q: expected 7 hex chars", shortSHA)
 	}
-
-	v, err := semver.NewVersion(version)
-	if err != nil {
-		v, _ = semver.NewVersion("0.0.0-nightly")
+	version := fmt.Sprintf("%02d.%02d.%d-dev.%s", now.Year()%100, int(now.Month()), now.Day(), sha)
+	if !devVersionPattern.MatchString(version) {
+		return "", fmt.Errorf("invalid dev version %q: fails upstream validation", version)
 	}
-	return v
+	return version, nil
 }
 
-// nightlyReleaseTag returns the release/container tag for nightly inputs.
-func nightlyReleaseTag(version string, shortSHA string) (string, bool) {
-	if version == "" || version == "nightly" {
-		if shortSHA == "" {
-			shortSHA = "unknown"
-		}
-		return fmt.Sprintf("nightly-%s-%s", time.Now().UTC().Format("20060102"), shortSHA), true
+// isStableRelease reports whether a version denotes a stable GitHub release:
+// legacy `v0.x` or calendar `YY.MM.N`. Release candidates and dev builds are
+// prereleases, never stable. Bare `YY.MM` is accepted as an input alias but
+// is not itself a release.
+func isStableRelease(releaseVersion string) bool {
+	if legacyVersionPattern.MatchString(releaseVersion) {
+		return true
 	}
+	m := calVerStablePattern.FindStringSubmatch(releaseVersion)
+	return len(m) > 3 && m[3] != ""
+}
 
-	if nightlyVersionPattern.MatchString(version) {
-		return version, true
-	}
+// isReleaseCandidate reports whether a version is an upstream release
+// candidate: YY.MM[.N]-rc.K.
+func isReleaseCandidate(version string) bool {
+	return calVerRCPattern.MatchString(strings.TrimPrefix(version, "v"))
+}
 
-	return "", false
+// isReleaseVersion reports whether a version gets a GitHub release at all:
+// stable releases and release candidates. Dev builds and anything
+// unparseable are excluded; commit hashes are handled by the caller.
+func isReleaseVersion(releaseVersion string) bool {
+	return isStableRelease(releaseVersion) || isReleaseCandidate(releaseVersion)
 }
 
 // resolveVersion determines the git source and build/release versions from user input.
 //
-// Handles semver tags, release branches, commit hashes, or defaults to nightly.
+// Accepted inputs: legacy `v0.x` tags, bare or `v`-prefixed calendar tags
+// (`26.10.0`, `v26.10.0`, `26.10-rc.1`, `26.10.0-rc.1`), bare or `v`-prefixed
+// dev versions (`26.10.15-dev.1511fd1`), 40-char commit hashes, or empty
+// (defaults to a dev build from upstream `main` with an upstream-style
+// `YY.MM.D-dev.<sha7>` build version, using the current UTC date).
 func (m *MemosBuilds) resolveVersion(
 	ctx context.Context,
 	version string,
@@ -275,45 +311,96 @@ func (m *MemosBuilds) resolveVersion(
 	git := dag.Git("https://github.com/usememos/memos.git")
 	treeOpts := dagger.GitRefTreeOpts{Depth: 1}
 
-	if v, err := semver.NewVersion(version); err == nil {
-		verStr := v.String()
-		// Check if this version has a known commit hash to use instead of the tag
-		if commitHash, ok := knownVersionCommits[verStr]; ok {
-			gitSrc = git.Commit(commitHash).Tree(treeOpts)
-			srcVersion := m.extractVersionFromSource(ctx, gitSrc)
-			return gitSrc, srcVersion, "v" + verStr, commitHash, nil
+	// Normalise version input to a git tag, preserving the literal segments.
+	// Upstream calendar tags are bare (e.g. 26.10.0, 26.10-rc.1); legacy 0.x
+	// tags keep the prefix (e.g. v0.25.3). A leading "v" on calendar versions
+	// is accepted for convenience. The literal form is preserved throughout:
+	// Masterminds semver coerces numeric segments to integers and re-renders
+	// them, turning 26.09.0 into the nonexistent tag 26.9.0. Anything else is
+	// rejected: silently building main for a typo'd version ships the
+	// wrong code under the wrong tag.
+	normaliseTag := func(input string) (tag string, release string, err error) {
+		bare := strings.TrimPrefix(input, "v")
+		switch {
+		case legacyVersionPattern.MatchString(input):
+			return input, input, nil
+		case legacyVersionPattern.MatchString("v" + bare):
+			return "v" + bare, "v" + bare, nil
+		case devVersionPattern.MatchString(bare):
+			return bare, bare, nil
+		case calVerRCPattern.MatchString(bare):
+			return bare, bare, nil
+		case calVerStablePattern.MatchString(bare):
+			return bare, bare, nil
+		default:
+			return "", "", fmt.Errorf("invalid version %q: expected a release tag, dev version, or commit hash", input)
 		}
-		ref := git.Tag("v" + verStr)
-		commit, _ = ref.Commit(ctx)
-		gitSrc = ref.Tree(treeOpts)
-		return gitSrc, "v" + verStr, "v" + verStr, commit, nil
 	}
 
-	if after, ok := strings.CutPrefix(version, "release/"); ok {
-		ver := strings.TrimPrefix(after, "v")
-		ref := git.Ref("heads/release/" + ver)
-		commit, _ = ref.Commit(ctx)
+	tag, release, err := normaliseTag(version)
+	if err == nil {
+		// Check if this version has a known commit hash to use instead of the tag.
+		// Keys are bare (e.g. "0.25.3") while release keeps the legacy "v"
+		// prefix, so strip it for the lookup.
+		if commitHash, ok := knownVersionCommits[strings.TrimPrefix(release, "v")]; ok {
+			gitSrc = git.Commit(commitHash).Tree(treeOpts)
+			if srcVersion, found := m.extractVersionFromSource(ctx, gitSrc); found {
+				return gitSrc, srcVersion, release, commitHash, nil
+			}
+			return gitSrc, release, release, commitHash, nil
+		}
+		if devVersionPattern.MatchString(release) {
+			// Dev versions are minted per commit, not tagged upstream:
+			// build from main. The embedded version matches the input tag
+			// exactly, so rebuilds are deterministic.
+			ref := git.Branch("main")
+			mainCommit, commitErr := ref.Commit(ctx)
+			if commitErr != nil {
+				return nil, "", "", "", fmt.Errorf("failed to resolve main branch: %w", commitErr)
+			}
+			gitSrc = ref.Tree(treeOpts)
+			return gitSrc, "v" + release, release, mainCommit, nil
+		}
+		ref := git.Tag(tag)
+		tagCommit, commitErr := ref.Commit(ctx)
+		if commitErr != nil {
+			return nil, "", "", "", fmt.Errorf("failed to resolve tag %q: %w", tag, commitErr)
+		}
 		gitSrc = ref.Tree(treeOpts)
-		return gitSrc, "v" + ver, "v" + ver, commit, nil
+		// Build from the release tag itself: it satisfies upstream validation.
+		return gitSrc, release, release, tagCommit, nil
+	}
+
+	if version != "" && version != "dev" && !commitHashPattern.MatchString(version) {
+		return nil, "", "", "", err
 	}
 
 	if commitHashPattern.MatchString(version) {
 		gitSrc = git.Commit(version).Tree(treeOpts)
-		srcVersion := m.extractVersionFromSource(ctx, gitSrc)
-		return gitSrc, srcVersion, srcVersion, version, nil
+		if srcVersion, found := m.extractVersionFromSource(ctx, gitSrc); found {
+			return gitSrc, srcVersion, srcVersion, version, nil
+		}
+		// Modern upstream sources carry no injected default; synthesise a
+		// dev version so the binary passes upstream validation.
+		devVer, synErr := devBuildVersion(time.Now().UTC(), shortCommitHash(version))
+		if synErr != nil {
+			return nil, "", "", "", fmt.Errorf("cannot synthesise dev version for %q: %w", version, synErr)
+		}
+		return gitSrc, "v" + devVer, devVer, version, nil
 	}
 
-	// Use nightly as default version.
+	// Default: dev build from upstream main, minted from the current UTC date
+	// and the resolved commit's short SHA.
 	ref := git.Branch("main")
-	commit, _ = ref.Commit(ctx)
+	commit, commitErr := ref.Commit(ctx)
+	if commitErr != nil {
+		return nil, "", "", "", fmt.Errorf("failed to resolve main branch: %w", commitErr)
+	}
 	gitSrc = ref.Tree(treeOpts)
 
-	shortSHA := shortCommitHash(commit)
-	nightlyVer := m.generateNightlyVersion(shortSHA)
-	releaseVersion, ok := nightlyReleaseTag(version, nightlyVer.Metadata())
-	if !ok {
-		releaseVersion, _ = nightlyReleaseTag("nightly", nightlyVer.Metadata())
+	devVer, synErr := devBuildVersion(time.Now().UTC(), shortCommitHash(commit))
+	if synErr != nil {
+		return nil, "", "", "", fmt.Errorf("cannot synthesise dev version for main@%q: %w", commit, synErr)
 	}
-
-	return gitSrc, "v" + nightlyVer.String(), releaseVersion, commit, nil
+	return gitSrc, "v" + devVer, devVer, commit, nil
 }
