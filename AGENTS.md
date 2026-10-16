@@ -99,8 +99,9 @@ Run `just --list` for all recipes. Most operations require Docker.
 - `.dagger/container.go` — OCI images (Alpine or BusyBox ARMv5)
 - `.dagger/patch.go` — sqlite/libc pinning + patch application
 - `.dagger/publish.go` — multi-arch registry push (Docker Hub + GHCR)
-- `.dagger/lib.go` — version resolution and git source preparation
+- `.dagger/resolve.go` — version resolution and git source preparation
 - `.dagger/buildplan/version.go` — version, tag, and release-identity rules
+- `.dagger/buildplan/plan.go` — version plan: ref selection and version policy
 - `.dagger/buildplan/targets.go` — platform matrix and artifact naming
 - `.dagger/buildconsts/consts.go` — base-image tags, Go/node version
 - `container/entrypoint.sh` — BusyBox ash container entrypoint
@@ -140,8 +141,12 @@ Run `just --list` for all recipes. Most operations require Docker.
   tags (`26.10.0`, `26.10.0-rc.1`), bare dev versions (`26.10.15-dev.1511fd1`),
   40-char commit hashes, or `dev` (default — builds upstream `main`).
   Certain historical versions use hardcoded commit hashes
-  (`knownVersionCommits` in `lib.go`). Dev builds embed an upstream-style
-  `YY.MM.D-dev.<sha7>` version so they pass upstream validation.
+  (`knownVersionCommits` in `.dagger/buildplan/plan.go`). Dev builds embed an
+  upstream-style `YY.MM.D-dev.<sha7>` version so they pass upstream validation.
+  The embedded app version is rendered by `buildplan.AppVersion`, which
+  preserves literal segments: upstream's startup validator requires the
+  zero-padded month (`26.09.0`), which a semver re-render would strip to the
+  rejected `26.9.0`.
 - **Container registries**: `docker.io/lincolnthalles/memos` and
   `ghcr.io/memospot/memos-builds`. CalVer releases tag `latest`, `YY.MM` and
   `YY.MM.N` (bare, no `v` prefix); legacy `v0.x` releases tag `latest`,

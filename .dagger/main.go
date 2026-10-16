@@ -12,15 +12,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"dagger/memos-builds/buildconsts"
 	"dagger/memos-builds/buildplan"
 	"dagger/memos-builds/internal/dagger"
 )
-
-var commitHashPattern = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 
 type MemosBuilds struct{}
 

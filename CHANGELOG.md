@@ -42,6 +42,7 @@ Security: in case of vulnerabilities.
 - Fixed daily builds failing to start with `invalid build version` after upstream moved to calendar versioning.
 - Fixed release names disagreeing with the published container tags when a dated development build was requested.
 - Fixed the test job failing on every commit: the tests no longer need a live Dagger session, so a plain `go test` runs them anywhere.
+- Fixed January–September builds failing to start with `invalid build metadata`: the embedded version keeps its zero-padded month (`26.09.0` no longer becomes `26.9.0`).
 
 ## [0.26.0] - 2026-02-02
 

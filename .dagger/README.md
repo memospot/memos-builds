@@ -150,10 +150,11 @@ dagger develop --compat=0.19.10
 ├── container.go     # buildContainer, buildAlpineContainer, buildBusyBoxARMv5Container
 ├── publish.go       # Archives, checksums, container publishing
 ├── patch.go         # SQLite/libc patching, custom patch application
-├── lib.go           # Version resolution and git source preparation
+├── resolve.go       # Version resolution and git source preparation
 ├── buildplan/       # Pure build plan: version/tag rules, platform matrix, artifact names
-│   ├── version.go
-│   └── targets.go
+│   ├── version.go   # Version, tag, and release-identity rules
+│   ├── plan.go      # Version plan: ref selection and version policy
+│   └── targets.go   # Platform matrix and artifact naming
 └── buildconsts/
     └── consts.go    # All configurable build constants
 ```

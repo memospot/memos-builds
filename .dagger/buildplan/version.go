@@ -30,6 +30,8 @@ var (
 	CalVerRCPattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])(\.(0|[1-9][0-9]*))?-rc\.[1-9][0-9]*$`)
 
 	shortSHA7Pattern = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
+
+	versionVarPattern = regexp.MustCompile(`var Version = "([^"]+)"`)
 )
 
 // ShortCommitHash returns the 7-char short commit hash, or an empty string
@@ -146,4 +148,49 @@ func TagsForRegistry(version string, registry string) []string {
 	}
 
 	return []string{"dev"}
+}
+
+// AppVersion renders the build version for injection into the binary
+// (`-X …internal/version.Version=…`). Unlike a Masterminds semver re-render,
+// the literal segments are preserved: 26.09.0 must stay 26.09.0, because
+// upstream's startup validator requires the two-digit month. Missing patch
+// components are filled with .0, the v prefix and build metadata are dropped.
+func AppVersion(version string) (string, bool) {
+	if _, err := semver.NewVersion(version); err != nil {
+		return "", false
+	}
+
+	bare := strings.TrimPrefix(version, "v")
+	if i := strings.IndexByte(bare, '+'); i >= 0 {
+		bare = bare[:i]
+	}
+
+	head, tail := bare, ""
+	if i := strings.IndexByte(bare, '-'); i >= 0 {
+		head, tail = bare[:i], bare[i:]
+	}
+	switch strings.Count(head, ".") {
+	case 0:
+		head += ".0.0"
+	case 1:
+		head += ".0"
+	}
+	return head + tail, true
+}
+
+// ParseDeclaredVersion extracts the version declared in an upstream source
+// file, e.g. `var Version = "0.25.3"`. It reports false when the declaration
+// is absent or its value is not a semantic version.
+func ParseDeclaredVersion(contents string) (string, bool) {
+	match := versionVarPattern.FindStringSubmatch(contents)
+	if len(match) < 2 {
+		return "", false
+	}
+
+	version := match[1]
+	if _, err := semver.NewVersion(version); err != nil {
+		return "", false
+	}
+
+	return version, true
 }

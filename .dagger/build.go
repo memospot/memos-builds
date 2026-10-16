@@ -9,8 +9,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-
-	"github.com/Masterminds/semver/v3"
 )
 
 // Generate Proto code
@@ -65,14 +63,7 @@ func (m *MemosBuilds) buildBackend(
 
 	// Build version must satisfy upstream validation (YY.MM.N, -rc.K or
 	// -dev.<sha7>); anything else fails startup, so skip unknown sources.
-	v, err := semver.NewVersion(version)
-	if err == nil {
-		// Version shown in app intentionally excludes build metadata (commit hash).
-		appVersion := fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch())
-		if pre := v.Prerelease(); pre != "" {
-			appVersion += "-" + pre
-		}
-
+	if appVersion, ok := buildplan.AppVersion(version); ok {
 		// https://pkg.go.dev/cmd/link
 		ldflags = append(ldflags, fmt.Sprintf("-X %s=%s", buildconsts.VERSION_IMPORT_PATH, appVersion))
 	}
@@ -134,10 +125,11 @@ func (m *MemosBuilds) buildBackend(
 		f := buildOne(base, t)
 		out = out.WithFile(t.BinaryName(), f)
 		// Sync forces this build to complete before starting the next.
-		out, err = out.Sync(ctx)
+		synced, err := out.Sync(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build %s: %w", t.BinaryName(), err)
 		}
+		out = synced
 	}
 
 	return out, nil
