@@ -92,7 +92,7 @@ func TestArchiveName(t *testing.T) {
 
 func TestFilterTargets(t *testing.T) {
 	// GIVEN platform selections against the declared matrix
-	t.Run("empty selects every target", func(t *testing.T) {
+	t.Run("empty selects every target without aliasing the global", func(t *testing.T) {
 		// WHEN
 		got, err := FilterTargets("")
 
@@ -102,6 +102,11 @@ func TestFilterTargets(t *testing.T) {
 		}
 		if !slices.Equal(got, Targets) {
 			t.Fatalf("FilterTargets(\"\") selected %d targets, want all %d", len(got), len(Targets))
+		}
+		// AND mutating the result leaves the global untouched
+		got[0].OS = "plan9"
+		if Targets[0].OS == "plan9" {
+			t.Fatal("FilterTargets(\"\") aliases Targets: mutating the result mutated the global")
 		}
 	})
 

@@ -56,6 +56,28 @@ func TestDevBuildVersionRejectsBadSHA(t *testing.T) {
 	}
 }
 
+func TestIsStableRelease(t *testing.T) {
+	// GIVEN stable versions in every accepted spelling
+	for _, version := range []string{"v0.25.3", "0.25.3", "26.10.0", "v26.10.0", "26.09.0"} {
+		t.Run("stable="+version, func(t *testing.T) {
+			// WHEN / THEN
+			if !IsStableRelease(version) {
+				t.Fatalf("IsStableRelease(%q) = false, want true", version)
+			}
+		})
+	}
+
+	// GIVEN prereleases and non-versions, which never count as stable
+	for _, version := range []string{"", "dev", "26.10.0-rc.1", "v26.10.0-rc.1", "26.10.15-dev.1511fd1", "26.10", "main"} {
+		t.Run("unstable="+version, func(t *testing.T) {
+			// WHEN / THEN
+			if IsStableRelease(version) {
+				t.Fatalf("IsStableRelease(%q) = true, want false", version)
+			}
+		})
+	}
+}
+
 func TestContainerTags(t *testing.T) {
 	// GIVEN
 	cases := []struct {
@@ -68,6 +90,9 @@ func TestContainerTags(t *testing.T) {
 		{"September release keeps the zero-padded month", "26.09.0", []string{"latest", "26.09", "26.09.0"}},
 		{"January release keeps the zero-padded month", "27.01.0", []string{"latest", "27.01", "27.01.0"}},
 		{"legacy stable", "v0.25.3", []string{"latest", "0.25", "0.25.3"}},
+		{"bare legacy stable", "0.25.3", []string{"latest", "0.25", "0.25.3"}},
+		{"v-prefixed candidate is the bare version itself", "v26.10.0-rc.1", []string{"26.10.0-rc.1"}},
+		{"v-prefixed dev build keeps dated tag plus alias", "v26.10.15-dev.1511fd1", []string{"26.10.15-dev.1511fd1", "dev"}},
 		{"release candidate", "26.10.0-rc.1", []string{"26.10.0-rc.1"}},
 		{"dev build keeps dated tag plus alias", "26.10.15-dev.1511fd1", []string{"26.10.15-dev.1511fd1", "dev"}},
 	}
@@ -99,6 +124,9 @@ func TestTagsForRegistry(t *testing.T) {
 		{"dev on GHCR", "26.10.15-dev.1511fd1", ghcr, []string{"26.10.15-dev.1511fd1", "dev"}},
 		{"dev on Hub", "26.10.15-dev.1511fd1", hub, []string{"dev"}},
 		{"candidate on GHCR", "26.10.0-rc.1", ghcr, []string{"26.10.0-rc.1"}},
+		{"v-prefixed candidate on GHCR", "v26.10.0-rc.1", ghcr, []string{"26.10.0-rc.1"}},
+		{"v-prefixed stable on Hub", "v26.10.0", hub, []string{"latest", "26.10", "26.10.0"}},
+		{"bare legacy stable on Hub", "0.25.3", hub, []string{"latest", "0.25", "0.25.3"}},
 		{"September release on GHCR", "26.09.0", ghcr, []string{"latest", "26.09", "26.09.0"}},
 		{"stable on GHCR", "26.10.0", ghcr, []string{"latest", "26.10", "26.10.0"}},
 		{"legacy stable on Hub", "v0.25.3", hub, []string{"latest", "0.25", "0.25.3"}},

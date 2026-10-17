@@ -45,6 +45,9 @@ Security: in case of vulnerabilities.
 - Fixed the test job failing on every commit: the tests no longer need a live Dagger session, so a plain `go test` runs them anywhere.
 - Fixed January–September builds failing to start with `invalid build metadata`: the embedded version keeps its zero-padded month (`26.09.0` no longer becomes `26.9.0`).
 - Fixed calendar container tags losing the zero-padded month: a `26.09.0` release publishes `26.09` and `26.09.0`, never `26.9` and `26.9.0`.
+- Fixed `TagsForRegistry` returning `dev` for `v`-prefixed calendar versions such as `v26.10.0`; stability is now decided on the bare version.
+- Fixed `FilterTargets` aliasing the global target list for empty and `all` selections; it now returns a copy.
+- Warn during the build when `modernc.org/libc` becomes a direct dependency, since the libc pin only rewrites the `// indirect` form.
 
 ## [0.26.0] - 2026-02-02
 

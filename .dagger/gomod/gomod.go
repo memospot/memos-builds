@@ -77,6 +77,19 @@ func LibcFromUpstreamGoMod(contents string) (string, bool) {
 	return matches[1], true
 }
 
+// LibcRequirement reports how modernc.org/libc is required in go.mod
+// contents: direct, indirect, or absent. Pinning only rewrites the indirect
+// form, so a direct requirement means the pin no longer applies.
+func LibcRequirement(contents string) string {
+	if reLibc.MatchString(contents) {
+		return "indirect"
+	}
+	if reLibcUpstream.MatchString(contents) {
+		return "direct"
+	}
+	return "absent"
+}
+
 // PatchLibc replaces the modernc.org/libc version in go.mod contents with the
 // expected version, preserving the `// indirect` suffix.
 // Returns the modified contents and true if a change was made, original contents and false otherwise.

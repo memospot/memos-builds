@@ -9,6 +9,7 @@ import (
 	"dagger/memos-builds/gomod"
 	"dagger/memos-builds/internal/dagger"
 	"fmt"
+	"log/slog"
 )
 
 // getLibcVersionForSqlite returns the expected modernc.org/libc version for a given SQLite version.
@@ -66,6 +67,10 @@ func (m *MemosBuilds) patchModerncSqlite(ctx context.Context, sourceCode *dagger
 
 	newContents, modified := gomod.PatchLibc(goModContents, expectedLibcVersion)
 	if !modified {
+		if gomod.LibcRequirement(goModContents) == "direct" {
+			slog.Warn("modernc.org/libc is a direct dependency; the libc pin no longer applies — update the pinning rules in .dagger/gomod",
+				"sqlite", sqliteVersion, "expectedLibc", expectedLibcVersion)
+		}
 		return sourceCode, nil
 	}
 

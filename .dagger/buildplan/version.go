@@ -68,13 +68,14 @@ func DevBuildVersion(now time.Time, shortSHA string) (string, error) {
 }
 
 // IsStableRelease reports whether a version denotes a stable GitHub release:
-// legacy `v0.x` or calendar `YY.MM.N`. Release candidates and dev builds are
-// prereleases, never stable.
+// legacy `v0.x` or calendar `YY.MM.N`, each bare or `v`-prefixed.
+// Release candidates and dev builds are prereleases, never stable.
 func IsStableRelease(releaseVersion string) bool {
-	if LegacyVersionPattern.MatchString(releaseVersion) {
+	bare := strings.TrimPrefix(releaseVersion, "v")
+	if LegacyVersionPattern.MatchString(releaseVersion) || LegacyVersionPattern.MatchString("v"+bare) {
 		return true
 	}
-	return CalVerStablePattern.MatchString(releaseVersion)
+	return CalVerStablePattern.MatchString(bare)
 }
 
 // IsReleaseCandidate reports whether a version is an upstream release
@@ -95,7 +96,7 @@ func IsReleaseCandidate(version string) bool {
 func ContainerTags(version string) []string {
 	bare := strings.TrimPrefix(version, "v")
 	switch {
-	case LegacyVersionPattern.MatchString(version) || IsStableRelease(bare):
+	case IsStableRelease(bare):
 		if i := strings.LastIndexByte(bare, '.'); i > 0 {
 			return []string{"latest", bare[:i], bare}
 		}
@@ -121,7 +122,7 @@ func TagsForRegistry(version string, registry string) []string {
 		return []string{"dev"}
 	}
 
-	if IsStableRelease(version) || LegacyVersionPattern.MatchString(version) {
+	if IsStableRelease(bare) {
 		return ContainerTags(version)
 	}
 

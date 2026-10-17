@@ -129,6 +129,33 @@ func TestLibcFromUpstreamGoMod(t *testing.T) {
 	}
 }
 
+func TestLibcRequirement(t *testing.T) {
+	// GIVEN go.mod contents with libc in each requirement shape
+	directGoMod := strings.Replace(memosGoMod, "modernc.org/libc v1.75.3 // indirect", "modernc.org/libc v1.75.3", 1)
+
+	cases := []struct {
+		name     string
+		contents string
+		want     string
+	}{
+		{"indirect requirement is pinnable", memosGoMod, "indirect"},
+		{"direct requirement no longer applies", directGoMod, "direct"},
+		{"absent requirement needs nothing", "module example.com/m\n\ngo 1.26.0\n", "absent"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// WHEN
+			got := LibcRequirement(tc.contents)
+
+			// THEN
+			if got != tc.want {
+				t.Fatalf("LibcRequirement() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestPatchLibc(t *testing.T) {
 	// GIVEN memos go.mod contents pinning libc v1.75.3
 	t.Run("downgrades to the pinned libc version", func(t *testing.T) {

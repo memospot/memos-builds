@@ -157,6 +157,7 @@ func (m *BuildMatrix) ArchiveName(version string) string {
 }
 
 // FilterTargets returns a subset of Targets matching the given platforms string.
+// The returned slice is a copy: mutating it never affects Targets.
 //
 // Accepted formats:
 //   - "" or "all": returns all Targets
@@ -166,7 +167,7 @@ func (m *BuildMatrix) ArchiveName(version string) string {
 func FilterTargets(platforms string) ([]BuildMatrix, error) {
 	platforms = strings.TrimSpace(platforms)
 	if platforms == "" || platforms == "all" {
-		return Targets, nil
+		return slices.Clone(Targets), nil
 	}
 
 	requested := strings.Split(platforms, ",")
