@@ -62,49 +62,28 @@ func (m *BuildMatrix) DockerPlatform() string {
 	return fmt.Sprintf("%s/%s/%s", m.OS, m.Arch, m.ArchLevel)
 }
 
-// GoArm returns the GOARM environment variable value (e.g., "5", "6", "7")
-// Returns empty string for non-ARM architectures.
-func (m *BuildMatrix) GoArm() string {
-	if m.Arch != "arm" {
-		return ""
+// GoEnv returns the GO* environment variable mapping for this target
+// (e.g. {"GOARM": "7"}). Returns nil when the target needs no arch-level
+// variables. The caller applies the map verbatim, learning nothing about
+// individual arches.
+func (m *BuildMatrix) GoEnv() map[string]string {
+	if m.ArchLevel == "" {
+		return nil
 	}
-	return strings.TrimPrefix(m.ArchLevel, "v")
-}
-
-// GoAmd64 returns the GOAMD64 environment variable value (e.g., "v1", "v2", "v3")
-// Returns empty string for non-AMD64 architectures.
-func (m *BuildMatrix) GoAmd64() string {
-	if m.Arch != "amd64" {
-		return ""
+	switch m.Arch {
+	case "arm":
+		return map[string]string{"GOARM": strings.TrimPrefix(m.ArchLevel, "v")}
+	case "amd64":
+		return map[string]string{"GOAMD64": m.ArchLevel}
+	case "386":
+		return map[string]string{"GO386": m.ArchLevel}
+	case "ppc64le":
+		return map[string]string{"GOPPC64": m.ArchLevel}
+	case "riscv64":
+		return map[string]string{"GORISCV64": m.ArchLevel}
+	default:
+		return nil
 	}
-	return m.ArchLevel
-}
-
-// Go386 returns the GO386 environment variable value (e.g., "sse2")
-// Returns empty string for non-386 architectures
-func (m *BuildMatrix) Go386() string {
-	if m.Arch != "386" {
-		return ""
-	}
-	return m.ArchLevel
-}
-
-// GoPpc64 returns the GOPPC64 environment variable value (e.g., "power8")
-// Returns empty string for non-ppc64le architectures.
-func (m *BuildMatrix) GoPpc64() string {
-	if m.Arch != "ppc64le" {
-		return ""
-	}
-	return m.ArchLevel
-}
-
-// GoRiscv64 returns the GORISCV64 environment variable value (e.g., "rva20u64")
-// Returns empty string for non-riscv64 architectures
-func (m *BuildMatrix) GoRiscv64() string {
-	if m.Arch != "riscv64" {
-		return ""
-	}
-	return m.ArchLevel
 }
 
 // UnameArch returns uname-compatible architecture name.
@@ -116,7 +95,7 @@ func (m *BuildMatrix) UnameArch() string {
 	case "386":
 		return "i386"
 	case "arm":
-		return "armv" + m.GoArm() + "l"
+		return "armv" + m.GoEnv()["GOARM"] + "l"
 	case "arm64":
 		return "arm64"
 	default:

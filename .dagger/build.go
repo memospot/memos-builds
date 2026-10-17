@@ -81,21 +81,9 @@ func (m *MemosBuilds) buildBackend(
 			WithEnvVariable("GOOS", t.OS).
 			WithEnvVariable("GOARCH", t.Arch)
 
-		// Set architecture level variables based on the architecture.
-		if goarm := t.GoArm(); goarm != "" {
-			ctr = ctr.WithEnvVariable("GOARM", goarm)
-		}
-		if goamd64 := t.GoAmd64(); goamd64 != "" {
-			ctr = ctr.WithEnvVariable("GOAMD64", goamd64)
-		}
-		if go386 := t.Go386(); go386 != "" {
-			ctr = ctr.WithEnvVariable("GO386", go386)
-		}
-		if goppc64 := t.GoPpc64(); goppc64 != "" {
-			ctr = ctr.WithEnvVariable("GOPPC64", goppc64)
-		}
-		if goriscv64 := t.GoRiscv64(); goriscv64 != "" {
-			ctr = ctr.WithEnvVariable("GORISCV64", goriscv64)
+		// Set architecture level variables from the target.
+		for k, v := range t.GoEnv() {
+			ctr = ctr.WithEnvVariable(k, v)
 		}
 
 		return ctr.

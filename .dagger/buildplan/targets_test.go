@@ -90,6 +90,40 @@ func TestArchiveName(t *testing.T) {
 	}
 }
 
+func TestGoEnv(t *testing.T) {
+	// GIVEN targets spanning every arch with a level mapping
+	cases := []struct {
+		name   string
+		want   map[string]string
+		target BuildMatrix
+	}{
+		{"arm level maps to GOARM", map[string]string{"GOARM": "7"}, BuildMatrix{"linux", "arm", "v7"}},
+		{"amd64 level maps to GOAMD64", map[string]string{"GOAMD64": "v3"}, BuildMatrix{"linux", "amd64", "v3"}},
+		{"386 level maps to GO386", map[string]string{"GO386": "sse2"}, BuildMatrix{"linux", "386", "sse2"}},
+		{"ppc64le level maps to GOPPC64", map[string]string{"GOPPC64": "power8"}, BuildMatrix{"linux", "ppc64le", "power8"}},
+		{"riscv64 level maps to GORISCV64", map[string]string{"GORISCV64": "rva20u64"}, BuildMatrix{"linux", "riscv64", "rva20u64"}},
+		{"empty level yields nil", nil, BuildMatrix{"linux", "arm64", ""}},
+		{"unknown arch yields nil", nil, BuildMatrix{"linux", "s390x", ""}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// WHEN
+			got := tc.target.GoEnv()
+
+			// THEN
+			if len(got) != len(tc.want) {
+				t.Fatalf("GoEnv() = %v, want %v", got, tc.want)
+			}
+			for k, v := range tc.want {
+				if got[k] != v {
+					t.Fatalf("GoEnv() = %v, want %v", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func TestFilterTargets(t *testing.T) {
 	// GIVEN platform selections against the declared matrix
 	t.Run("empty selects every target without aliasing the global", func(t *testing.T) {
