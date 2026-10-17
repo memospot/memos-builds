@@ -65,10 +65,10 @@ func TestContainerTags(t *testing.T) {
 	}{
 		{"CalVer stable", "26.10.0", []string{"latest", "26.10", "26.10.0"}},
 		{"v-prefixed CalVer stable", "v26.10.0", []string{"latest", "26.10", "26.10.0"}},
-		{"bare month stable", "26.10", []string{"latest", "26.10"}},
+		{"September release keeps the zero-padded month", "26.09.0", []string{"latest", "26.09", "26.09.0"}},
+		{"January release keeps the zero-padded month", "27.01.0", []string{"latest", "27.01", "27.01.0"}},
 		{"legacy stable", "v0.25.3", []string{"latest", "0.25", "0.25.3"}},
 		{"release candidate", "26.10.0-rc.1", []string{"26.10.0-rc.1"}},
-		{"live upstream candidate form", "26.10-rc.1", []string{"26.10-rc.1"}},
 		{"dev build keeps dated tag plus alias", "26.10.15-dev.1511fd1", []string{"26.10.15-dev.1511fd1", "dev"}},
 	}
 
@@ -99,7 +99,7 @@ func TestTagsForRegistry(t *testing.T) {
 		{"dev on GHCR", "26.10.15-dev.1511fd1", ghcr, []string{"26.10.15-dev.1511fd1", "dev"}},
 		{"dev on Hub", "26.10.15-dev.1511fd1", hub, []string{"dev"}},
 		{"candidate on GHCR", "26.10.0-rc.1", ghcr, []string{"26.10.0-rc.1"}},
-		{"live upstream candidate on GHCR", "26.10-rc.1", ghcr, []string{"26.10-rc.1"}},
+		{"September release on GHCR", "26.09.0", ghcr, []string{"latest", "26.09", "26.09.0"}},
 		{"stable on GHCR", "26.10.0", ghcr, []string{"latest", "26.10", "26.10.0"}},
 		{"legacy stable on Hub", "v0.25.3", hub, []string{"latest", "0.25", "0.25.3"}},
 	}

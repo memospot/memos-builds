@@ -25,12 +25,13 @@ Security: in case of vulnerabilities.
 ### Added
 
 - Daily development builds now follow upstream calendar versioning (`YY.MM.D-dev.<sha7>`), so they start without extra patching.
-- Release candidate builds (for example, `26.10-rc.1`) get their own prerelease with matching container tags.
+- Release candidate builds (for example, `26.10.0-rc.1`) get their own prerelease with matching container tags.
 
 ### Changed
 
 - **Breaking:** daily development releases and container tags moved from `nightly-YYYYMMDD-<sha>` to upstream-style `YY.MM.D-dev.<sha7>` versions, with a floating `dev` container tag instead of `nightly`.
 - **Breaking:** future stable and candidate tags drop the `v` prefix to match upstream (for example, `26.10.0` instead of `v26.10.0`); legacy `v0.x` tags are unchanged.
+- **Breaking:** calendar build inputs require the patch component (`26.10.0`, `26.10.0-rc.1`), matching upstream's release tooling; unpatched forms (`26.10`, and the historical `26.10-rc.1` tag) are rejected instead of failing mid-build. The `26.10` container alias is still published from `26.10.N` releases.
 - Old daily development releases are now pruned by release date instead of by tag name.
 
 ### Removed
@@ -43,6 +44,7 @@ Security: in case of vulnerabilities.
 - Fixed release names disagreeing with the published container tags when a dated development build was requested.
 - Fixed the test job failing on every commit: the tests no longer need a live Dagger session, so a plain `go test` runs them anywhere.
 - Fixed January–September builds failing to start with `invalid build metadata`: the embedded version keeps its zero-padded month (`26.09.0` no longer becomes `26.9.0`).
+- Fixed calendar container tags losing the zero-padded month: a `26.09.0` release publishes `26.09` and `26.09.0`, never `26.9` and `26.9.0`.
 
 ## [0.26.0] - 2026-02-02
 

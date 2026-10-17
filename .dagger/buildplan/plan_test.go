@@ -45,9 +45,9 @@ func TestPlanVersion(t *testing.T) {
 			VersionPlan{RefKind: RefTag, Ref: "26.10.0", LiteralBuild: "26.10.0", LiteralRelease: "26.10.0", Now: now},
 		},
 		{
-			"release candidate resolves the bare tag",
-			"26.10-rc.1",
-			VersionPlan{RefKind: RefTag, Ref: "26.10-rc.1", LiteralBuild: "26.10-rc.1", LiteralRelease: "26.10-rc.1", Now: now},
+			"release candidate resolves the tag",
+			"26.10.0-rc.1",
+			VersionPlan{RefKind: RefTag, Ref: "26.10.0-rc.1", LiteralBuild: "26.10.0-rc.1", LiteralRelease: "26.10.0-rc.1", Now: now},
 		},
 		{
 			"dev version builds main and keeps the literal version",
@@ -88,8 +88,9 @@ func TestPlanVersion(t *testing.T) {
 }
 
 func TestPlanVersionRejectsUnknownInput(t *testing.T) {
-	// GIVEN inputs that are neither tags, dev versions, hashes, nor "dev"
-	for _, input := range []string{"26.9.0", "v1.2", "main", "short"} {
+	// GIVEN inputs that are neither tags, dev versions, hashes, nor "dev",
+	// including unpatched calendar forms that upstream never tags
+	for _, input := range []string{"26.9.0", "v1.2", "main", "short", "26.10", "v26.10", "26.10-rc.1"} {
 		t.Run("input="+input, func(t *testing.T) {
 			// WHEN
 			_, err := PlanVersion(input, time.Now())
@@ -99,7 +100,7 @@ func TestPlanVersionRejectsUnknownInput(t *testing.T) {
 				t.Fatalf("PlanVersion(%q) succeeded, want error", input)
 			}
 			// AND the message names every accepted form
-			want := fmt.Sprintf(`invalid version %q: expected a release tag (v0.25.3, 26.10.0, 26.10-rc.1), a dev version (26.10.15-dev.1511fd1), a 40-character commit hash, or "dev" to build upstream main`, input)
+			want := fmt.Sprintf(`invalid version %q: expected a release tag (v0.25.3, 26.10.0, 26.10.0-rc.1), a dev version (26.10.15-dev.1511fd1), a 40-character commit hash, or "dev" to build upstream main`, input)
 			if err.Error() != want {
 				t.Fatalf("error = %q, want %q", err, want)
 			}

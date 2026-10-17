@@ -20,14 +20,14 @@ var (
 	// LegacyVersionPattern matches legacy `v0.x` git tags.
 	LegacyVersionPattern = regexp.MustCompile(`^v0\.[0-9]+\.[0-9]+$`)
 
-	// CalVerStablePattern matches calendar releases with an optional patch
-	// component: YY.MM[.N]. Upstream never tags bare YY.MM, but the old
-	// validator accepts it, so it stays accepted here.
-	CalVerStablePattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])(\.(0|[1-9][0-9]*))?$`)
+	// CalVerStablePattern matches calendar releases: YY.MM.N. The patch
+	// component is required, matching upstream tags; bare YY.MM is only an
+	// upstream image-tag alias and never a git tag.
+	CalVerStablePattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)$`)
 
-	// CalVerRCPattern matches release candidates YY.MM[.N]-rc.K, including
-	// the live 26.10-rc.1 form. Upstream tags candidates bare.
-	CalVerRCPattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])(\.(0|[1-9][0-9]*))?-rc\.[1-9][0-9]*$`)
+	// CalVerRCPattern matches release candidates YY.MM.N-rc.K, tagged bare
+	// (no v prefix) like upstream.
+	CalVerRCPattern = regexp.MustCompile(`^[1-9][0-9]\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)-rc\.[1-9][0-9]*$`)
 
 	shortSHA7Pattern = regexp.MustCompile(`^[0-9a-fA-F]{7}$`)
 
@@ -69,18 +69,16 @@ func DevBuildVersion(now time.Time, shortSHA string) (string, error) {
 
 // IsStableRelease reports whether a version denotes a stable GitHub release:
 // legacy `v0.x` or calendar `YY.MM.N`. Release candidates and dev builds are
-// prereleases, never stable. Bare `YY.MM` is accepted as an input alias but
-// is not itself a release.
+// prereleases, never stable.
 func IsStableRelease(releaseVersion string) bool {
 	if LegacyVersionPattern.MatchString(releaseVersion) {
 		return true
 	}
-	m := CalVerStablePattern.FindStringSubmatch(releaseVersion)
-	return len(m) > 3 && m[3] != ""
+	return CalVerStablePattern.MatchString(releaseVersion)
 }
 
 // IsReleaseCandidate reports whether a version is an upstream release
-// candidate: YY.MM[.N]-rc.K.
+// candidate: YY.MM.N-rc.K.
 func IsReleaseCandidate(version string) bool {
 	return CalVerRCPattern.MatchString(strings.TrimPrefix(version, "v"))
 }
@@ -89,35 +87,19 @@ func IsReleaseCandidate(version string) bool {
 //
 // CalVer releases (26.10.0): ["latest", "26.10", "26.10.0"]
 // Legacy releases (v0.25.3): ["latest", "0.25", "0.25.3"]
-// Release candidates (26.10.0-rc.1, 26.10-rc.1): the bare version itself.
+// Release candidates (26.10.0-rc.1): the bare version itself.
 // Dev builds (26.10.15-dev.1511fd1): ["26.10.15-dev.1511fd1", "dev"]
+//
+// Aliases are sliced from the literal version, so a zero-padded month
+// survives: 26.09.0 publishes 26.09 and 26.09.0, never 26.9.
 func ContainerTags(version string) []string {
 	bare := strings.TrimPrefix(version, "v")
 	switch {
-	case LegacyVersionPattern.MatchString(version):
-		v, err := semver.NewVersion(strings.TrimPrefix(version, "v"))
-		if err != nil {
-			return []string{"latest"}
+	case LegacyVersionPattern.MatchString(version) || IsStableRelease(bare):
+		if i := strings.LastIndexByte(bare, '.'); i > 0 {
+			return []string{"latest", bare[:i], bare}
 		}
-		return []string{
-			"latest",
-			fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
-			fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
-		}
-	case IsStableRelease(bare) || CalVerStablePattern.MatchString(bare):
-		parts := strings.Split(bare, ".")
-		if len(parts) == 2 {
-			return []string{"latest", bare}
-		}
-		v, err := semver.NewVersion(bare)
-		if err != nil {
-			return []string{"latest"}
-		}
-		return []string{
-			"latest",
-			fmt.Sprintf("%d.%d", v.Major(), v.Minor()),
-			fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()),
-		}
+		return []string{"latest", bare}
 	case IsReleaseCandidate(bare):
 		return []string{bare}
 	case DevVersionPattern.MatchString(bare):
@@ -153,8 +135,8 @@ func TagsForRegistry(version string, registry string) []string {
 // AppVersion renders the build version for injection into the binary
 // (`-X …internal/version.Version=…`). Unlike a Masterminds semver re-render,
 // the literal segments are preserved: 26.09.0 must stay 26.09.0, because
-// upstream's startup validator requires the two-digit month. Missing patch
-// components are filled with .0, the v prefix and build metadata are dropped.
+// upstream's startup validator requires the two-digit month. The v prefix and
+// build metadata are dropped.
 func AppVersion(version string) (string, bool) {
 	if _, err := semver.NewVersion(version); err != nil {
 		return "", false
@@ -164,18 +146,7 @@ func AppVersion(version string) (string, bool) {
 	if i := strings.IndexByte(bare, '+'); i >= 0 {
 		bare = bare[:i]
 	}
-
-	head, tail := bare, ""
-	if i := strings.IndexByte(bare, '-'); i >= 0 {
-		head, tail = bare[:i], bare[i:]
-	}
-	switch strings.Count(head, ".") {
-	case 0:
-		head += ".0.0"
-	case 1:
-		head += ".0"
-	}
-	return head + tail, true
+	return bare, true
 }
 
 // ParseDeclaredVersion extracts the version declared in an upstream source

@@ -140,7 +140,10 @@ Run `just --list` for all recipes. Most operations require Docker.
   `./dist/`.
 - **`--version` accepts**: legacy `v0.x` tags, bare or `v`-prefixed calendar
   tags (`26.10.0`, `26.10.0-rc.1`), bare dev versions (`26.10.15-dev.1511fd1`),
-  40-char commit hashes, or `dev` (default — builds upstream `main`).
+  40-char commit hashes, or `dev` (default — builds upstream `main`). Calendar
+  inputs require the patch component, matching upstream's release tooling
+  (`YY.MM.N[-rc.K]`): unpatched forms (`26.10`, and the historical
+  `26.10-rc.1` tag) are rejected.
   Certain historical versions use hardcoded commit hashes
   (`knownVersionCommits` in `.dagger/buildplan/plan.go`). Dev builds embed an
   upstream-style `YY.MM.D-dev.<sha7>` version so they pass upstream validation.
@@ -150,7 +153,8 @@ Run `just --list` for all recipes. Most operations require Docker.
   rejected `26.9.0`.
 - **Container registries**: `docker.io/lincolnthalles/memos` and
   `ghcr.io/memospot/memos-builds`. CalVer releases tag `latest`, `YY.MM` and
-  `YY.MM.N` (bare, no `v` prefix); legacy `v0.x` releases tag `latest`,
+  `YY.MM.N` (bare, no `v` prefix; the `YY.MM` month alias is derived from the
+  release); legacy `v0.x` releases tag `latest`,
   `0.YY` and `0.YY.N` (bare patch — the `v` lives only on the git tag);
   dev releases use their `YY.MM.D-dev.<sha7>` tag on
   GHCR plus a floating `dev` alias on both registries.

@@ -24,7 +24,7 @@ func (m *MemosBuilds) extractVersionFromSource(ctx context.Context, src *dagger.
 // resolveVersion determines the git source and build/release versions from user input.
 //
 // Accepted inputs: legacy `v0.x` tags, bare or `v`-prefixed calendar tags
-// (`26.10.0`, `v26.10.0`, `26.10-rc.1`, `26.10.0-rc.1`), bare or `v`-prefixed
+// (`26.10.0`, `v26.10.0`, `26.10.0-rc.1`), bare or `v`-prefixed
 // dev versions (`26.10.15-dev.1511fd1`), 40-char commit hashes, or empty
 // (defaults to a dev build from upstream `main` with an upstream-style
 // `YY.MM.D-dev.<sha7>` build version, using the current UTC date).

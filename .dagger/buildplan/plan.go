@@ -61,20 +61,22 @@ type VersionPlan struct {
 // mint a dev version.
 //
 // Accepted inputs: legacy `v0.x` tags, bare or `v`-prefixed calendar tags
-// (`26.10.0`, `26.10-rc.1`), bare or `v`-prefixed dev versions
+// (`26.10.0`, `26.10.0-rc.1`), bare or `v`-prefixed dev versions
 // (`26.10.15-dev.1511fd1`), 40-char commit hashes, or empty (defaults to a
 // dev build from upstream `main`).
 func PlanVersion(input string, now time.Time) (VersionPlan, error) {
 	plan := VersionPlan{Now: now}
 
 	// Normalise version input to a git tag, preserving the literal segments.
-	// Upstream calendar tags are bare (e.g. 26.10.0, 26.10-rc.1); legacy 0.x
+	// Upstream calendar tags are bare (e.g. 26.10.0, 26.10.0-rc.1); legacy 0.x
 	// tags keep the prefix (e.g. v0.25.3). A leading "v" on calendar versions
 	// is accepted for convenience. The literal form is preserved throughout:
 	// Masterminds semver coerces numeric segments to integers and re-renders
 	// them, turning 26.09.0 into the nonexistent tag 26.9.0. Anything else is
 	// rejected: silently building main for a typo'd version ships the wrong
-	// code under the wrong tag.
+	// code under the wrong tag. Unpatched calendar forms are rejected:
+	// upstream's release tooling emits only YY.MM.N[-rc.K] tags, and the
+	// historical 26.10-rc.1 tag is intentionally never rebuilt.
 	bare := strings.TrimPrefix(input, "v")
 	var tag, release string
 	switch {
@@ -123,7 +125,7 @@ func PlanVersion(input string, now time.Time) (VersionPlan, error) {
 		return plan, nil
 	}
 
-	return VersionPlan{}, fmt.Errorf(`invalid version %q: expected a release tag (v0.25.3, 26.10.0, 26.10-rc.1), a dev version (26.10.15-dev.1511fd1), a 40-character commit hash, or "dev" to build upstream main`, input)
+	return VersionPlan{}, fmt.Errorf(`invalid version %q: expected a release tag (v0.25.3, 26.10.0, 26.10.0-rc.1), a dev version (26.10.15-dev.1511fd1), a 40-character commit hash, or "dev" to build upstream main`, input)
 }
 
 // Finalize applies the source-declared version and dev minting to the plan

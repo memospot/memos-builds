@@ -22,8 +22,6 @@ func TestAppVersion(t *testing.T) {
 	}{
 		{"calendar release is literal", "26.10.0", "26.10.0"},
 		{"zero-padded September month survives", "26.09.0", "26.09.0"},
-		{"bare month gains a patch", "26.10", "26.10.0"},
-		{"candidate without patch gains one", "26.10-rc.1", "26.10.0-rc.1"},
 		{"candidate with patch is literal", "26.10.0-rc.1", "26.10.0-rc.1"},
 		{"dev version keeps its v-prefixed build form stripped", "v26.10.15-dev.1511fd1", "26.10.15-dev.1511fd1"},
 		{"zero-padded January month survives", "26.01.15-dev.1511fd1", "26.01.15-dev.1511fd1"},
