@@ -7,7 +7,6 @@ import (
 	"dagger/memos-builds/buildplan"
 	"dagger/memos-builds/internal/dagger"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -43,26 +42,25 @@ func (m *MemosBuilds) addContainerEnv(c *dagger.Container) *dagger.Container {
 	return c
 }
 
-// buildContainer creates a container for a specific platform using the built binary.
+// buildContainer creates a container for a specific target using the built binary.
 func (m *MemosBuilds) buildContainer(
-	// The specific binary file for this platform
+	// The specific binary file for this target
 	binary *dagger.File,
-	// Platform string (e.g. linux/amd64, linux/arm/v5)
-	platform string,
+	target buildplan.BuildMatrix,
 	source *dagger.Directory,
 ) *dagger.Container {
 	// ARMv5 requires special handling:
 	// 	- It's only supported on BusyBox.
 	// 	- BusyBox lacks package manager, tz-data and needs a pre-built su-exec.
-	if platform == "linux/arm/v5" {
-		ctr := m.buildBusyBoxARMv5Container(binary, platform, source)
-		ctr = m.ensurePlatformVariant(ctr, platform)
+	if target.IsARMv5() {
+		ctr := m.buildBusyBoxARMv5Container(binary, target, source)
+		ctr = m.ensurePlatformVariant(ctr, target)
 		return m.addContainerAnnotations(ctr)
 	}
 
 	// All other platforms use a standard Alpine-based container.
-	ctr := m.buildAlpineContainer(binary, platform, source)
-	ctr = m.ensurePlatformVariant(ctr, platform)
+	ctr := m.buildAlpineContainer(binary, target, source)
+	ctr = m.ensurePlatformVariant(ctr, target)
 	return m.addContainerAnnotations(ctr)
 }
 
@@ -74,12 +72,12 @@ func (m *MemosBuilds) buildContainer(
 // re-import into a container explicitly pinned to the target platform.
 func (m *MemosBuilds) ensurePlatformVariant(
 	ctr *dagger.Container,
-	platform string,
+	target buildplan.BuildMatrix,
 ) *dagger.Container {
-	parts := strings.Split(platform, "/")
-	if len(parts) != 3 || parts[1] != "amd64" || parts[2] == "v1" {
+	if !target.IsAmd64Variant() {
 		return ctr
 	}
+	platform := target.DockerPlatform()
 	return dag.Container(dagger.ContainerOpts{Platform: dagger.Platform(platform)}).
 		Import(ctr.AsTarball())
 }
@@ -87,12 +85,13 @@ func (m *MemosBuilds) ensurePlatformVariant(
 // buildAlpineContainer creates an Alpine-based container.
 func (m *MemosBuilds) buildAlpineContainer(
 	binary *dagger.File,
-	platform string,
+	target buildplan.BuildMatrix,
 	source *dagger.Directory,
 ) *dagger.Container {
 
 	entrypoint := source.Directory("container").File("entrypoint.sh")
 	newFilePerms := dagger.ContainerWithFileOpts{Permissions: 0755}
+	platform := target.DockerPlatform()
 
 	return dag.Container(dagger.ContainerOpts{Platform: dagger.Platform(platform)}).
 		From(buildconsts.PRIMARY_IMAGE).
@@ -120,9 +119,10 @@ func (m *MemosBuilds) buildAlpineContainer(
 //   - Isolated to make it easier to remove if ARMv5 gets too difficult to support.
 func (m *MemosBuilds) buildBusyBoxARMv5Container(
 	binary *dagger.File,
-	platform string,
+	target buildplan.BuildMatrix,
 	source *dagger.Directory,
 ) *dagger.Container {
+	platform := target.DockerPlatform()
 
 	entrypointFile := source.Directory("container").File("entrypoint.sh")
 	suExecFile := source.Directory("container/armv5/bin").File("su-exec")
@@ -184,7 +184,7 @@ func (m *MemosBuilds) buildContainers(
 	var containers []*dagger.Container
 	for _, t := range targets {
 		binary := binaries.File(t.BinaryName())
-		ctr := m.buildContainer(binary, t.DockerPlatform(), source)
+		ctr := m.buildContainer(binary, t, source)
 		containers = append(containers, ctr)
 	}
 

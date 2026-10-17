@@ -124,6 +124,60 @@ func TestGoEnv(t *testing.T) {
 	}
 }
 
+func TestIsARMv5(t *testing.T) {
+	// GIVEN targets around the single BusyBox row
+	cases := []struct {
+		name   string
+		target BuildMatrix
+		want   bool
+	}{
+		{"linux arm v5 is ARMv5", BuildMatrix{"linux", "arm", "v5"}, true},
+		{"arm v6 is not ARMv5", BuildMatrix{"linux", "arm", "v6"}, false},
+		{"arm v7 is not ARMv5", BuildMatrix{"linux", "arm", "v7"}, false},
+		{"non-linux arm v5 is not ARMv5", BuildMatrix{"darwin", "arm", "v5"}, false},
+		{"arm64 is not ARMv5", BuildMatrix{"linux", "arm64", ""}, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// WHEN
+			got := tc.target.IsARMv5()
+
+			// THEN
+			if got != tc.want {
+				t.Fatalf("IsARMv5() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsAmd64Variant(t *testing.T) {
+	// GIVEN targets around the platform-pinning rule
+	cases := []struct {
+		name   string
+		target BuildMatrix
+		want   bool
+	}{
+		{"amd64 v1 is not a variant", BuildMatrix{"linux", "amd64", "v1"}, false},
+		{"amd64 v2 is a variant", BuildMatrix{"linux", "amd64", "v2"}, true},
+		{"amd64 v3 is a variant", BuildMatrix{"linux", "amd64", "v3"}, true},
+		{"empty level is not a variant", BuildMatrix{"linux", "amd64", ""}, false},
+		{"arm level is not an amd64 variant", BuildMatrix{"linux", "arm", "v7"}, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// WHEN
+			got := tc.target.IsAmd64Variant()
+
+			// THEN
+			if got != tc.want {
+				t.Fatalf("IsAmd64Variant() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestFilterTargets(t *testing.T) {
 	// GIVEN platform selections against the declared matrix
 	t.Run("empty selects every target without aliasing the global", func(t *testing.T) {

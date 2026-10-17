@@ -86,6 +86,19 @@ func (m *BuildMatrix) GoEnv() map[string]string {
 	}
 }
 
+// IsARMv5 reports whether this target needs the BusyBox container:
+// Linux arm at level v5, the only ARMv5 row in Targets.
+func (m BuildMatrix) IsARMv5() bool {
+	return m.OS == "linux" && m.Arch == "arm" && m.ArchLevel == "v5"
+}
+
+// IsAmd64Variant reports whether this target is an amd64 microarchitecture
+// variant above the base level, whose platform the engine would otherwise
+// collapse to plain linux/amd64.
+func (m BuildMatrix) IsAmd64Variant() bool {
+	return m.Arch == "amd64" && m.ArchLevel != "" && m.ArchLevel != "v1"
+}
+
 // UnameArch returns uname-compatible architecture name.
 // (e.g., "x86_64", "i386", "arm64", "armv7l")
 func (m *BuildMatrix) UnameArch() string {
