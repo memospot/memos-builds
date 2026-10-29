@@ -2,9 +2,7 @@
 // see the documentation: https://zed.dev/docs/configuring-zed#settings-files
 {
   "file_types": {
-    "GitHub Actions": [
-      ".github/workflows/*.yml"
-    ]
+    "GitHub Actions": [".github/workflows/*.yml"]
   },
   "format_on_save": "on",
   "formatter": {
@@ -14,9 +12,7 @@
     }
   },
   "languages": {
-    "Go": {
-      "language_servers": ["gopls", "golangci-lint"]
-    },
+    "Go": { "language_servers": ["gopls", "golangci-lint"] },
     "Just": { "formatter": "language_server" }
   },
   "language_servers": [

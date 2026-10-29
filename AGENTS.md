@@ -53,6 +53,8 @@ app for Memos.
 
 - Only high-value regression tests covering success, failure, and realistic edge cases. No tests for statically defined values, no negative tests for removed logic.
 - Test public contracts and behavior only, with deep equality over whole objects. Do not duplicate implementation logic in the test.
+- Do NOT change tests to match a wrong implementation; double-check the implementation and the expected behavior before proceeding, flagging the issue if the behavior is unclear.
+- Do NOT weaken existing assertions unless the expected behavior has genuinely changed and the reason is clear.
 - Deterministic: no wall-clock, network, or environment coupling unless the behavior under test requires it.
 - Isolation: mock only at the system boundary (subprocess, filesystem, network), never domain logic.
 - Inline BDD-style comments `// GIVEN` / `// WHEN` / `// THEN` (`// AND` as needed) + high-signal description, splitting each test into logical blocks whenever it doesn't get redundant and improves readability.
