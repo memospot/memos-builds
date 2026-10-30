@@ -22,7 +22,7 @@ jobs:
         uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f
         with:
           token: ${{ secrets.GHCR_TOKEN }}
-          delete-tags: "*-dev.*"
+          delete-tags: "*-dev.*,nightly*"
           older-than: 7 days
           delete-untagged: true
 
@@ -41,22 +41,44 @@ jobs:
 
       - name: Prune old dev releases
         run: |
+          set -euo pipefail
           cutoff_days=7
+          cutoff_ts=$(date -u -d "-${cutoff_days} days" +%Y-%m-%dT00:00:00Z)
           cutoff_date=$(date -u -d "-${cutoff_days} days" +%F)
 
           start_time=$(date +%s)
 
-          # Dev releases carry the build date in the tag (YY.MM.D-dev.<sha7>),
-          # but the GitHub release timestamp is authoritative: the tag date is
-          # the build date, the release may be re-created later by re-runs.
-          readarray -t tags < <(gh release list --limit 100 --json tagName,publishedAt \
-            --jq --arg cutoff "$cutoff_date" '.[] | select(.tagName | test("^[1-9][0-9]\\.[0-9]+\\.[0-9]+-dev\\.[0-9a-f]{7}$")) | select(.publishedAt < $cutoff) | .tagName')
+          # Ephemeral prereleases are identified by the prerelease flag plus
+          # a substring match, not a full version regex. The GitHub release
+          # timestamp stays authoritative: the tag date is the build date,
+          # the release may be re-created later by re-runs. Substring matching
+          # covers both the current YY.MM.D-dev.sha7 scheme and legacy
+          # nightly-* tags, survives minor format drift, and needs no update
+          # on the next rename. Stable releases (prerelease=false) and
+          # release candidates (-rc.) never match.
+          # NOTE: `gh release list --jq` accepts a single expression and has
+          # no `--arg` support, so filter with the standalone `jq` binary.
+          releases_json=$(gh release list --limit 1000 --exclude-drafts --json tagName,publishedAt,isPrerelease)
+          tags_output=$(echo "$releases_json" | jq -r --arg cutoff "$cutoff_ts" '
+            .[]
+            | select(.isPrerelease)
+            | select(.publishedAt != null and .publishedAt < $cutoff)
+            | select(.tagName | contains("-dev.") or startswith("nightly-"))
+            | .tagName
+          ')
+          readarray -t tags <<<"$tags_output"
+
+          # An empty selection yields one empty element via herestring;
+          # normalize to an empty list.
+          if [ "${#tags[@]}" -eq 1 ] && [ -z "${tags[0]:-}" ]; then
+            tags=()
+          fi
 
           total=${#tags[@]}
           deleted=0
           declare -A tag_status
 
-          for tag in "${tags[@]}"; do
+          for tag in ${tags[@]+"${tags[@]}"}; do
             echo "Deleting release: $tag"
             if gh release delete "$tag" --yes --cleanup-tag; then
               deleted=$((deleted + 1))
@@ -82,15 +104,15 @@ jobs:
             echo "<table><tr><th>Key</th><th>Value</th></tr>"
             echo "<tr><td>cutoff-days</td><td>${cutoff_days}</td></tr>"
             echo "<tr><td>cutoff-date</td><td>${cutoff_date}</td></tr>"
-            echo "<tr><td>limit</td><td>100</td></tr>"
-            echo "<tr><td>tag-pattern</td><td>YY.MM.D-dev.sha7</td></tr>"
+            echo "<tr><td>limit</td><td>1000</td></tr>"
+            echo "<tr><td>tag-pattern</td><td>prerelease with -dev. or nightly-</td></tr>"
             echo "</table></details>"
             echo "<h2>Results</h2>"
             if [ "${total}" -eq 0 ]; then
               echo "<p>No old dev releases found.</p>"
             else
               echo "<table><tr><th>Tag</th><th>Status</th></tr>"
-              for tag in "${tags[@]}"; do
+              for tag in ${tags[@]+"${tags[@]}"}; do
                 echo "<tr><td>${tag}</td><td>${tag_status[$tag]}</td></tr>"
               done
               echo "</table>"
