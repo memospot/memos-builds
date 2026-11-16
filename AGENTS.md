@@ -134,10 +134,15 @@ Run `just --list` for all recipes. Most operations require Docker.
   and shellcheck.
 - **Dagger SDK export rule**: PascalCase in `.dagger/main.go` → exported via
   `dagger functions`; camelCase → Dagger-internal.
-- **Dagger engine** version pinned in `dagger.json` (currently `v0.21.10`).
+- **Dagger engine** version pinned in `dagger.json` (currently `v0.21.11`).
 - **Dagger codegen**: run `just dagger-codegen` after public signature changes
   (`dagger develop --compat=skip`). `just update-deps` runs codegen without
-  `--compat=skip`. Both remove the generated `.dagger/.gitignore`.
+  `--compat=skip`. Both leave the generated `.dagger/.gitignore` in place.
+- **`.dagger` module deps are engine-owned**: Dependabot ignores
+  `go.opentelemetry.io/otel*` and `github.com/dagger/otel-go` for `/.dagger`
+  (see `.github/dependabot.yml`). They track the Dagger engine SDK; refresh
+  with `just update-deps` after bumping `dagger.json`. Drop the ignore only
+  when `dagger/otel-go` supports the OpenTelemetry `log` v1 API.
 - **All `dagger call` invocations MUST pass `--source=.`**. Artifacts land in
   `./dist/`.
 - **`--version` accepts**: legacy `v0.x` tags, bare or `v`-prefixed calendar

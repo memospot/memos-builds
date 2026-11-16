@@ -24,3 +24,9 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 0
+    ignore:
+      # .dagger deps follow the Dagger engine SDK. otel >= 1.47 requires
+      # dagger/otel-go with the otel/log v1 API; refresh via `just update-deps`
+      # after bumping dagger.json.
+      - dependency-name: "go.opentelemetry.io/otel*"
+      - dependency-name: "github.com/dagger/otel-go"
