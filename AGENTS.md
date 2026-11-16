@@ -117,7 +117,7 @@ Run `just --list` for all recipes. Most operations require Docker.
   fetch that tag's `go.mod`). CI and `just validate` enforce it. Change with
   `just tidy <version>`. Never set this to the Memos Go version.
 - **Memos build Go** pinned as `MEMOS_GO_VERSION` + `GOLANG_BUILD_IMAGE` in
-  `.dagger/buildconsts/consts.go` (currently `1.27.2`). Tracks upstream Memos,
+  `.dagger/buildconsts/consts.go` (currently `1.27.4`). Tracks upstream Memos,
   independently of the module Go. Applied inside the build container
   (`build.go` runs `go mod tidy -go=<MEMOS_GO_VERSION>`).
 - **Go workspace** includes only `.dagger/`. Run `go work sync` after
