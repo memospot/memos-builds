@@ -106,7 +106,7 @@ dagger-clean:
 
 # Regenerate Dagger SDK bindings after public function signature changes
 dagger-codegen:
-    dagger develop --compat=skip && rm .dagger/.gitignore || true
+    dagger develop --compat=skip
 
 [doc('
 Build Memos binaries for the specified version and platforms.
